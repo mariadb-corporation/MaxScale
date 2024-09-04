@@ -40,6 +40,7 @@ add_library(nosqlprotocol SHARED
   nosqlnobson.cc
   nosqloperator.cc
   nosqlprotocol.cc
+  nosqlquery.cc
   nosqlscram.cc
   nosqlupdateoperator.cc
   nosqlusermanager.cc

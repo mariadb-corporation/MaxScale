@@ -13,6 +13,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
+#include <functional>
 #include <sstream>
 #include <bsoncxx/array/element.hpp>
 #include <bsoncxx/document/element.hpp>
@@ -24,6 +25,38 @@ namespace nosql
 // "nobson" to prevent confusion with bsoncxx.
 namespace nobson
 {
+
+/**
+ * Returns the type as the string used in the API. This is different from
+ * what bsoncxx::to_string(bsoncxx::type) returns.
+ *
+ * @param type  A type.
+ *
+ * @return The corresponding string.
+ */
+std::string_view to_string(bsoncxx::type type);
+
+/**
+ * Converts a type string as used in the API to the corresponding type
+ * value.
+ *
+ * @param type   A type string, as used in the API.
+ * @param pType  On successful return the corresponding type.
+ *
+ * @return True, if @type is a valid type string, false otherwise.
+ */
+bool from_string(std::string_view type, bsoncxx::type* pType);
+
+/**
+ * Converts an integer used in the API to the corresponing type
+ * value.
+ *
+ * @param type   An integer, as used in the API.
+ * @param pType  On successful return the corresponding type.
+ *
+ * @return True, if @type is a valid type code, false otherwise.
+ */
+bool from_number(int32_t type, bsoncxx::type* pType);
 
 /**
  * bsoncxx::type
@@ -487,7 +520,18 @@ inline bool operator > (const bsoncxx::types::bson_value::view& lhs,
 }
 
 inline bool operator >= (const bsoncxx::types::bson_value::view& lhs,
-                        const bsoncxx::types::bson_value::view& rhs)
+                         const bsoncxx::types::bson_value::view& rhs)
 {
     return nosql::nobson::compare(lhs, rhs) >= 0;
 }
+
+template<>
+class std::less<bsoncxx::types::bson_value::view>
+{
+public:
+    bool operator()(const bsoncxx::types::bson_value::view& lhs,
+                    const bsoncxx::types::bson_value::view& rhs) const
+    {
+        return nosql::nobson::compare(lhs, rhs) < 0;
+    }
+};

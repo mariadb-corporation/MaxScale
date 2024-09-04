@@ -262,277 +262,34 @@ inline std::string double_to_string(double d)
 }
 
 
-template<class document_element_or_array_item>
-std::string element_to_value(const document_element_or_array_item& x,
+std::string element_to_value(const bsoncxx::types::bson_value::view& x,
                              ValueFor value_for,
-                             const std::string& op = "")
+                             const std::string& op = "");
+
+inline std::string element_to_value(const bsoncxx::document::element& x,
+                                    ValueFor value_for,
+                                    const std::string& op = "")
 {
-    std::ostringstream ss;
-
-    switch (x.type())
-    {
-    case bsoncxx::type::k_double:
-        double_to_string(x.get_double(), ss);
-        break;
-
-    case bsoncxx::type::k_utf8:
-        {
-            const auto& utf8 = x.get_utf8();
-            string_view s(utf8.value.data(), utf8.value.size());
-
-            switch (value_for)
-            {
-            case ValueFor::JSON:
-                ss << "'\"" << s << "\"'";
-                break;
-
-            case ValueFor::JSON_NESTED:
-            case ValueFor::SQL:
-                ss << "\"" << s << "\"";
-            }
-        }
-        break;
-
-    case bsoncxx::type::k_int32:
-        ss << x.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        ss << x.get_int64();
-        break;
-
-    case bsoncxx::type::k_binary:
-        {
-            auto b = x.get_binary();
-
-            string_view s(reinterpret_cast<const char*>(b.bytes), b.size);
-
-            ss << "'" << s << "'";
-        }
-        break;
-
-    case bsoncxx::type::k_bool:
-        ss << x.get_bool();
-        break;
-
-    case bsoncxx::type::k_date:
-        ss << x.get_date();
-        break;
-
-    case bsoncxx::type::k_array:
-        {
-            ss << "JSON_ARRAY(";
-
-            bsoncxx::array::view a = x.get_array();
-
-            bool first = true;
-            for (auto element : a)
-            {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    ss << ", ";
-                }
-
-                ss << element_to_value(element, ValueFor::JSON_NESTED, op);
-            }
-
-            ss << ")";
-        }
-        break;
-
-    case bsoncxx::type::k_document:
-        {
-            ss << "JSON_OBJECT(";
-
-            bsoncxx::document::view d = x.get_document();
-
-            bool first = true;
-            for (auto element : d)
-            {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    ss << ", ";
-                }
-
-                ss << "\"" << element.key() << "\", " << element_to_value(element, ValueFor::JSON_NESTED, op);
-            }
-
-            ss << ")";
-        }
-        break;
-
-    case bsoncxx::type::k_null:
-        switch (value_for)
-        {
-        case ValueFor::JSON:
-        case ValueFor::JSON_NESTED:
-            ss << "null";
-            break;
-
-        case ValueFor::SQL:
-            ss << "'null'";
-        }
-        break;
-
-    case bsoncxx::type::k_regex:
-        {
-            std::ostringstream ss2;
-
-            auto r = x.get_regex();
-            if (r.options.length() != 0)
-            {
-                ss2 << "(?" << r.options << ")";
-            }
-
-            ss2 << r.regex;
-
-            ss << "REGEXP '" << escape_essential_chars(ss2.str()) << "'";
-        }
-        break;
-
-    case bsoncxx::type::k_minkey:
-        ss << std::numeric_limits<int64_t>::min();
-        break;
-
-    case bsoncxx::type::k_maxkey:
-        ss << std::numeric_limits<int64_t>::max();
-        break;
-
-    case bsoncxx::type::k_code:
-        ss << "'" << x.get_code().code << "'";
-        break;
-
-    case bsoncxx::type::k_undefined:
-        throw SoftError("cannot compare to undefined", error::BAD_VALUE);
-
-    default:
-        {
-            ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
-
-            throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
-        }
-    }
-
-    return ss.str();
+    return element_to_value(x.get_value(), value_for, op);
 }
 
-template<class document_element_or_array_item>
-std::string element_to_string(const document_element_or_array_item& x)
+inline std::string element_to_value(const bsoncxx::array::element& x,
+                                    ValueFor value_for,
+                                    const std::string& op = "")
 {
-    std::ostringstream ss;
+    return element_to_value(x.get_value(), value_for, op);
+}
 
-    switch (x.type())
-    {
-    case bsoncxx::type::k_array:
-        {
-            bool first = true;
-            ss << "[";
-            bsoncxx::array::view array = x.get_array();
-            for (const auto& item : array)
-            {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    ss << ", ";
-                }
+std::string element_to_string(const bsoncxx::types::bson_value::view& x);
 
-                ss << element_to_string(item);
-            }
-            ss << "]";
-        }
-        break;
+inline std::string element_to_string(const bsoncxx::document::element& x)
+{
+    return element_to_string(x.get_value());
+}
 
-    case bsoncxx::type::k_bool:
-        ss << x.get_bool();
-        break;
-
-    case bsoncxx::type::k_code:
-        ss << x.get_code().code;
-        break;
-
-    case bsoncxx::type::k_date:
-        ss << x.get_date();
-        break;
-
-    case bsoncxx::type::k_decimal128:
-        ss << x.get_decimal128().value.to_string();
-        break;
-
-    case bsoncxx::type::k_document:
-        ss << escape_essential_chars(std::move(bsoncxx::to_json(x.get_document())));
-        break;
-
-    case bsoncxx::type::k_double:
-        ss << element_to_value(x, ValueFor::JSON);
-        break;
-
-    case bsoncxx::type::k_int32:
-        ss << x.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        ss << x.get_int64();
-        break;
-
-    case bsoncxx::type::k_null:
-        ss << "null";
-        break;
-
-    case bsoncxx::type::k_oid:
-        ss << "{\"$oid\":\"" << x.get_oid().value.to_string() << "\"}";
-        break;
-
-    case bsoncxx::type::k_regex:
-        ss << x.get_regex().regex;
-        break;
-
-    case bsoncxx::type::k_symbol:
-        ss << x.get_symbol().symbol;
-        break;
-
-    case bsoncxx::type::k_utf8:
-        {
-            const auto& view = x.get_utf8().value;
-            std::string value(view.data(), view.length());
-            ss << escape_essential_chars(std::move(value));
-        }
-        break;
-
-    case bsoncxx::type::k_minkey:
-        ss << "{\"$minKey\":1}";
-        break;
-
-    case bsoncxx::type::k_maxkey:
-        ss << "{\"$maxKey\":1}";
-        break;
-
-    case bsoncxx::type::k_undefined:
-        throw SoftError("cannot compare to undefined", error::BAD_VALUE);
-        break;
-
-    case bsoncxx::type::k_binary:
-    case bsoncxx::type::k_codewscope:
-    case bsoncxx::type::k_dbpointer:
-    case bsoncxx::type::k_timestamp:
-        {
-            ss << "A " << bsoncxx::to_string(x.type()) << " cannot be converted to a string.";
-            throw SoftError(ss.str(), error::BAD_VALUE);
-        }
-        break;
-    }
-
-    return ss.str();
+inline std::string element_to_string(const bsoncxx::array::element& x)
+{
+    return element_to_string(x.get_value());
 }
 
 mxb::Json bson_to_json(const bsoncxx::types::value& x);
@@ -544,9 +301,110 @@ enum class Conversion
 };
 
 template<class T>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                T* pT);
+bool bson_view_as(const bsoncxx::types::bson_value::view& view,
+                  Conversion conversion,
+                  T* pT);
+
+template<class T>
+bool bson_view_as(const bsoncxx::types::bson_value::view& view, T* pT)
+{
+    return bson_view_as(view, Conversion::STRICT, pT);
+}
+
+template<>
+bool bson_view_as(const bsoncxx::types::bson_value::view& view,
+                  Conversion conversion,
+                  double* pT);
+
+template<>
+bool bson_view_as(const bsoncxx::types::bson_value::view& view,
+                  Conversion conversion,
+                  int32_t* pT);
+
+template<>
+bool bson_view_as(const bsoncxx::types::bson_value::view& view,
+                  Conversion conversion,
+                  std::string* pT);
+
+template<class T>
+T bson_view_as(const std::string& command,
+               const char* zKey,
+               const bsoncxx::types::bson_value::view& view,
+               int error_code,
+               Conversion conversion = Conversion::STRICT);
+
+template<class T>
+T bson_view_as(const std::string& command,
+               const char* zKey,
+               const bsoncxx::types::bson_value::view& view,
+               Conversion conversion = Conversion::STRICT)
+{
+    return bson_view_as<T>(command, zKey, view, error::TYPE_MISMATCH, conversion);
+}
+
+template<>
+bsoncxx::document::view bson_view_as<bsoncxx::document::view>(const std::string& command,
+                                                              const char* zKey,
+                                                              const bsoncxx::types::bson_value::view& view,
+                                                              int error_code,
+                                                              Conversion conversion);
+
+template<>
+bsoncxx::array::view bson_view_as<bsoncxx::array::view>(const std::string& command,
+                                                        const char* zKey,
+                                                        const bsoncxx::types::bson_value::view& view,
+                                                        int error_code,
+                                                        Conversion conversion);
+
+template<>
+std::string bson_view_as<std::string>(const std::string& command,
+                                      const char* zKey,
+                                      const bsoncxx::types::bson_value::view& view,
+                                      int error_code,
+                                      Conversion conversion);
+
+template<>
+std::string_view bson_view_as<std::string_view>(const std::string& command,
+                                                const char* zKey,
+                                                const bsoncxx::types::bson_value::view& view,
+                                                int error_code,
+                                                Conversion conversion);
+
+template<>
+int64_t bson_view_as<int64_t>(const std::string& command,
+                              const char* zKey,
+                              const bsoncxx::types::bson_value::view& view,
+                              int error_code,
+                              Conversion conversion);
+
+template<>
+int32_t bson_view_as<int32_t>(const std::string& command,
+                              const char* zKey,
+                              const bsoncxx::types::bson_value::view& view,
+                              int error_code,
+                              Conversion conversion);
+template<>
+bool bson_view_as<bool>(const std::string& command,
+                        const char* zKey,
+                        const bsoncxx::types::bson_value::view& view,
+                        int error_code,
+                        Conversion conversion);
+
+template<>
+bsoncxx::types::b_binary bson_view_as<bsoncxx::types::b_binary>(const std::string& command,
+                                                                const char* zKey,
+                                                                const bsoncxx::types::bson_value::view& view,
+                                                                int error_code,
+                                                                Conversion conversion);
+
+
+template<class T>
+inline bool element_as(const bsoncxx::document::element& element,
+                       Conversion conversion,
+                       T* pT)
+{
+    return bson_view_as(element.get_value(), conversion, pT);
+}
 
 template<class T>
 inline bool element_as(const bsoncxx::document::element& element, T* pT)
@@ -554,91 +412,24 @@ inline bool element_as(const bsoncxx::document::element& element, T* pT)
     return element_as(element, Conversion::STRICT, pT);
 }
 
-template<>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                double* pT);
-
-template<>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                int32_t* pT);
-
-template<>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                std::string* pT);
+template<class T>
+inline T element_as(const std::string& command,
+                    const char* zKey,
+                    const bsoncxx::document::element& element,
+                    int error_code,
+                    Conversion conversion = Conversion::STRICT)
+{
+    return bson_view_as<T>(command, zKey, element.get_value(), error_code, conversion);
+}
 
 template<class T>
-T element_as(const std::string& command,
-             const char* zKey,
-             const bsoncxx::document::element& element,
-             int error_code,
-             Conversion conversion = Conversion::STRICT);
-
-template<class T>
-T element_as(const std::string& command,
-             const char* zKey,
-             const bsoncxx::document::element& element,
-             Conversion conversion = Conversion::STRICT)
+inline T element_as(const std::string& command,
+                    const char* zKey,
+                    const bsoncxx::document::element& element,
+                    Conversion conversion = Conversion::STRICT)
 {
     return element_as<T>(command, zKey, element, error::TYPE_MISMATCH, conversion);
 }
-
-template<>
-bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& command,
-                                                            const char* zKey,
-                                                            const bsoncxx::document::element& element,
-                                                            int error_code,
-                                                            Conversion conversion);
-
-template<>
-bsoncxx::array::view element_as<bsoncxx::array::view>(const std::string& command,
-                                                      const char* zKey,
-                                                      const bsoncxx::document::element& element,
-                                                      int error_code,
-                                                      Conversion conversion);
-
-template<>
-std::string element_as<std::string>(const std::string& command,
-                                    const char* zKey,
-                                    const bsoncxx::document::element& element,
-                                    int error_code,
-                                    Conversion conversion);
-
-template<>
-nosql::string_view element_as<nosql::string_view>(const std::string& command,
-                                                  const char* zKey,
-                                                  const bsoncxx::document::element& element,
-                                                  int error_code,
-                                                  Conversion conversion);
-
-template<>
-int64_t element_as<int64_t>(const std::string& command,
-                            const char* zKey,
-                            const bsoncxx::document::element& element,
-                            int error_code,
-                            Conversion conversion);
-
-template<>
-int32_t element_as<int32_t>(const std::string& command,
-                            const char* zKey,
-                            const bsoncxx::document::element& element,
-                            int error_code,
-                            Conversion conversion);
-template<>
-bool element_as<bool>(const std::string& command,
-                      const char* zKey,
-                      const bsoncxx::document::element& element,
-                      int error_code,
-                      Conversion conversion);
-
-template<>
-bsoncxx::types::b_binary element_as<bsoncxx::types::b_binary>(const std::string& command,
-                                                              const char* zKey,
-                                                              const bsoncxx::document::element& element,
-                                                              int error_code,
-                                                              Conversion conversion);
 
 template<class Type>
 bool optional(const std::string& command,

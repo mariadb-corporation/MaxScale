@@ -22,6 +22,7 @@
 #include "nosqlaggregationoperator.hh"
 #include "nosqlextraction.hh"
 #include "nosqlfieldpath.hh"
+#include "nosqlquery.hh"
 
 namespace nosql
 {
@@ -517,8 +518,9 @@ public:
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    bsoncxx::document::view m_match;
-    std::string             m_where_condition;
+    static bsoncxx::document::view get_document(const bsoncxx::document::element& element);
+
+    nosql::Query m_match;
 };
 
 /**

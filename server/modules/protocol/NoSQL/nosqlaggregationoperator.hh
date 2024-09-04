@@ -109,6 +109,9 @@ public:
 private:
     BsonValue process(bsoncxx::document::view doc, bool* pFound);
 
+    BsonValue get(std::vector<std::string>::iterator it, bsoncxx::document::view doc, bool* pFound);
+    BsonValue get(std::vector<std::string>::iterator it, bsoncxx::array::view array, bool* pFound);
+
     std::vector<std::string> m_fields;
 };
 

@@ -505,8 +505,9 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
         {
             for (const NamedOperator& nop : group.operators)
             {
-                nop.sOperator->accumulate(doc, i++, n);
+                nop.sOperator->accumulate(doc, i, n);
             }
+            ++i;
         }
     }
 
@@ -669,54 +670,52 @@ ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element, Stage* 
  */
 Match::Match(bsoncxx::document::element element, Stage* pPrevious)
     : DualStage(pPrevious)
+    , m_match(get_document(element))
 {
-    if (pPrevious)
-    {
-        throw SoftError("Currently the match stage must be the first stage in the pipeline",
-                        error::INTERNAL_ERROR);
-    }
-
-    if (element.type() != bsoncxx::type::k_document)
-    {
-        throw SoftError("the match filter must be an expression in a object", error::LOCATION15959);
-    }
-
-    m_match = element.get_document();
-
-    if (!m_match.empty())
-    {
-        m_where_condition = where_condition_from_query(m_match);
-    }
 }
 
 bool Match::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
 
-    if (!m_where_condition.empty())
+    string where = query.where();
+
+    if (!where.empty())
     {
-        string where = query.where();
-
-        if (!where.empty())
-        {
-            where += " AND ";
-        }
-
-        where += m_where_condition;
-
-        query.set_where(where);
+        where += " AND ";
     }
+
+    where += m_match.sql();
+
+    query.set_where(where);
 
     return true;
 }
 
 std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)
 {
-    mxb_assert(kind() == Kind::PIPELINE);
+    vector<bsoncxx::document::value> out;
 
-    // TODO: Match query and remove exception in constructor.
-    mxb_assert(!true);
-    return std::move(in);
+    for (bsoncxx::document::value& doc : in)
+    {
+        if (m_match.matches(doc))
+        {
+            out.emplace_back(std::move(doc));
+        }
+    }
+
+    return out;
+}
+
+//static
+bsoncxx::document::view Match::get_document(const bsoncxx::document::element& element)
+{
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("the match filter must be an expression in a object", error::LOCATION15959);
+    }
+
+    return element.get_document();
 }
 
 /**
