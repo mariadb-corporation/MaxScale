@@ -83,7 +83,7 @@ git submodule update --init
 
 rm -rf build
 mkdir build && cd build
-cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DBUILD_SYSTEM_TESTS=Y -DCMAKE_COLOR_MAKEFILE=N -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
 cd system-test
 NCPU=$(grep -c processor /proc/cpuinfo)
 make -j $NCPU
