@@ -44,7 +44,7 @@ you need to create the following directories:
 
     $ sudo mkdir /var/log/maxscale
     $ sudo mkdir /var/lib/maxscale
-    $ sudo mkdir run/maxscale
+    $ sudo mkdir /run/maxscale
     $ sudo mkdir /var/cache/maxscale
 
 and make `maxscale` the owner of them:
