@@ -156,6 +156,7 @@ private:
     GWBUF create_reset_connection_packet();
     bool  read_com_ping_response();
     bool  check_ephemeral_sig(const GWBUF& ok_packet);
+    bool  connection_is_local();
 
     void do_handle_error(DCB* dcb, const std::string& errmsg,
                          mxs::ErrorType type = mxs::ErrorType::TRANSIENT);

@@ -2514,10 +2514,16 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                     }
                     else if (status == BackendDCB::CertStatus::IN_DOUBT)
                     {
+                        if (connection_is_local())
+                        {
+                            // In this case we can trust the connection. Allow a self-signed certificate
+                            // even with an empty password or unsafe authenticator.
+                            m_hs_state = HandShakeState::SEND_HS_RESP;
+                        }
                         // Continue to authentication if pw is not empty and auth plugin is MitM-proof.
                         // Usually the empty pw case would be detected on the client side but more exotic
                         // setups may end up here.
-                        if (m_authenticator->require_mitm_proof())
+                        else if (m_authenticator->require_mitm_proof())
                         {
                             m_using_ephemeral_cert = true;
                             // Need to save the error message as the check can still fail.
@@ -2865,5 +2871,24 @@ bool MariaDBBackendConnection::check_ephemeral_sig(const GWBUF& ok_packet)
         }
     }
 
+    return rval;
+}
+
+bool MariaDBBackendConnection::connection_is_local()
+{
+    // Server is considered trusted if connection is through a local socket or loopback address.
+    bool rval = false;
+    if (m_dcb->ip().ss_family == AF_UNIX)
+    {
+        rval = true;
+    }
+    else
+    {
+        auto& remote = m_dcb->remote();
+        if (remote == "127.0.0.1" || remote == "::1")
+        {
+            rval = true;
+        }
+    }
     return rval;
 }
