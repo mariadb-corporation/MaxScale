@@ -11,9 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import SqlCommenter from '@/utils/SqlCommenter.js'
+import workspace from '@/composables/workspace'
 import { formatSQL } from '@/utils/queryUtils'
-import { watch } from 'vue'
 
 const props = defineProps({
   fields: { type: Array, required: true },
@@ -30,8 +29,6 @@ const SQL_EXPORT_OPTS = Object.freeze({
   BOTH: 'bothStructureAndData',
 })
 
-const sqlCommenter = new SqlCommenter()
-
 const { t } = useI18n()
 const typy = useTypy()
 const {
@@ -40,8 +37,8 @@ const {
   dateFormat,
 } = useHelpers()
 const logger = useLogger()
-
 const { validateRequired } = useValidationRule()
+const sqlCommenter = workspace.useSqlCommenter()
 
 const isFormValid = ref(false)
 const isConfigDialogOpened = ref(false)

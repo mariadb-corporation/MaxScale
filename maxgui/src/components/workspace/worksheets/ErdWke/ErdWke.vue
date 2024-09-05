@@ -18,7 +18,7 @@ import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 import workspaceService from '@wsServices/workspaceService'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
-import SqlCommenter from '@/utils/SqlCommenter.js'
+import workspace from '@/composables/workspace'
 import erdHelper from '@/utils/erdHelper'
 import { formatSQL } from '@/utils/queryUtils'
 
@@ -32,7 +32,6 @@ const scriptName = ref('')
 const scriptGeneratedTime = ref(null)
 const isFormValid = ref(true)
 
-const sqlCommenter = new SqlCommenter()
 const store = useStore()
 const typy = useTypy()
 const {
@@ -44,6 +43,7 @@ const {
   exportToJpeg,
   copyTextToClipboard,
 } = useHelpers()
+const sqlCommenter = workspace.useSqlCommenter()
 
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 const taskId = computed(() => props.wke.erd_task_id)
@@ -57,14 +57,14 @@ const erdTaskTmp = computed(() => ErdTaskTmp.find(taskId.value) || {})
 const erdTaskKey = computed(() => typy(erdTaskTmp.value, 'key').safeString)
 const nodeMap = computed(() => typy(erdTask.value, 'nodeMap').safeObjectOrEmpty)
 const nodes = computed(() => Object.values(nodeMap.value))
-const tables = computed(() => nodes.value.map(n => n.data))
-const schemas = computed(() => [...new Set(nodes.value.map(n => n.data.options.schema))])
+const tables = computed(() => nodes.value.map((n) => n.data))
+const schemas = computed(() => [...new Set(nodes.value.map((n) => n.data.options.schema))])
 const refTargetMap = computed(() => keyBy(erdHelper.genRefTargets(tables.value), 'id'))
 const tablesColNameMap = computed(() => erdHelper.createTablesColNameMap(tables.value))
 const activeEntityId = computed(() => typy(erdTaskTmp.value, 'active_entity_id').safeString)
 const graphHeightPct = computed({
   get: () => typy(erdTaskTmp.value, 'graph_height_pct').safeNumber,
-  set: v => ErdTaskTmp.update({ where: taskId.value, data: { graph_height_pct: v } }),
+  set: (v) => ErdTaskTmp.update({ where: taskId.value, data: { graph_height_pct: v } }),
 })
 const erGraphHeight = computed(() =>
   pctToPx({ pct: graphHeightPct.value, containerPx: props.ctrDim.height })
@@ -79,12 +79,7 @@ const minErdPct = computed(() =>
 )
 const maxErdPct = computed(() => 100 - minErdPct.value)
 const taskName = computed(() => props.wke.name)
-const conn = computed(
-  () =>
-    QueryConn.query()
-      .where('erd_task_id', taskId.value)
-      .first() || {}
-)
+const conn = computed(() => QueryConn.query().where('erd_task_id', taskId.value).first() || {})
 const connId = computed(() => typy(conn.value, 'id').safeString)
 
 function genScript() {
