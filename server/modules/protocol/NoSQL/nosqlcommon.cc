@@ -1912,6 +1912,13 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::types::bson_value
                                        << element_to_value(one_element, ValueFor::SQL, zDescription)
                                        << ")";
                                 }
+                                else
+                                {
+                                    ss << "OR (JSON_CONTAINS(";
+                                    ss << "JSON_EXTRACT(doc, '$." << p << "'), "
+                                       << element_to_value(one_element, ValueFor::JSON_NESTED, zDescription)
+                                       << ") = 1)";
+                                }
                             }
                             ss << ")";
                         }
@@ -1926,6 +1933,12 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::types::bson_value
                                 ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
                                    << element_to_value(one_element, ValueFor::SQL, zDescription)
                                    << ")";
+                            }
+                            else
+                            {
+                                ss << " OR (JSON_CONTAINS(doc, "
+                                   << element_to_value(one_element, ValueFor::JSON_NESTED, zDescription)
+                                   << ", '$." << field << "') = 1)";
                             }
                         }
                     }
