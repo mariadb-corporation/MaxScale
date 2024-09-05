@@ -331,6 +331,8 @@ private:
     std::string       m_datadir;
     cdc::Server       m_server;
 
+    mxb::Regex m_no_comments_re;
+
     std::unordered_map<std::string, int> m_versions;    // Table version numbers per identifier
 
     void handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
@@ -383,4 +385,6 @@ private:
     void do_add_column(const STable& create, Column c);
     void do_drop_column(const STable& create, const std::string& name);
     void do_change_column(const STable& create, const std::string& old_name);
+
+    void normalize_sql_string(std::string& str) const;
 };
