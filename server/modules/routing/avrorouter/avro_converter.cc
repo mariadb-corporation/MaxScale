@@ -316,10 +316,10 @@ void AvroConverter::column_double(const Table& create, int i, double value)
     avro_value_set_double(&m_field, value);
 }
 
-void AvroConverter::column_string(const Table& create, int i, const std::string& value)
+void AvroConverter::column_string(const Table& create, int i, std::string_view value)
 {
     set_active(create, i);
-    avro_value_set_string(&m_field, value.c_str());
+    avro_value_set_string_len(&m_field, value.data(), value.size());
 }
 
 void AvroConverter::column_bytes(const Table& create, int i, uint8_t* value, int len)

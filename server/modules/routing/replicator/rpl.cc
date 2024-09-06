@@ -1722,7 +1722,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                     uint64_t bytes = unpack_enum(ptr, &metadata[metadata_offset], val);
                     char strval[bytes * 2 + 1];
                     mxs::bin2hex(val, bytes, strval);
-                    conv->column_string(create, i, strval);
+                    conv->column_string(create, i, std::string_view(strval, bytes * 2));
                     MXB_INFO("[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
                     mxb_assert(ptr <= end);
@@ -1757,17 +1757,14 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
 
                     MXB_INFO("[%ld] %s: field: %d bytes, data: %d bytes", i,
                              mxb::upper_case_copy(create.columns[i].type).c_str(), field_length, bytes);
-                    char str[bytes + 1];
-                    memcpy(str, ptr, bytes);
-                    str[bytes] = '\0';
 
                     if (strcasecmp(create.columns[i].type.c_str(), "binary") == 0)
                     {
-                        conv->column_bytes(create, i, (uint8_t*)str, bytes);
+                        conv->column_bytes(create, i, ptr, bytes);
                     }
                     else
                     {
-                        conv->column_string(create, i, str);
+                        conv->column_string(create, i, std::string_view((const char*)ptr, bytes));
                     }
 
                     ptr += bytes;
@@ -1815,11 +1812,8 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                 }
 
                 MXB_INFO("[%ld] VARCHAR: field: %d bytes, data: %lu bytes", i, bytes, sz);
-                char buf[sz + 1];
-                memcpy(buf, ptr, sz);
-                buf[sz] = '\0';
+                conv->column_string(create, i, std::string_view((const char*)ptr, sz));
                 ptr += sz;
-                conv->column_string(create, i, buf);
                 mxb_assert(ptr <= end);
             }
             else if (column_is_blob(create.column_types[i]))

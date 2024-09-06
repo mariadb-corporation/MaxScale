@@ -320,12 +320,12 @@ public:
         }
     }
 
-    void column_string(const Table& create, int i, const std::string& value) override
+    void column_string(const Table& create, int i, std::string_view value) override
     {
         if (m_obj)
         {
             json_object_set_new(m_obj, create.columns[i].name.c_str(),
-                                make_string(value.c_str(), value.size()));
+                                make_string(value.data(), value.size()));
         }
     }
 

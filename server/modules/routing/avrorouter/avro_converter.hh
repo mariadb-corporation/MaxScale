@@ -61,7 +61,7 @@ public:
     void column_long(const Table& create, int i, int64_t value) override final;
     void column_float(const Table& create, int i, float value) override final;
     void column_double(const Table& create, int i, double value) override final;
-    void column_string(const Table& create, int i, const std::string& value) override final;
+    void column_string(const Table& create, int i, std::string_view value) override final;
     void column_bytes(const Table& create, int i, uint8_t* value, int len) override final;
     void column_null(const Table& create, int i) override final;
     bool needs_rotate(const Table& create) const override final;

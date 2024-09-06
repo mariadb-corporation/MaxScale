@@ -243,7 +243,7 @@ public:
     virtual void column_double(const Table& create, int i, double value) = 0;
 
     // String handler
-    virtual void column_string(const Table& create, int i, const std::string& value) = 0;
+    virtual void column_string(const Table& create, int i, std::string_view value) = 0;
 
     // Bytes handler
     virtual void column_bytes(const Table& create, int i, uint8_t* value, int len) = 0;
