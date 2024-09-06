@@ -1758,7 +1758,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                     MXB_INFO("[%ld] %s: field: %d bytes, data: %d bytes", i,
                              mxb::upper_case_copy(create.columns[i].type).c_str(), field_length, bytes);
 
-                    if (strcasecmp(create.columns[i].type.c_str(), "binary") == 0)
+                    if (create.columns[i].is_binary)
                     {
                         conv->column_bytes(create, i, ptr, bytes);
                     }

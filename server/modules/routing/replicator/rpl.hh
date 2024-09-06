@@ -115,6 +115,7 @@ struct Column
         , type(type)
         , length(length)
         , is_unsigned(is_unsigned)
+        , is_binary(strcasecmp(type.c_str(), "binary") == 0)
     {
     }
 
@@ -122,6 +123,7 @@ struct Column
     std::string type;
     int         length;
     bool        is_unsigned;
+    bool        is_binary;
     bool        first = false;
     std::string after;
 };
