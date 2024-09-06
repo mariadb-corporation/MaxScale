@@ -2930,7 +2930,6 @@ void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_row
 
 void MariaDBClientConnection::send_auth_ok(int sequence)
 {
-    mxb_assert(!m_session_data->user_search_settings.listener.passthrough_auth);
     if (m_dcb->ssl_enabled())
     {
         mxb_assert(m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
