@@ -219,7 +219,7 @@ maxbase::CompressionAlgorithm Config::compression_algorithm() const
 
 int32_t Config::number_of_noncompressed_files() const
 {
-    return m_number_of_noncompressed_files;
+    return std::max(1l, m_number_of_noncompressed_files);
 }
 
 const std::string& Config::key_id() const
