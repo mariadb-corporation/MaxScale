@@ -1092,11 +1092,12 @@ bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * @param dest Destination where the string is stored
  * @param len Size of destination
  */
-void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, char* dest, size_t len)
+std::pair<std::string, uint64_t> read_table_info(uint8_t* ptr, uint8_t post_header_len)
 {
-    uint64_t table_id = 0;
+    std::pair<std::string, uint64_t> rval;
+    auto& [ident, tbl_id] = rval;
     size_t id_size = post_header_len == 6 ? 4 : 6;
-    memcpy(&table_id, ptr, id_size);
+    memcpy(&tbl_id, ptr, id_size);
     ptr += id_size;
 
     uint16_t flags = 0;
@@ -1104,20 +1105,15 @@ void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, ch
     ptr += 2;
 
     uint8_t schema_name_len = *ptr++;
-    char schema_name[schema_name_len + 2];
 
-    /** Copy the NULL byte after the schema name */
-    memcpy(schema_name, ptr, schema_name_len + 1);
+    ident.assign((const char*)ptr, (const char*)ptr + schema_name_len);
+    ident += '.';
     ptr += schema_name_len + 1;
 
     uint8_t table_name_len = *ptr++;
-    char table_name[table_name_len + 2];
+    ident.append((const char*)ptr, table_name_len);
 
-    /** Copy the NULL byte after the table name */
-    memcpy(table_name, ptr, table_name_len + 1);
-
-    snprintf(dest, len, "%s.%s", schema_name, table_name);
-    *tbl_id = table_id;
+    return rval;
 }
 
 /**
@@ -1405,17 +1401,9 @@ uint64_t Table::map_table(uint8_t* ptr, uint8_t hdr_len)
     ptr += 2;
 
     uint8_t schema_name_len = *ptr++;
-    char schema_name[schema_name_len + 2];
-
-    /** Copy the NULL byte after the schema name */
-    memcpy(schema_name, ptr, schema_name_len + 1);
     ptr += schema_name_len + 1;
 
     uint8_t table_name_len = *ptr++;
-    char table_name[table_name_len + 2];
-
-    /** Copy the NULL byte after the table name */
-    memcpy(table_name, ptr, table_name_len + 1);
     ptr += table_name_len + 1;
 
     uint64_t column_count = mxq::leint_value(ptr);
@@ -1898,11 +1886,8 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
 bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 {
     bool rval = false;
-    uint64_t id;
-    char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
     int ev_len = m_event_type_hdr_lens[hdr->event_type];
-
-    read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident));
+    auto [table_ident, id] = read_table_info(ptr, ev_len);
 
     if (!table_matches(table_ident))
     {
@@ -1925,7 +1910,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
                 // Returns one row with the CREATE in the second field
                 auto sql = rset[0][1];
                 normalize_sql_string(sql);
-                parse_sql(sql, std::string(table_ident, strchr(table_ident, '.')));
+                parse_sql(sql, table_ident.substr(0, table_ident.find('.')));
                 create = m_created_tables.find(table_ident);
             }
             else if (int err = res.second->errnum())
@@ -1936,7 +1921,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
         }
         else
         {
-            MXB_ERROR("Failed to fetch CREATE for '%s': %s", table_ident,
+            MXB_ERROR("Failed to fetch CREATE for '%s': %s", table_ident.c_str(),
                       res.first.empty() ? res.second->error().c_str() : res.first.c_str());
         }
     }
@@ -1959,7 +1944,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
         MXB_WARNING("Table map event for table '%s' read before the DDL statement "
                     "for that table  was read. Data will not be processed for this "
                     "table until a DDL statement for it is read.",
-                    table_ident);
+                    table_ident.c_str());
     }
 
     return rval;
