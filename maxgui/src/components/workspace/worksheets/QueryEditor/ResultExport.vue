@@ -54,21 +54,25 @@ const csvCheckboxOpts = ref({ noBackslashEscapes: false, withHeaders: false })
 
 const chosenSqlOpt = ref(SQL_EXPORT_OPTS.BOTH)
 
-const fileFormats = computed(() => [
-  {
-    contentType: 'data:text/csv;charset=utf-8;',
-    extension: 'csv',
-  },
-  {
-    contentType: 'data:application/json;charset=utf-8;',
-    extension: 'json',
-  },
-  {
-    contentType: 'data:application/sql;charset=utf-8;',
-    extension: 'sql',
-    disabled: !props.exportAsSQL,
-  },
-])
+const fileFormats = computed(() =>
+  [
+    {
+      contentType: 'data:text/csv;charset=utf-8;',
+      extension: 'csv',
+    },
+    {
+      contentType: 'data:application/json;charset=utf-8;',
+      extension: 'json',
+    },
+  ].concat(
+    props.exportAsSQL
+      ? {
+          contentType: 'data:application/sql;charset=utf-8;',
+          extension: 'sql',
+        }
+      : []
+  )
+)
 const sqlExportOpts = computed(() =>
   Object.keys(SQL_EXPORT_OPTS).map((key) => ({
     title: t(SQL_EXPORT_OPTS[key]),
