@@ -324,7 +324,8 @@ public:
     {
         if (m_obj)
         {
-            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_string(value.c_str()));
+            json_object_set_new(m_obj, create.columns[i].name.c_str(),
+                                make_string(value.c_str(), value.size()));
         }
     }
 
@@ -333,7 +334,7 @@ public:
         if (m_obj)
         {
             json_object_set_new(m_obj, create.columns[i].name.c_str(),
-                                json_stringn_nocheck((const char*)value, len));
+                                make_string((const char*)value, len));
         }
     }
 
@@ -356,6 +357,22 @@ private:
         : m_config(config)
         , m_producer(std::move(producer))
     {
+    }
+
+    json_t* make_string(const char* value, size_t len)
+    {
+        json_t* js = json_stringn(value, len);
+
+        if (!js)
+        {
+            // If the creation of the string fails, it means the data is not valid UTF8. This almost
+            // always means that the value is some type of a binary string which is why it must be
+            // encoded as a hex value in order to be transported as JSON.
+            auto hexstr = mxb::to_hex((uint8_t*)value, (uint8_t*)value + len);
+            js = json_stringn(hexstr.c_str(), hexstr.size());
+        }
+
+        return js;
     }
 
     /**
