@@ -11,8 +11,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import workspace from '@/composables/workspace'
-import { formatSQL } from '@/utils/queryUtils'
+import {
+  CsvExporter,
+  JsonExporter,
+  SqlExporter,
+  SQL_EXPORT_OPTS,
+} from '@wkeComps/QueryEditor/resultExporter'
 
 const props = defineProps({
   fields: { type: Array, required: true },
@@ -22,30 +26,17 @@ const props = defineProps({
   metadata: { type: Array, required: true },
 })
 
-// values are used for i18n
-const SQL_EXPORT_OPTS = Object.freeze({
-  STRUCTURE: 'structure',
-  DATA: 'data',
-  BOTH: 'bothStructureAndData',
-})
-
 const { t } = useI18n()
 const typy = useTypy()
-const {
-  quotingIdentifier,
-  lodash: { uniq, keyBy },
-  dateFormat,
-} = useHelpers()
+const { dateFormat, escapeBackslashes } = useHelpers()
 const logger = useLogger()
 const { validateRequired } = useValidationRule()
-const sqlCommenter = workspace.useSqlCommenter()
 
 const isFormValid = ref(false)
 const isConfigDialogOpened = ref(false)
 const selectedFormat = ref(null)
 const excludedFieldIndexes = ref([])
 const fileName = ref('')
-// csv export options
 const csvOpts = ref({
   fieldsTerminatedBy: '',
   linesTerminatedBy: '',
@@ -82,15 +73,16 @@ const sqlExportOpts = computed(() =>
 )
 const selectedFields = computed(() =>
   props.fields.reduce((acc, field, i) => {
-    if (!excludedFieldIndexes.value.includes(i)) acc.push(field)
+    if (!excludedFieldIndexes.value.includes(i)) acc.push({ value: field, index: i })
     return acc
   }, [])
 )
 const totalSelectedFields = computed(() => selectedFields.value.length)
 const selectedFieldsLabel = computed(() => {
+  const firstSelectedField = typy(selectedFields.value, '[0].value').safeString
   if (totalSelectedFields.value > 1)
-    return `${selectedFields.value[0]} (+${totalSelectedFields.value - 1} others)`
-  return selectedFields.value.join(', ')
+    return `${firstSelectedField} (+${totalSelectedFields.value - 1} others)`
+  return firstSelectedField
 })
 const selectedFieldsErrMsg = computed(() =>
   totalSelectedFields.value ? '' : t('errors.requiredField')
@@ -112,6 +104,7 @@ function assignDefOpt() {
 }
 
 /**
+ * For CSV option inputs
  * Input entered by the user is escaped automatically.
  * As the result, if the user enters \t, it is escaped as \\t. However, here
  * we allow the user to add the custom line | fields terminator, so when the user
@@ -120,11 +113,11 @@ function assignDefOpt() {
  * to unescaped inputs
  * @param {String} v - users utf8 input
  */
-function unescapedUserInput(v) {
+function unescapedTerminatedChar(v) {
   try {
     let str = v
     // if user enters \\, escape it again so it won't be removed when it is parsed by JSON.parse
-    if (str.includes('\\\\')) str = escapeForCSV(str)
+    if (str.includes('\\\\')) str = escapeBackslashes(str)
     return JSON.parse(
       '"' +
         str.replace(/"/g, '\\"') + // escape " to prevent json syntax errors
@@ -136,124 +129,30 @@ function unescapedUserInput(v) {
 }
 
 /**
- * @param {(String|Number)} v field value
- * @returns {(String|Number)} returns escape value
- */
-function escapeForCSV(v) {
-  // NULL is returned as js null in the query result.
-  if (typy(v).isNull) return csvOpts.value.nullReplacedBy
-  if (typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
-  return v
-}
-
-function escapeForSQL(v) {
-  if (typy(v).isNull) return 'NULL'
-  if (typy(v).isString) return `'${v.replace(/'/g, "''")}'`
-  return v
-}
-
-function getValues({ row, escaper }) {
-  return row.reduce((acc, field, fieldIdx) => {
-    if (!excludedFieldIndexes.value.includes(fieldIdx)) acc.push(escaper(field))
-    return acc
-  }, [])
-}
-
-function buildColDef({ colName, colsMetadataMap }) {
-  const { type, length } = colsMetadataMap[colName]
-  const tokens = [quotingIdentifier(colName), type]
-  if (length) tokens.push(`(${length})`)
-  return tokens.join(' ')
-}
-
-function genTableCreationScript(identifier) {
-  const colsMetadataMap = keyBy(props.metadata, 'name')
-  const tokens = ['CREATE TABLE', `${identifier}`, '(']
-  selectedFields.value.forEach((colName, i) => {
-    tokens.push(
-      `${buildColDef({ colName, colsMetadataMap })}${
-        i < selectedFields.value.length - 1 ? ',' : ''
-      }`
-    )
-  })
-  tokens.push(');')
-  return sqlCommenter.genSection('Create') + '\n' + tokens.join(' ')
-}
-
-function genInsertionScript(identifier) {
-  const fields = selectedFields.value.map((f) => quotingIdentifier(f)).join(', ')
-  const insertionSection = `${sqlCommenter.genSection('Insert')}\n`
-  if (!props.rows.length) return insertionSection
-  return (
-    insertionSection +
-    `INSERT INTO ${identifier} (${fields}) VALUES` +
-    props.rows.map((row) => `(${getValues({ row, escaper: escapeForSQL }).join(',')})`).join(',')
-  )
-}
-
-function toCsv() {
-  const fieldsTerminatedBy = unescapedUserInput(csvOpts.value.fieldsTerminatedBy)
-  const linesTerminatedBy = unescapedUserInput(csvOpts.value.linesTerminatedBy)
-  let str = ''
-  if (csvOpts.value.withHeaders) {
-    const fields = selectedFields.value.map((field) => escapeForCSV(field))
-    str = `${fields.join(fieldsTerminatedBy)}${linesTerminatedBy}`
-  }
-  str += props.rows
-    .map((row) => getValues({ row, escaper: escapeForCSV }).join(fieldsTerminatedBy))
-    .join(linesTerminatedBy)
-
-  return `${str}${linesTerminatedBy}`
-}
-
-function toJson() {
-  const arr = []
-  for (let i = 0; i < props.rows.length; ++i) {
-    const obj = {}
-    for (const [n, field] of props.fields.entries()) {
-      if (!excludedFieldIndexes.value.includes(n)) obj[`${field}`] = props.rows[i][n]
-    }
-    arr.push(obj)
-  }
-  return JSON.stringify(arr)
-}
-
-function toSql() {
-  const { STRUCTURE, DATA } = SQL_EXPORT_OPTS
-
-  const tblNames = uniq(props.metadata.map((item) => item.table))
-  // e.g. employees_departments if the resultSet is from a join query
-  const identifier = quotingIdentifier(tblNames.join('_'))
-
-  let script = ''
-
-  switch (chosenSqlOpt.value) {
-    case STRUCTURE:
-      script = genTableCreationScript(identifier)
-      break
-    case DATA:
-      script = genInsertionScript(identifier)
-      break
-    default:
-      script = genTableCreationScript(identifier) + '\n' + genInsertionScript(identifier)
-      break
-  }
-  const { content } = sqlCommenter.genHeader()
-  return `${content}\n\n${formatSQL(script)}`
-}
-
-/**
  * @param {string} fileExtension
  * @return {string}
  */
 function getData(fileExtension) {
+  const data = { fields: selectedFields.value, data: props.rows }
   switch (fileExtension) {
     case 'json':
-      return toJson()
+      return new JsonExporter(data).export()
     case 'csv':
-      return toCsv()
+      return new CsvExporter({
+        ...data,
+        opts: {
+          fieldsTerminatedBy: unescapedTerminatedChar(csvOpts.value.fieldsTerminatedBy),
+          linesTerminatedBy: unescapedTerminatedChar(csvOpts.value.linesTerminatedBy),
+          nullReplacedBy: csvOpts.value.nullReplacedBy,
+          withHeaders: csvOpts.value.withHeaders,
+        },
+      }).export()
     case 'sql':
-      return toSql()
+      return new SqlExporter({
+        ...data,
+        metadata: props.metadata,
+        opt: chosenSqlOpt.value,
+      }).export()
   }
 }
 

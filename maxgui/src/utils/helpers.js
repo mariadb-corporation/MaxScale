@@ -390,9 +390,18 @@ export function unquoteIdentifier(identifier) {
   return identifier.slice(1, -1).replace(new RegExp(quoteMark + quoteMark, 'g'), quoteMark)
 }
 
-export function escapeSingleQuote(str) {
-  if (!typy(str).isString) return str
-  return str.replace(/'/g, "\\'")
+export function escapeSingleQuote(v) {
+  if (!typy(v).isString) return v
+  return v.replace(/'/g, "\\'")
+}
+
+/**
+ * @param {string} v
+ * @returns {string}
+ */
+export function escapeBackslashes(v) {
+  if (!typy(v).isString) return v
+  return v.replace(/\\/g, '\\\\') // replace \ with \\
 }
 /**
  * @param {Array} payload.fields - fields
