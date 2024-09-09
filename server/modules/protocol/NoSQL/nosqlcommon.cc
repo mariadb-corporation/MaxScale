@@ -1874,6 +1874,8 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::types::bson_value
 
                 default:
                     {
+                        string v = element_to_value(one_element, ValueFor::JSON_NESTED, zDescription);
+
                         if (is_scoped)
                         {
                             string path;
@@ -1898,7 +1900,7 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::types::bson_value
                                 {
                                     ss << "(JSON_CONTAINS(";
                                     ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
-                                       << element_to_value(one_element, ValueFor::JSON_NESTED, zDescription)
+                                       << v
                                        << ")) = 1)";
                                 }
                                 else
@@ -1909,8 +1911,15 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::types::bson_value
                                 if (one_element.type() != bsoncxx::type::k_document)
                                 {
                                     ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
-                                       << element_to_value(one_element, ValueFor::SQL, zDescription)
+                                       << v
                                        << ")";
+                                }
+                                else
+                                {
+                                    ss << "OR (JSON_CONTAINS(";
+                                    ss << "JSON_EXTRACT(doc, '$." << p << "'), "
+                                       << v
+                                       << ") = 1)";
                                 }
                             }
                             ss << ")";
@@ -1918,14 +1927,20 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::types::bson_value
                         else
                         {
                             ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
-                               << element_to_value(one_element, ValueFor::JSON_NESTED, zDescription)
+                               << v
                                << "), '$." << field << "') = 1)";
 
                             if (one_element.type() != bsoncxx::type::k_document)
                             {
                                 ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
-                                   << element_to_value(one_element, ValueFor::SQL, zDescription)
+                                   << v
                                    << ")";
+                            }
+                            else
+                            {
+                                ss << " OR (JSON_CONTAINS(doc, "
+                                   << v
+                                   << ", '$." << field << "') = 1)";
                             }
                         }
                     }

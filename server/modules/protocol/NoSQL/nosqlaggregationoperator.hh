@@ -450,6 +450,22 @@ public:
 };
 
 /**
+ * In
+ */
+class In : public MultiExpressionOperator<In>
+{
+public:
+    static constexpr const char* const NAME = "$in";
+
+    In(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * IsArray
  */
 class IsArray : public SingleExpressionOperator<IsArray>

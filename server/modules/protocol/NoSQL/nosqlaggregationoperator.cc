@@ -59,6 +59,7 @@ map<string, CreatorEntry, less<>> operators =
     NOSQL_OPERATOR(Floor),
     NOSQL_OPERATOR(Gt),
     NOSQL_OPERATOR(Gte),
+    NOSQL_OPERATOR(In),
     NOSQL_OPERATOR(IfNull),
     NOSQL_OPERATOR(IsArray),
     NOSQL_OPERATOR(IsNumber),
@@ -2044,6 +2045,39 @@ bsoncxx::types::bson_value::value IfNull::process(bsoncxx::document::view doc)
     auto condition = m_ops[0]->process(doc);
 
     return nobson::is_null(condition) || nobson::is_undefined(condition) ? m_ops[1]->process(doc) : condition;
+}
+
+/**
+ * In
+ */
+
+bsoncxx::types::bson_value::value In::process(bsoncxx::document::view doc)
+{
+    BsonValue needle = m_ops[0]->process(doc);
+    BsonValue value = m_ops[1]->process(doc);
+
+    auto type = value.view().type();
+    if (type != bsoncxx::type::k_array)
+    {
+        stringstream serr;
+        serr << "$in requires an array as a second argument, found: " << bsoncxx::to_string(type);
+        throw SoftError(serr.str(), error::LOCATION40081);
+    }
+
+    bsoncxx::array::view haystack = value.view().get_array();
+
+    bool rv = false;
+
+    for (const auto& element : haystack)
+    {
+        if (element == needle)
+        {
+            rv = true;
+            break;
+        }
+    }
+
+    return BsonValue(rv);
 }
 
 /**
