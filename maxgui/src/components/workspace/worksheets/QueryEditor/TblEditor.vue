@@ -59,6 +59,7 @@ const stagingData = computed({
   set: (v) =>
     QueryTabTmp.update({ where: props.queryTab.id, data: { alter_editor_staging_data: v } }),
 })
+const initialData = computed(() => (isCreating.value ? {} : persistentData.value))
 const data = computed({
   get: () => (isCreating.value ? persistentData.value : stagingData.value),
   set: (v) => {
@@ -75,6 +76,7 @@ const nonSystemSchemas = computed(() =>
 const schema = computed(() => typy(data.value, 'options.schema').safeString)
 const lookupTables = computed(() => ({ [data.value.id]: data.value }))
 const skipSchemaCreation = computed(() => nonSystemSchemas.value.includes(schema.value))
+const connData = computed(() => ({ id: connId.value, config: activeRequestConfig.value }))
 
 watch(
   isFetchingData,
@@ -92,22 +94,7 @@ watch(
 watch(
   schema,
   debounce(async (v) => {
-    if (v) {
-      const tblNames = await queryTblIdentifiers({
-        connId: connId.value,
-        config: activeRequestConfig.value,
-        schemaName: v,
-      })
-      hintedRefTargets.value = tblNames.map((name) => {
-        const qualifiedName = `${quotingIdentifier(v)}.${quotingIdentifier(name)}`
-        return {
-          id: `${UNPARSED_TBL_PLACEHOLDER}${qualifiedName}`,
-          text: qualifiedName,
-          name,
-          schema: v,
-        }
-      })
-    }
+    if (v) await updateNewHintedRefTargets(v)
   }, 1000),
   { immediate: true }
 )
@@ -119,6 +106,31 @@ onMounted(
       config: activeRequestConfig.value,
     })
 )
+
+async function updateNewHintedRefTargets(schema) {
+  const tblNames = await queryTblIdentifiers({
+    connId: connId.value,
+    config: activeRequestConfig.value,
+    schemaName: schema,
+  })
+  hintedRefTargets.value = tblNames.map((name) => {
+    const qualifiedName = `${quotingIdentifier(schema)}.${quotingIdentifier(name)}`
+    return {
+      id: `${UNPARSED_TBL_PLACEHOLDER}${qualifiedName}`,
+      text: qualifiedName,
+      name,
+      schema,
+    }
+  })
+}
+
+/**
+ * After successfully altering the table, store the stagingData to persistentData
+ * Skip for creation mode because the data is always up to date.
+ */
+function handleUpdatePersistentData() {
+  if (!isCreating.value) persistentData.value = cloneDeep(stagingData.value)
+}
 /**
  * Execute script for altering or creating a table.
  */
@@ -127,10 +139,7 @@ async function onExecute() {
     connId: connId.value,
     schema: persistentData.value.options.schema,
     name: persistentData.value.options.name,
-    successCb: () => {
-      // alter successfully altering the table, store the stagingData to persistentData
-      if (!isCreating.value) persistentData.value = cloneDeep(stagingData.value)
-    },
+    successCb: handleUpdatePersistentData,
   })
 }
 </script>
@@ -146,10 +155,10 @@ async function onExecute() {
       v-model="data"
       v-model:activeSpec="activeSpec"
       :dim="dim"
-      :initialData="isCreating ? {} : persistentData"
+      :initialData="initialData"
       :isCreating="isCreating"
       :skipSchemaCreation="skipSchemaCreation"
-      :connData="{ id: connId, config: activeRequestConfig }"
+      :connData="connData"
       :onExecute="onExecute"
       :lookupTables="lookupTables"
       :hintedRefTargets="hintedRefTargets"
