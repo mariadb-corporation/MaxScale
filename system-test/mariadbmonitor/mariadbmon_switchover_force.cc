@@ -112,7 +112,7 @@ void test_main(TestConnections& test)
                 mxs.wait_for_monitor();
                 auto rwsplit_conn = mxs.open_rwsplit_connection2_nodb();
                 rwsplit_conn->cmd("flush tables;");
-                sleep(1);
+                mxs.sleep_and_wait_for_monitor(2, 1);
                 auto servers = mxs.get_servers();
                 auto master_gtid = servers.get(0).gtid;
                 auto slave_gtid = servers.get(1).gtid;
@@ -122,7 +122,7 @@ void test_main(TestConnections& test)
                 {
                     test.tprintf("Replication delay set.");
                     servers.print();
-                    test.tprintf("Sleeping 5s so that slave is > 5s behing master.");
+                    test.tprintf("Sleeping 5s so that slave is > 5s behind master.");
                     sleep(5);
                     test.tprintf("Trying normal switchover, it should fail immediately as replication "
                                  "delay is too high.");
@@ -149,8 +149,8 @@ void test_main(TestConnections& test)
                         auto dur_s = mxb::to_secs(timer.lap());
                         double dur_s_expected = 4.9;
                         test.expect(dur_s > dur_s_expected,
-                                    "Normal switchover only waited %.1f seconds when %.1f was expected.",
-                                    dur_s, dur_s_expected);
+                                    "Forced switchover only waited %.1f seconds when %.1f or more was "
+                                    "expected.", dur_s, dur_s_expected);
                     }
                 }
             }
