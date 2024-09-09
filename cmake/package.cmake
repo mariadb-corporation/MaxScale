@@ -47,10 +47,10 @@ This package contains experimental and community contributed modules for MariaDB
 MaxScale. The packages are not fully supported parts of MaxScale and should be
 considered as alpha quality software.")
 
-# If we're building something other than the main package, append the target name
-# to the package name.
-
-set(CPACK_PACKAGE_NAME "${PACKAGE_NAME}")
+# Set the default package name to "maxscale", this way the source tarball has
+# the correct name. The RPM and DEB packages set the package name for each
+# component separately.
+set(CPACK_PACKAGE_NAME "maxscale")
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
