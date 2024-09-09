@@ -177,7 +177,14 @@ function onExport() {
 </script>
 
 <template>
-  <TooltipBtn square variant="text" size="small" color="primary" @click="openConfigDialog">
+  <TooltipBtn
+    square
+    variant="text"
+    size="small"
+    color="primary"
+    data-test="download-btn"
+    @click="openConfigDialog"
+  >
     <template #btn-content>
       <VIcon size="16" icon="$mdiDownload" />
       <BaseDlg
