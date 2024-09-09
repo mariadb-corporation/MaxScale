@@ -39,6 +39,7 @@ void test_main(TestConnections& test)
         cmd("sudo mkdir -p ", cnf.build_root, " ", build_dir);
         cmd("sudo chmod -R a+rw ", cnf.build_root);
         cmd("git clone --depth=1 --branch=", cnf.branch, " ", cnf.repo, " ", src_dir);
+        cmd("cd ", src_dir, " && git submodule update --init");
         cmd(src_dir, "/BUILD/install_build_deps.sh");
         cmd("cd ", build_dir,
             " && cmake ", src_dir, " ", cnf.cmake_flags,
