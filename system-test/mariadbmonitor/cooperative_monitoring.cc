@@ -38,24 +38,16 @@ MonitorInfo monitors[] = {
     {MonitorID::ONE_B,   "MariaDB-Monitor1B"},
     {MonitorID::TWO_A,   "MariaDB-Monitor2A"},
     {MonitorID::TWO_B,   "MariaDB-Monitor2B"},
-    {MonitorID::UNKNOWN, "none",            },
+    {MonitorID::UNKNOWN, "none"             },
 };
 
 const int failover_mon_ticks = 6;
 const int mxs_switch_ticks = 6;
-}
 
 const MonitorInfo* get_primary_monitor(TestConnections& test);
-
 void test_failover(TestConnections& test, MaxScale& maxscale);
 bool release_monitor_locks(TestConnections& test, const MonitorInfo& mon_info);
-void test_main(TestConnections& test);
-
-int main(int argc, char* argv[])
-{
-    TestConnections test;
-    return test.run_test(argc, argv, test_main);
-}
+void ensure_primary_monitor(TestConnections& test, const MonitorInfo& primary_monitor);
 
 void test_main(TestConnections& test)
 {
@@ -71,14 +63,14 @@ void test_main(TestConnections& test)
     monitors[1].maxscale = &mxs1;
     monitors[2].maxscale = &mxs2;
     monitors[3].maxscale = &mxs2;
-    mxs1.wait_for_monitor(mxs_switch_ticks);
-    mxs2.wait_for_monitor(mxs_switch_ticks);
+
+    test.tprintf("Starting MaxScales. MariaDB-Monitor1A should acquire server locks.");
+    auto* primary_mon1 = &monitors[0];
+    ensure_primary_monitor(test, *primary_mon1);
 
     mxs1.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     mxs2.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
-    // Should have just one primary monitor.
-    const auto* primary_mon1 = get_primary_monitor(test);
     if (test.ok())
     {
         // Test a normal failover.
@@ -158,18 +150,10 @@ void test_main(TestConnections& test)
         // MXS-4902
         test.tprintf("Test that all manual commands fail on a monitor which does not have locks. Restart "
                      "both MaxScales to clear any lock release timeouts.");
-        mxs1.stop();
-        mxs2.stop();
-        mxs2.start();
-        // Locks can get split between two monitors so wait before starting mxs1.
-        const MonitorInfo* primary_mon = get_primary_monitor(test);
+        auto* primary_mon = &monitors[2];
+        ensure_primary_monitor(test, *primary_mon);
 
-        mxs1.start();
-        mxs1.wait_for_monitor();
-
-        // MaxScale2 should (still) have the locks. Check that monitor MariaDB-Monitor1A is secondary.
-        primary_mon = get_primary_monitor(test);
-        if (primary_mon && primary_mon->id != MonitorID::ONE_A)
+        if (test.ok())
         {
             auto try_manual_command = [&](const char* cmdname, const char* opts) {
                 string total_cmd = mxb::string_printf("call command mariadbmon %s MariaDB-Monitor1A %s 2>&1",
@@ -225,6 +209,45 @@ bool release_monitor_locks(TestConnections& test, const MonitorInfo& mon_info)
     return success;
 }
 
+void ensure_primary_monitor(TestConnections& test, const MonitorInfo& primary_monitor)
+{
+    auto* mxs1 = test.maxscale;
+    auto* mxs2 = test.maxscale2;
+    mxs1->stop();
+    mxs2->stop();
+    auto* primary_mxs = primary_monitor.maxscale;
+    auto* other_mxs = primary_mxs == mxs1 ? mxs2 : mxs1;
+
+    primary_mxs->start();
+    // Ensure the correct monitor gets locks by restarting monitors in order.
+    const MonitorInfo* other_monitor = nullptr;
+    for (int i = 0; monitors[i].maxscale; i++)
+    {
+        auto& mon_info = monitors[i];
+        if (mon_info.maxscale == primary_mxs)
+        {
+            primary_mxs->maxctrl(mxb::string_printf("stop monitor %s", mon_info.name.c_str()));
+            if (mon_info.id != primary_monitor.id)
+            {
+                other_monitor = &mon_info;
+            }
+        }
+    }
+    sleep(1);
+    const char start_mon_fmt[] = "start monitor %s";
+    primary_mxs->maxctrl(mxb::string_printf(start_mon_fmt, primary_monitor.name.c_str()));
+    primary_mxs->sleep_and_wait_for_monitor(1, 1);
+    primary_mxs->maxctrl(mxb::string_printf(start_mon_fmt, other_monitor->name.c_str()));
+    primary_mxs->wait_for_monitor(1);
+
+    other_mxs->start_maxscale();
+    other_mxs->wait_for_monitor(1);
+
+    auto primary_mon = get_primary_monitor(test);
+    test.expect(primary_mon->id == primary_monitor.id, "Wrong primary monitor. Got %i, expected %i.",
+                primary_mon->id, primary_monitor.id);
+}
+
 void test_failover(TestConnections& test, MaxScale& maxscale)
 {
     // Test a normal failover.
@@ -248,4 +271,12 @@ void test_failover(TestConnections& test, MaxScale& maxscale)
         test.repl->start_node(master_node);
         maxscale.wait_for_monitor(failover_mon_ticks);      // wait for rejoin, assume it works
     }
+}
+}
+
+int main(int argc, char* argv[])
+{
+    TestConnections test;
+    TestConnections::skip_maxscale_start(true);
+    return test.run_test(argc, argv, test_main);
 }
