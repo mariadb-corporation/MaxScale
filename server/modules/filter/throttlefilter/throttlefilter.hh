@@ -52,7 +52,8 @@ struct ThrottleConfig : public mxs::config::Configuration
 class ThrottleFilter : public mxs::Filter
 {
 public:
-    static ThrottleFilter* create(const char* zName);
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
+    ThrottleFilter(const char* name);
     ThrottleFilter(const ThrottleFilter&) = delete;
     ThrottleFilter& operator=(const ThrottleFilter&) = delete;
 
@@ -69,9 +70,8 @@ public:
 
     const ThrottleConfig& config() const;
     void                  sessionClose(ThrottleSession* session);
-private:
-    ThrottleFilter(const char* name);
 
+private:
     ThrottleConfig m_config;
 };
 }   // throttle

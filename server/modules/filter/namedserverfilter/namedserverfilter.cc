@@ -571,9 +571,9 @@ mxs::config::Configuration& RegexHintFilter::getConfiguration()
  *
  * @return The new instance or null on error
  */
-RegexHintFilter* RegexHintFilter::create(const char* name)
+std::unique_ptr<mxs::Filter> RegexHintFilter::create(const char* name)
 {
-    return new RegexHintFilter(name);
+    return std::make_unique<RegexHintFilter>(name);
 }
 
 /**

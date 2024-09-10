@@ -29,9 +29,9 @@
 mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::FILTER);
 
 // static
-HintInstance* HintInstance::create(const char* zName)
+std::unique_ptr<mxs::Filter> HintInstance::create(const char* zName)
 {
-    return new HintInstance(zName);
+    return std::make_unique<HintInstance>(zName);
 }
 
 HintInstance::HintInstance(const char* zName)

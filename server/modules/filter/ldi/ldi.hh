@@ -26,6 +26,8 @@ public:
     LDI(const LDI&) = delete;
     LDI& operator=(const LDI&) = delete;
 
+    LDI(const std::string& name);
+
     class Config : public mxs::config::Configuration
     {
     public:
@@ -57,7 +59,7 @@ public:
         mxs::WorkerGlobal<Values> m_values;
     };
 
-    static LDI* create(const char* zName);
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
@@ -77,7 +79,6 @@ public:
 
 private:
     friend class LDISession;
-    LDI(const std::string& name);
 
 private:
     Config m_config;

@@ -39,7 +39,6 @@ public:
         Instance(const Instance&);
         Instance& operator=(const Instance&);
     public:
-        ~Instance();
 
         /**
          * Create a new filter session.
@@ -54,24 +53,24 @@ public:
     private:
         friend class FilterModule;
 
-        Instance(FilterModule* pModule, mxs::Filter* pInstance);
+        Instance(FilterModule* pModule, std::unique_ptr<mxs::Filter> sInstance);
 
     private:
         friend class Session;
 
         bool routeQuery(mxs::Routable* pFilter_session, GWBUF&& statement)
         {
-            return m_module.routeQuery(m_pInstance, pFilter_session, std::move(statement));
+            return m_module.routeQuery(pFilter_session, std::move(statement));
         }
 
         bool clientReply(mxs::Routable* pFilter_session, GWBUF&& statement, const mxs::Reply& reply)
         {
-            return m_module.clientReply(m_pInstance, pFilter_session, std::move(statement), reply);
+            return m_module.clientReply(pFilter_session, std::move(statement), reply);
         }
 
     private:
-        FilterModule& m_module;
-        mxs::Filter*  m_pInstance;
+        FilterModule&                m_module;
+        std::unique_ptr<mxs::Filter> m_sInstance;
     };
 
     class Session
@@ -124,11 +123,6 @@ public:
 private:
     friend class Instance;
 
-    void destroyInstance(mxs::Filter* pInstance)
-    {
-        delete pInstance;
-    }
-
     std::shared_ptr<mxs::FilterSession> newSession(mxs::Filter* pInstance,
                                                    MXS_SESSION* pSession,
                                                    SERVICE* pService)
@@ -136,13 +130,12 @@ private:
         return pInstance->newSession(pSession, pService);
     }
 
-    bool routeQuery(mxs::Filter* pInstance, mxs::Routable* pFilter_session, GWBUF&& statement)
+    bool routeQuery(mxs::Routable* pFilter_session, GWBUF&& statement)
     {
         return pFilter_session->routeQuery(std::move(statement));
     }
 
-    bool clientReply(mxs::Filter* pInstance,
-                     mxs::Routable* pFilter_session,
+    bool clientReply(mxs::Routable* pFilter_session,
                      GWBUF&& statement,
                      const mxs::Reply& reply)
     {

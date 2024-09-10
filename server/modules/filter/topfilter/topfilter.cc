@@ -176,9 +176,14 @@ private:
 class TopFilter : public mxs::Filter
 {
 public:
-    static TopFilter* create(const std::string& name)
+    TopFilter(const std::string& name)
+        : m_config(name)
     {
-        return new TopFilter(name);
+    }
+
+    static std::unique_ptr<mxs::Filter> create(const std::string& name)
+    {
+        return std::make_unique<TopFilter>(name);
     }
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override
@@ -212,11 +217,6 @@ public:
     }
 
 private:
-    TopFilter(const std::string& name)
-        : m_config(name)
-    {
-    }
-
     Config m_config;
 };
 

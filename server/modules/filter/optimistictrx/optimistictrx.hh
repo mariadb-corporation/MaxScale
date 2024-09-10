@@ -72,9 +72,11 @@ public:
     OptimisticTrx(const OptimisticTrx&) = delete;
     OptimisticTrx& operator=(const OptimisticTrx&) = delete;
 
-    static OptimisticTrx* create(const char* name)
+    OptimisticTrx(const std::string& name);
+
+    static std::unique_ptr<mxs::Filter> create(const char* name)
     {
-        return new OptimisticTrx(name);
+        return std::make_unique<OptimisticTrx>(name);
     }
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override
@@ -110,8 +112,6 @@ public:
     }
 
 private:
-    OptimisticTrx(const std::string& name);
-
     mxs::config::Configuration m_config;
     std::atomic<int64_t>       m_success{0};
     std::atomic<int64_t>       m_rollback{0};

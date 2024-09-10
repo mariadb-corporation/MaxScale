@@ -95,9 +95,9 @@ LDI::LDI(const std::string& name)
 }
 
 // static
-LDI* LDI::create(const char* zName)
+std::unique_ptr<mxs::Filter> LDI::create(const char* zName)
 {
-    return new LDI(zName);
+    return std::make_unique<LDI>(zName);
 }
 
 

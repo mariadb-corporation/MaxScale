@@ -33,7 +33,7 @@ class FilterDef : public MXS_FILTER_DEF
                 , public mxs::ConfigState
 {
 public:
-    FilterDef(std::string name, std::string module, mxs::Filter* instance);
+    FilterDef(std::string name, std::string module, std::unique_ptr<mxs::Filter> instance);
     ~FilterDef();
 
     const char* name() const

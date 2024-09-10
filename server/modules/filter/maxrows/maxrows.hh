@@ -74,8 +74,14 @@ public:
 
     static constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING;
 
+    MaxRows(const char* name)
+        : m_name(name)
+        , m_config(name)
+    {
+    }
+
     // Creates a new filter instance
-    static MaxRows* create(const char* name);
+    static std::unique_ptr<mxs::Filter> create(const char* name);
 
     // Creates a new session for this filter
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override
@@ -109,13 +115,6 @@ public:
     const Config& config() const
     {
         return m_config;
-    }
-
-private:
-    MaxRows(const char* name)
-        : m_name(name)
-        , m_config(name)
-    {
     }
 
 private:

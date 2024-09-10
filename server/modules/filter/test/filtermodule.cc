@@ -32,17 +32,13 @@ unique_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zFil
 {
     unique_ptr<Instance> sInstance;
 
-    mxs::Filter* pFilter = m_pApi->createInstance(zFilter_name);
+    std::unique_ptr<mxs::Filter> sFilter = m_pApi->createInstance(zFilter_name);
 
-    if (pFilter)
+    if (sFilter)
     {
-        if (pFilter->getConfiguration().configure(*pParameters))
+        if (sFilter->getConfiguration().configure(*pParameters))
         {
-            sInstance.reset(new Instance(this, pFilter));
-        }
-        else
-        {
-            delete pFilter;
+            sInstance.reset(new Instance(this, std::move(sFilter)));
         }
     }
 
@@ -53,15 +49,10 @@ unique_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zFil
 // FilterModule::Instance
 //
 
-FilterModule::Instance::Instance(FilterModule* pModule, mxs::Filter* pInstance)
+FilterModule::Instance::Instance(FilterModule* pModule, std::unique_ptr<mxs::Filter> sInstance)
     : m_module(*pModule)
-    , m_pInstance(pInstance)
+    , m_sInstance(std::move(sInstance))
 {
-}
-
-FilterModule::Instance::~Instance()
-{
-    m_module.destroyInstance(m_pInstance);
 }
 
 unique_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* pSession,
@@ -71,7 +62,7 @@ unique_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION
 {
     unique_ptr<Session> sFilter_session;
 
-    auto pFilter_session = m_module.newSession(m_pInstance, pSession, pService);
+    auto pFilter_session = m_module.newSession(m_sInstance.get(), pSession, pService);
 
     if (pFilter_session)
     {

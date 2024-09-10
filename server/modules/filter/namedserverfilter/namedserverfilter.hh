@@ -58,7 +58,7 @@ public:
 
     RegexHintFilter(const std::string& name);
 
-    static RegexHintFilter*             create(const char* zName);
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
     json_t*                             diagnostics() const override;
     uint64_t                            getCapabilities() const override;

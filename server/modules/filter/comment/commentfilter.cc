@@ -57,9 +57,9 @@ CommentFilter::CommentFilter(const std::string& name)
 }
 
 // static
-CommentFilter* CommentFilter::create(const char* zName)
+std::unique_ptr<mxs::Filter> CommentFilter::create(const char* zName)
 {
-    return new CommentFilter(zName);
+    return std::make_unique<CommentFilter>(zName);
 }
 
 std::shared_ptr<mxs::FilterSession> CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)

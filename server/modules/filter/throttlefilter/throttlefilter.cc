@@ -82,9 +82,9 @@ ThrottleFilter::ThrottleFilter(const char* name)
 {
 }
 
-ThrottleFilter* ThrottleFilter::create(const char* zName)
+std::unique_ptr<mxs::Filter> ThrottleFilter::create(const char* zName)
 {
-    return new ThrottleFilter(zName);
+    return std::make_unique<ThrottleFilter>(zName);
 }
 
 std::shared_ptr<mxs::FilterSession> ThrottleFilter::newSession(MXS_SESSION* mxsSession, SERVICE* service)

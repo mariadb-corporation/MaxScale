@@ -58,9 +58,11 @@ public:
     PsReuse(const PsReuse&) = delete;
     PsReuse& operator=(const PsReuse&) = delete;
 
-    static PsReuse* create(const char* name)
+    PsReuse(const std::string& name);
+
+    static std::unique_ptr<mxs::Filter> create(const char* name)
     {
-        return new PsReuse(name);
+        return std::make_unique<PsReuse>(name);
     }
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override
@@ -96,8 +98,6 @@ public:
     }
 
 private:
-    PsReuse(const std::string& name);
-
     mxs::config::Configuration m_config;
     std::atomic<int64_t>       m_hits{0};
     std::atomic<int64_t>       m_misses{0};

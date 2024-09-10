@@ -199,9 +199,14 @@ class CCRFilter : public mxs::Filter
 public:
     friend class CCRSession;    // Session needs to access & modify data in filter object
 
-    static CCRFilter* create(const char* name)
+    static std::unique_ptr<mxs::Filter> create(const char* name)
     {
-        return new CCRFilter(name);
+        return std::make_unique<CCRFilter>(name);
+    }
+
+    CCRFilter(const char* name)
+        : m_config(name)
+    {
     }
 
     ~CCRFilter()
@@ -244,11 +249,6 @@ public:
     }
 
 private:
-    CCRFilter(const char* name)
-        : m_config(name)
-    {
-    }
-
     struct LagStats
     {
         int n_add_count = 0;    /*< No. of statements diverted based on count */

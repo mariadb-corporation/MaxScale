@@ -123,8 +123,13 @@ private:
 class TpmFilter : public mxs::Filter
 {
 public:
+    TpmFilter(const std::string& name)
+        : m_config(name, this)
+    {
+    }
+
     ~TpmFilter();
-    static TpmFilter*                   create(const char* name);
+    static std::unique_ptr<mxs::Filter> create(const char* name);
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
     json_t*                             diagnostics() const override;
     uint64_t                            getCapabilities() const override;
@@ -164,13 +169,7 @@ public:
     void check_named_pipe();
     bool post_configure();
 
-
 private:
-    TpmFilter(const std::string& name)
-        : m_config(name, this)
-    {
-    }
-
     std::mutex    m_lock;
     bool          m_enabled = false;
     std::ofstream m_file;
@@ -263,9 +262,9 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
 }
 
 // static
-TpmFilter* TpmFilter::create(const char* name)
+std::unique_ptr<mxs::Filter> TpmFilter::create(const char* name)
 {
-    return new TpmFilter(name);
+    return std::make_unique<TpmFilter>(name);
 }
 
 std::shared_ptr<mxs::FilterSession> TpmFilter::newSession(MXS_SESSION* session, SERVICE* service)

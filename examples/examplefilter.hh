@@ -33,6 +33,9 @@ class ExampleFilter : public mxs::Filter
     ExampleFilter& operator=(const ExampleFilter&);
 
 public:
+    // Used by the create function
+    ExampleFilter(const std::string& name);
+
     ~ExampleFilter();
 
     struct ExampleConfig : public mxs::config::Configuration
@@ -52,7 +55,7 @@ public:
      * @return The object on success, NULL on failure. Failure is typically caused by an invalid
      * configuration parameter.
      */
-    static ExampleFilter* create(const char* zName);
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
 
     /*
      * Creates a new session for this filter. This is called when a new client connects.
@@ -97,9 +100,6 @@ public:
     void reply_seen();
 
 private:
-    // Used by the create function
-    ExampleFilter(const std::string& name);
-
     // The fields are specific to ExampleFilter.
     std::atomic<int> m_total_queries {0};   /**< How many queries has this filter seen */
     std::atomic<int> m_total_replies {0};   /**< How many replies has this filter seen */

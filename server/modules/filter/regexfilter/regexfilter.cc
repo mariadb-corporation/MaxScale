@@ -144,7 +144,7 @@ public:
 
     RegexInstance(const char* name);
 
-    static RegexInstance*               create(const char* name);
+    static std::unique_ptr<mxs::Filter> create(const char* name);
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
 
     json_t* diagnostics() const override
@@ -233,9 +233,9 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
 }
 
 // static
-RegexInstance* RegexInstance::create(const char* name)
+std::unique_ptr<mxs::Filter> RegexInstance::create(const char* name)
 {
-    return new RegexInstance(name);
+    return std::make_unique<RegexInstance>(name);
 }
 
 RegexInstance::RegexInstance(const char* name)

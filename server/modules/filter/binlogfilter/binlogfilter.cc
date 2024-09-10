@@ -55,9 +55,9 @@ BinlogFilter::~BinlogFilter()
 }
 
 // static: filter create routine
-BinlogFilter* BinlogFilter::create(const char* zName)
+std::unique_ptr<mxs::Filter> BinlogFilter::create(const char* zName)
 {
-    return new BinlogFilter(zName);
+    return std::make_unique<BinlogFilter>(zName);
 }
 
 // BinlogFilterSession create routine
