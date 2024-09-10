@@ -788,12 +788,6 @@ void AvroSession::notify_all_clients(SERVICE* service)
         }, mxs::RoutingWorker::EXECUTE_AUTO);
 }
 
-// static
-AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
-{
-    return new AvroSession(inst, session);
-}
-
 AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
     : mxs::RouterSession(session)
     , m_session(session)

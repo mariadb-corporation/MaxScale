@@ -35,10 +35,14 @@ class SmartRouter;
 
 class SmartRouterSession : public mxs::RouterSession, private mariadb::QueryClassifier::Handler
 {
+    struct Cluster;
+    using Clusters = std::vector<Cluster>;
 public:
-    static SmartRouterSession* create(SmartRouter* pRouter, MXS_SESSION* pSession,
-                                      const std::vector<mxs::Endpoint*>& pEndpoints);
+    static std::shared_ptr<SmartRouterSession>
+    create(SmartRouter* pRouter, MXS_SESSION* pSession,
+           const std::vector<mxs::Endpoint*>& pEndpoints);
 
+    SmartRouterSession(SmartRouter*, MXS_SESSION* pSession, Clusters clusters);
     virtual ~SmartRouterSession();
     SmartRouterSession(const SmartRouterSession&) = delete;
     SmartRouterSession& operator=(const SmartRouterSession&) = delete;
@@ -95,10 +99,6 @@ private:
 
         maxsql::PacketTracker tracker;
     };
-
-    using Clusters = std::vector<Cluster>;
-
-    SmartRouterSession(SmartRouter*, MXS_SESSION* pSession, Clusters clusters);
 
     // The write functions initialize Cluster flags and Cluster::ProtocolTracker.
     bool write_to_target(mxs::Target* target, GWBUF&& buffer);
