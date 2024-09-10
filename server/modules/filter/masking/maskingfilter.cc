@@ -126,7 +126,7 @@ MaskingFilter* MaskingFilter::create(const char* zName)
 
 std::shared_ptr<mxs::FilterSession> MaskingFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return std::shared_ptr<mxs::FilterSession>(MaskingFilterSession::create(pSession, pService, this));
+    return std::make_shared<MaskingFilterSession>(pSession, pService, this);
 }
 
 // static

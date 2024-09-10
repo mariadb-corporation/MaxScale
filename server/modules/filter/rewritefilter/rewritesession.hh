@@ -21,20 +21,15 @@ struct SessionData;
 class RewriteFilterSession : public maxscale::FilterSession
 {
 public:
-    ~RewriteFilterSession();
-
-    static RewriteFilterSession* create(MXS_SESSION* pSession,
-                                        SERVICE* pService,
-                                        const std::shared_ptr<const SessionData>& sSettings
-                                        );
-
-    bool routeQuery(GWBUF&& pBuffer) override final;
-
-private:
     RewriteFilterSession(MXS_SESSION* pSession,
                          SERVICE* pService,
                          const std::shared_ptr<const SessionData>& sSettings);
 
+    ~RewriteFilterSession();
+
+    bool routeQuery(GWBUF&& pBuffer) override final;
+
+private:
     RewriteFilterSession(const RewriteFilterSession&);
     RewriteFilterSession& operator=(const RewriteFilterSession&);
 

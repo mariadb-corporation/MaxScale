@@ -114,7 +114,7 @@ private:
 class LDISession : public maxscale::FilterSession
 {
 public:
-    static LDISession* create(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter);
+    LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter);
 
     bool routeQuery(GWBUF&& buffer) override;
 
@@ -130,7 +130,6 @@ private:
         LOAD,               // Fake LDLI being processed
     };
 
-    LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter);
     bool route_data(GWBUF&& buffer);
     bool route_end(GWBUF&& buffer);
     bool send_ok(int64_t rows_affected);

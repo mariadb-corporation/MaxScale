@@ -64,7 +64,7 @@ CommentFilter* CommentFilter::create(const char* zName)
 
 std::shared_ptr<mxs::FilterSession> CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return std::shared_ptr<mxs::FilterSession>(CommentFilterSession::create(pSession, pService, this));
+    return std::make_shared<CommentFilterSession>(pSession, pService, this);
 }
 
 json_t* CommentFilter::diagnostics() const

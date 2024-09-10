@@ -24,10 +24,3 @@ NullFilterSession::NullFilterSession(MXS_SESSION* pSession, SERVICE* pService, c
 NullFilterSession::~NullFilterSession()
 {
 }
-
-// static
-NullFilterSession* NullFilterSession::create(MXS_SESSION* pSession, SERVICE* pService,
-                                             const NullFilter* pFilter)
-{
-    return new NullFilterSession(pSession, pService, pFilter);
-}

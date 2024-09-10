@@ -43,30 +43,6 @@ TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, std::unique_ptr<L
     }
 }
 
-TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* service)
-{
-    std::unique_ptr<LocalClient> client;
-    const auto& config = my_instance->config();
-    bool user_matches = config.user.empty() || session->user() == config.user;
-    bool remote_matches = config.source.empty() || session->client_remote() == config.source;
-
-    if (my_instance->is_enabled() && user_matches && remote_matches)
-    {
-        if ((client = LocalClient::create(session, config.target)))
-        {
-            client->connect();
-        }
-        else
-        {
-            MXB_ERROR("Failed to create local client connection to '%s'",
-                      config.target->name());
-            return nullptr;
-        }
-    }
-
-    return new TeeSession(session, service, std::move(client), config.match, config.exclude, config.sync);
-}
-
 bool TeeSession::routeQuery(GWBUF&& queue)
 {
     if (m_client && m_sync && m_branch_replies + m_main_replies > 0)

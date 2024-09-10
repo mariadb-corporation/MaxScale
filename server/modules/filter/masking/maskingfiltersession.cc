@@ -138,14 +138,6 @@ MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession,
 {
 }
 
-// static
-MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession,
-                                                   SERVICE* pService,
-                                                   const MaskingFilter* pFilter)
-{
-    return new MaskingFilterSession(pSession, pService, pFilter);
-}
-
 bool MaskingFilterSession::check_query(const GWBUF& packet)
 {
     const char* zUser = m_pSession->user().c_str();

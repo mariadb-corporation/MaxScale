@@ -32,18 +32,6 @@ CommentFilterSession::CommentFilterSession(MXS_SESSION* pSession,
 {
 }
 
-CommentFilterSession::~CommentFilterSession()
-{
-}
-
-// static
-CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession,
-                                                   SERVICE* pService,
-                                                   const CommentFilter* pFilter)
-{
-    return new CommentFilterSession(pSession, pService, pFilter);
-}
-
 bool CommentFilterSession::routeQuery(GWBUF&& packet)
 {
     if (mariadb::is_com_query(packet))

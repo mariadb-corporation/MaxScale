@@ -57,18 +57,13 @@ class BinlogFilterSession : public maxscale::FilterSession
 public:
     ~BinlogFilterSession();
 
-    // Create a new filter session
-    static BinlogFilterSession* create(MXS_SESSION* pSession, SERVICE* pService,
-                                       const BinlogFilter* pFilter);
+    BinlogFilterSession(MXS_SESSION* pSession, SERVICE* pService, const BinlogFilter* pFilter);
 
     bool routeQuery(GWBUF&& packet) override;
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
-    // Used in the create function
-    BinlogFilterSession(MXS_SESSION* pSession, SERVICE* pService, const BinlogFilter* pFilter);
-
     // Reference to Filter instance
     const BinlogFilter& m_filter;
 
