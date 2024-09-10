@@ -186,7 +186,7 @@ json_t* GaleraMonitor::diagnostics(MonitorServer* server) const
             states.push_back(comment);
         }
 
-        if (m_config.disable_master_failback && server->server->is_master() && it->second.local_index != 0)
+        if (m_config.disable_master_failback && server->server->is_master() && server == m_master)
         {
             states.push_back("Master Stickiness");
         }
