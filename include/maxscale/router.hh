@@ -262,11 +262,10 @@ struct MXS_ROUTER_API
      * This function is called when a new router instance is created.
      *
      * @param service The service where the instance is created
-     * @param params  Parameters for the router
      *
-     * @return New router instance on NULL on error
+     * @return New router instance or NULL on error
      */
-    Router* (* createInstance)(SERVICE* service);
+    std::unique_ptr<Router> (* createInstance)(SERVICE* service);
 };
 }
 
@@ -310,9 +309,9 @@ public:
     RouterApi(const RouterApi&) = delete;
     RouterApi& operator=(const RouterApi&) = delete;
 
-    static Router* createInstance(SERVICE* pService)
+    static std::unique_ptr<Router> createInstance(SERVICE* pService)
     {
-        Router* inst = nullptr;
+        std::unique_ptr<Router> inst;
         MXS_EXCEPTION_GUARD(inst = RouterClass::create(pService));
         return inst;
     }

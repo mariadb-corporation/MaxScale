@@ -50,9 +50,9 @@ XRouter::XRouter(SERVICE& service)
 {
 }
 
-XRouter* XRouter::create(SERVICE* pService)
+std::unique_ptr<mxs::Router> XRouter::create(SERVICE* pService)
 {
-    return new XRouter(*pService);
+    return std::make_unique<XRouter>(*pService);
 }
 
 std::shared_ptr<mxs::RouterSession> XRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)

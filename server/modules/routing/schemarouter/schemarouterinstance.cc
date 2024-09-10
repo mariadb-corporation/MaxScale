@@ -89,9 +89,9 @@ SchemaRouter::SchemaRouter(SERVICE* service)
 {
 }
 
-SchemaRouter* SchemaRouter::create(SERVICE* pService)
+std::unique_ptr<mxs::Router> SchemaRouter::create(SERVICE* pService)
 {
-    return new SchemaRouter(pService);
+    return std::make_unique<SchemaRouter>(pService);
 }
 
 std::shared_ptr<mxs::RouterSession> SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)

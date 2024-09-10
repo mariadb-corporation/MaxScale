@@ -32,9 +32,9 @@
 using namespace maxscale;
 
 // static
-Avro* Avro::create(SERVICE* service)
+std::unique_ptr<mxs::Router> Avro::create(SERVICE* service)
 {
-    return new Avro(service);
+    return std::make_unique<Avro>(service);
 }
 
 Avro::Avro(SERVICE* service)

@@ -28,9 +28,9 @@ Cat::Cat(const std::string& name)
 {
 }
 
-Cat* Cat::create(SERVICE* pService)
+std::unique_ptr<mxs::Router> Cat::create(SERVICE* pService)
 {
-    return new Cat(pService->name());
+    return std::make_unique<Cat>(pService->name());
 }
 
 std::shared_ptr<mxs::RouterSession> Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)

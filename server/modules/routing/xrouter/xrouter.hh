@@ -55,7 +55,7 @@ public:
         mxs::WorkerGlobal<Values> m_shared;
     };
 
-    static XRouter* create(SERVICE* pService);
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService);
 
     std::shared_ptr<mxs::RouterSession>
     newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;

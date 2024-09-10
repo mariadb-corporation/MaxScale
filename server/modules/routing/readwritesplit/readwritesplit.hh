@@ -243,7 +243,7 @@ public:
      *
      * @return New router instance or nullptr on error
      */
-    static RWSplit* create(SERVICE* pService);
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService);
 
     /**
      * @brief Create a new session for this router instance

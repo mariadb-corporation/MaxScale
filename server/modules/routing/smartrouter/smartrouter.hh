@@ -69,7 +69,9 @@ public:
         config::Bool   m_persist_performance_data;
     };
 
-    static SmartRouter* create(SERVICE* pService);
+    SmartRouter(SERVICE* service);
+
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService);
 
     std::shared_ptr<mxs::RouterSession>
     newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
@@ -103,8 +105,6 @@ public:
     void perf_update(const std::string& canonical, PerformanceInfo perf);
 
 private:
-    SmartRouter(SERVICE* service);
-
     SERVICE* m_service;
     Config   m_config;
 

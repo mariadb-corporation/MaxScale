@@ -91,10 +91,10 @@ bool Pinloki::post_configure()
 }
 
 // static
-Pinloki* Pinloki::create(SERVICE* pService)
+std::unique_ptr<mxs::Router> Pinloki::create(SERVICE* pService)
 {
     pService->set_custom_version_suffix("-BinlogRouter");
-    return new Pinloki(pService);
+    return std::make_unique<Pinloki>(pService);
 }
 
 std::shared_ptr<mxs::RouterSession> Pinloki::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)

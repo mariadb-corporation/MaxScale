@@ -108,9 +108,9 @@ std::shared_ptr<mxs::RouterSession> SmartRouter::newSession(MXS_SESSION* pSessio
 }
 
 // static
-SmartRouter* SmartRouter::create(SERVICE* pService)
+std::unique_ptr<mxs::Router> SmartRouter::create(SERVICE* pService)
 {
-    return new SmartRouter(pService);
+    return std::make_unique<SmartRouter>(pService);
 }
 
 json_t* SmartRouter::diagnostics() const

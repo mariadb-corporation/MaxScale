@@ -32,8 +32,14 @@ public:
     Mirror(const Mirror&) = delete;
     Mirror& operator=(const Mirror&) = delete;
 
+    Mirror(SERVICE* pService)
+        : m_config(pService->name(), this)
+        , m_service(pService)
+    {
+    }
+
     ~Mirror() = default;
-    static Mirror* create(SERVICE* pService);
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService);
 
     std::shared_ptr<mxs::RouterSession>
     newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
@@ -66,12 +72,6 @@ public:
     bool post_configure();
 
 private:
-    Mirror(SERVICE* pService)
-        : m_config(pService->name(), this)
-        , m_service(pService)
-    {
-    }
-
     Config                    m_config;
     std::unique_ptr<Exporter> m_exporter;
     mxb::shared_mutex         m_rw_lock;
