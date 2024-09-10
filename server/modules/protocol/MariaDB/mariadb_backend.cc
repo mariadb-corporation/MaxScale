@@ -2011,7 +2011,17 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
 
             case SESSION_TRACK_SYSTEM_VARIABLES:
                 {
+                    const std::string_view REDIRECT_URL = "redirect_url";
+                    const std::string_view MXS_RDIR_URL = "mxs_rdir_url";
                     auto name = get_encoded_str(it);
+
+                    if (name == REDIRECT_URL)
+                    {
+                        mxb_assert(REDIRECT_URL.size() == MXS_RDIR_URL.size());
+                        uint8_t* ptr = it - REDIRECT_URL.size();
+                        memcpy(ptr, MXS_RDIR_URL.data(), MXS_RDIR_URL.size());
+                    }
+
                     auto value = get_encoded_str(it);
                     m_reply.set_variable(name, value);
                 }
