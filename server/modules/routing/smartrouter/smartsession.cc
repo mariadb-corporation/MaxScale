@@ -43,8 +43,9 @@ SmartRouterSession::~SmartRouterSession()
 }
 
 // static
-SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION* pSession,
-                                               const std::vector<mxs::Endpoint*>& pEndpoints)
+std::shared_ptr<SmartRouterSession>
+SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION* pSession,
+                           const std::vector<mxs::Endpoint*>& pEndpoints)
 {
     Clusters clusters;
 
@@ -70,7 +71,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
         }
     }
 
-    SmartRouterSession* pSess = nullptr;
+    std::shared_ptr<SmartRouterSession> sSess;
 
     if (master_pos != -1)
     {
@@ -79,7 +80,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
             std::swap(clusters[0], clusters[master_pos]);
         }
 
-        pSess = new SmartRouterSession(pRouter, pSession, std::move(clusters));
+        sSess = std::make_shared<SmartRouterSession>(pRouter, pSession, std::move(clusters));
     }
     else
     {
@@ -87,7 +88,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
                   pRouter->config().name().c_str());
     }
 
-    return pSess;
+    return sSess;
 }
 
 bool SmartRouterSession::routeQuery(GWBUF&& buffer)

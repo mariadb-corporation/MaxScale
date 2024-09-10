@@ -110,7 +110,7 @@ bool Avro::post_configure()
 
 std::shared_ptr<mxs::RouterSession> Avro::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    return std::shared_ptr<mxs::RouterSession>(AvroSession::create(this, session));
+    return std::make_shared<AvroSession>(this, session);
 }
 
 json_t* Avro::diagnostics() const

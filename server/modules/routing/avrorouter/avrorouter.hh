@@ -178,8 +178,8 @@ class AvroSession : public mxs::RouterSession
     AvroSession(const AvroSession&) = delete;
     AvroSession& operator=(const AvroSession&) = delete;
 public:
+    AvroSession(Avro* instance, MXS_SESSION* session);
 
-    static AvroSession* create(Avro* router, MXS_SESSION* session);
     virtual ~AvroSession();
 
     bool routeQuery(GWBUF&& buffer) override;
@@ -210,8 +210,6 @@ private:
     gtid_pos_t       m_gtid;            /*< Current/requested GTID */
     gtid_pos_t       m_gtid_start;      /*< First sent GTID */
     bool             m_in_high_waters = false;
-
-    AvroSession(Avro* instance, MXS_SESSION* session);
 
     int  do_registration(const GWBUF& data);
     void process_command(GWBUF&& queue);
