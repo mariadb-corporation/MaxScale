@@ -17,13 +17,26 @@ import viteConfig from './vite.config'
 export default mergeConfig(
   viteConfig,
   defineConfig({
-    define: process.env.VITEST ? {} : { global: 'window' },
     test: {
       environment: 'happy-dom',
       exclude: [...configDefaults.exclude, 'e2e/*'],
       root: fileURLToPath(new URL('./', import.meta.url)),
       globals: true,
       server: { deps: { inline: ['vuetify'] } },
+      coverage: {
+        provider: 'istanbul',
+        reporter: ['text', 'html'],
+        enabled: true,
+        include: [
+          'src/components/**/*.{js,vue}',
+          'src/composables/**/*.{js,vue}',
+          'src/layouts/**/*.{js,vue}',
+          'src/services/**/*.{js,vue}',
+          'src/utils/**/*.{js,vue}',
+        ],
+        exclude: ['**/__tests__/**'],
+        all: true,
+      },
     },
   })
 )
