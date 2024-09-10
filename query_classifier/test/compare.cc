@@ -502,7 +502,7 @@ bool compare_get_trx_type(QUERY_CLASSIFIER* pClassifier1,
             ss << ", AND custom: ";
         }
 
-        string types = qc_typemask_to_string(rv1);
+        string types = qc_typemask_to_string(rv3);
 
         ss << types;
     }
