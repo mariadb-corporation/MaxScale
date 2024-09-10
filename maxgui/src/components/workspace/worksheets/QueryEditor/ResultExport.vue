@@ -46,8 +46,12 @@ const selectedFormat = ref(null)
 const excludedFieldIndexes = ref([])
 const fileName = ref('')
 // csv export options
-const csvTerminatedOpts = ref({ fieldsTerminatedBy: '', linesTerminatedBy: '' })
-const csvCheckboxOpts = ref({ noBackslashEscapes: false, withHeaders: false })
+const csvOpts = ref({
+  fieldsTerminatedBy: '',
+  linesTerminatedBy: '',
+  nullReplacedBy: '',
+  withHeaders: false,
+})
 
 const chosenSqlOpt = ref(SQL_EXPORT_OPTS.BOTH)
 
@@ -98,9 +102,11 @@ function assignDefOpt() {
   excludedFieldIndexes.value = []
   //TODO: Determine OS newline and store it as user preferences
   // escape reserved single character escape sequences so it can be rendered to the DOM
-  csvTerminatedOpts.value = {
+  csvOpts.value = {
     fieldsTerminatedBy: '\\t',
     linesTerminatedBy: '\\n',
+    nullReplacedBy: '\\N',
+    withHeaders: false,
   }
   selectedFormat.value = fileFormats.value[0] // csv
 }
@@ -135,7 +141,7 @@ function unescapedUserInput(v) {
  */
 function escapeForCSV(v) {
   // NULL is returned as js null in the query result.
-  if (typy(v).isNull) return csvCheckboxOpts.value.noBackslashEscapes ? 'NULL' : '\\N' // db escape
+  if (typy(v).isNull) return csvOpts.value.nullReplacedBy
   if (typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
   return v
 }
@@ -186,10 +192,10 @@ function genInsertionScript(identifier) {
 }
 
 function toCsv() {
-  const fieldsTerminatedBy = unescapedUserInput(csvTerminatedOpts.value.fieldsTerminatedBy)
-  const linesTerminatedBy = unescapedUserInput(csvTerminatedOpts.value.linesTerminatedBy)
+  const fieldsTerminatedBy = unescapedUserInput(csvOpts.value.fieldsTerminatedBy)
+  const linesTerminatedBy = unescapedUserInput(csvOpts.value.linesTerminatedBy)
   let str = ''
-  if (csvCheckboxOpts.value.withHeaders) {
+  if (csvOpts.value.withHeaders) {
     const fields = selectedFields.value.map((field) => escapeForCSV(field))
     str = `${fields.join(fieldsTerminatedBy)}${linesTerminatedBy}`
   }
@@ -352,40 +358,20 @@ function onExport() {
             </VRow>
             <template v-if="$typy(selectedFormat, 'extension').safeString === 'csv'">
               <VRow class="ma-n1">
-                <VCol
-                  v-for="(_, key) in csvTerminatedOpts"
-                  :key="key"
-                  cols="12"
-                  md="12"
-                  class="pa-1"
-                >
+                <VCol v-for="(_, key) in csvOpts" :key="key" cols="12" md="12" class="pa-1">
+                  <VCheckboxBtn
+                    v-if="key === 'withHeaders'"
+                    v-model="csvOpts[key]"
+                    class="ml-n2"
+                    :label="$t(key)"
+                  />
                   <LabelField
-                    v-model="csvTerminatedOpts[key]"
+                    v-else
+                    v-model="csvOpts[key]"
                     :label="$t(key)"
                     required
                     hide-details="auto"
                   />
-                </VCol>
-              </VRow>
-              <VRow class="mt-3 mx-n1 mb-n1">
-                <VCol v-for="(_, key) in csvCheckboxOpts" :key="key" cols="12" class="pa-1">
-                  <VCheckboxBtn v-model="csvCheckboxOpts[key]" class="ml-n1">
-                    <template #label>
-                      <span class="cursor--pointer text-caption"> {{ $t(key) }} </span>
-                      <VTooltip v-if="key === 'noBackslashEscapes'" location="top" max-width="400">
-                        <template #activator="{ props }">
-                          <VIcon
-                            class="ml-1 cursor--pointer"
-                            size="16"
-                            color="info"
-                            icon="$mdiInformationOutline"
-                            v-bind="props"
-                          />
-                        </template>
-                        {{ $t(`info.${key}`) }}
-                      </VTooltip>
-                    </template>
-                  </VCheckboxBtn>
                 </VCol>
               </VRow>
             </template>
