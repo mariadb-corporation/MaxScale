@@ -21,38 +21,7 @@ import txtHighlighter from '@/plugins/txtHighlighter'
 import resizeObserver from '@/plugins/resizeObserver'
 import router from '@/router'
 import store from '@/store'
-import { useI18n } from 'vue-i18n'
 import { WS_KEY, WS_EDITOR_KEY, TBL_STRUCTURE_EDITOR_KEY } from '@/constants/injectionKeys'
-
-// Required for Vuetify as modal component are mounted to mxs-app
-const el = document.createElement('div')
-el.setAttribute('id', 'mxs-app')
-document.body.appendChild(el)
-
-document.execCommand = vi.fn()
-
-global.Worker = vi.fn(() => ({ postMessage: vi.fn(), onmessage: vi.fn(), terminate: vi.fn() }))
-
-global.ResizeObserver = require('resize-observer-polyfill')
-global.WebSocket = vi.fn()
-
-vi.mock('vue-i18n')
-useI18n.mockReturnValue({ t: (tKey) => tKey, tm: (tKey) => tKey })
-vi.mock('axios', () => ({
-  default: {
-    post: vi.fn(() => Promise.resolve(null)),
-    get: vi.fn(() => Promise.resolve(null)),
-    delete: vi.fn(() => Promise.resolve(null)),
-    put: vi.fn(() => Promise.resolve(null)),
-    create: vi.fn().mockReturnThis(),
-    interceptors: {
-      request: { use: vi.fn().mockReturnThis(), eject: vi.fn().mockReturnThis() },
-      response: { use: vi.fn().mockReturnThis(), eject: vi.fn().mockReturnThis() },
-    },
-  },
-}))
-// mock monaco
-vi.mock('@/components/common/SqlEditor/customMonaco.js', () => ({ default: {} }))
 
 export default (component, options, mockStore) => {
   const mountOpts = lodash.merge(
