@@ -3430,13 +3430,36 @@ The configuration has three variables, `redirect_url`, `service_name` and
 metadata that is sent to the client would be `redirect_url=localhost:3306`,
 `service_name=my-service` and `max_allowed_packet=16777216`.
 
-### Version-specific Behavior
+#### Version-specific Behavior
 
 If the `connection_metadata` variable list contains the `tx_isolation` variable
 and the backend MariaDB server from which the variable is retrieved is MariaDB
 11 or newer, the value is renamed to `transaction_isolation`. The `tx_isolation`
 parameter was deprecated in favor of `transaction_isolation` in MariaDB 11
 (MDEV-21921).
+
+### `redirect_url`
+
+- **Type**: URL
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
+
+Database URL where clients are redirected.
+
+If set, the `redirect_url` system variable tracker is sent in the final response
+to the client after authentication is complete. The URL must start with a valid
+connection prefix, either `mariadb://` or `mysql://`, and if a port is defined
+it must be a number.
+
+If the [connection metadata](#connection_metadata) has `redirect_url` in it and
+the `redirect_url` parameter is defined, the value of the `redirect_url`
+parameter is used.
+
+For more information about connection redirection and how MaxScale deals with
+it, read the
+[Connection Redirection](../Protocols/MariaDB.md#connection-redirection)
+section in the MariaDB protocol module documentation.
 
 ## Include
 

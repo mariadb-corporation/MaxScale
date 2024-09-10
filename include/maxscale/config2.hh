@@ -2163,6 +2163,22 @@ private:
                                 std::string* pMessage);
 };
 
+/**
+ * ParamMariaURL
+ *
+ * A parameter type for URLs of the form `mariadb://host:port` or `mysql://host:port`.
+ * The port is optional but the prefix is mandatory.
+ */
+class ParamMariaURL : public mxs::config::ParamString
+{
+public:
+    using mxs::config::ParamString::ParamString;
+
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const override;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const override;
+};
 
 /**
  * ParamBitMask

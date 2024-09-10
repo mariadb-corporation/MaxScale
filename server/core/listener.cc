@@ -152,6 +152,11 @@ cfg::ParamString s_proxy_networks(
     &s_spec, CN_PROXY_PROTOCOL_NETWORKS, "Allowed (sub)networks for proxy protocol connections. Should be "
                                          "a comma-separated list of IPv4 or IPv6 addresses.", "", RUNTIME);
 
+mxs::config::ParamMariaURL s_redirect_url(
+    &s_spec, "redirect_url",
+    "Redirect clients to this URL",
+    "", mxs::config::Param::AT_RUNTIME);
+
 cfg::ParamStringList s_connection_metadata(
     &s_spec, "connection_metadata",
     "Metadata that's sent to all connecting clients.",
@@ -585,6 +590,7 @@ Listener::Config::Config(const std::string& name, Listener* listener)
     add_native(&Listener::Config::connection_init_sql_file, &s_connection_init_sql_file);
     add_native(&Listener::Config::user_mapping_file, &s_user_mapping_file);
     add_native(&Listener::Config::proxy_networks, &s_proxy_networks);
+    add_native(&Listener::Config::redirect_url, &s_redirect_url);
     add_native(&Listener::Config::connection_metadata, &s_connection_metadata);
 }
 
@@ -1576,6 +1582,12 @@ Listener::SMetadata Listener::create_connection_metadata()
         {
             metadata.emplace(key, value);
         }
+    }
+
+    if (!m_config.redirect_url.empty())
+    {
+        // If connection_metadata conflicts with redirect_url, use the value from redirect_url.
+        metadata.insert_or_assign("redirect_url", m_config.redirect_url);
     }
 
     return std::make_shared<mxs::ConnectionMetadata>(

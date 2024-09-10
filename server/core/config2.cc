@@ -2758,5 +2758,51 @@ bool config::ParamHostsPatternList::parse_host_list(const string& value_str, Hos
     }
     return rval;
 }
+
+bool ParamMariaURL::from_string(const std::string& value, value_type* pValue, std::string* pMessage) const
+{
+    std::string_view val = value;
+    bool prefix_ok = value.empty();         // Empty string is allowed
+    bool port_ok = true;
+
+    for (std::string_view prefix : {"mariadb://", "mysql://"})
+    {
+        if (val.size() > prefix.size() && val.substr(0, prefix.size()) == prefix)
+        {
+            val.remove_prefix(prefix.size());
+            prefix_ok = !val.empty();
+
+            if (auto pos = val.find(":"); pos != std::string_view::npos)
+            {
+                auto port = val.substr(pos + 1);
+                port_ok = !port.empty() && std::all_of(port.begin(), port.end(), ::isdigit);
+            }
+
+            break;
+        }
+    }
+
+    if (prefix_ok && port_ok)
+    {
+        *pValue = value;
+    }
+    else if (!prefix_ok)
+    {
+        *pMessage += "Invalid URL prefix, expected 'mariadb://' or 'mysql://'.";
+    }
+    else
+    {
+        mxb_assert(prefix_ok && !port_ok);
+        *pMessage += "Invalid port in URL.";
+    }
+
+    return prefix_ok && port_ok;
+}
+
+bool ParamMariaURL::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
+{
+    std::string value;
+    return ParamString::from_json(pJson, &value, pMessage) && from_string(value, pValue, pMessage);
+}
 }
 }
