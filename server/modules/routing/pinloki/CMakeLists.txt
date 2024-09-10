@@ -1,3 +1,5 @@
+find_package(Boost REQUIRED)
+
 add_library(pinloki-core OBJECT
   config.cc
   dbconnection.cc

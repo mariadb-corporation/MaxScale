@@ -254,9 +254,6 @@ install_header(${CMAKE_SOURCE_DIR}/LICENSE.TXT devel)
 # Install startup scripts and other system configuration files
 if(WITH_SCRIPTS)
   include(cmake/init_scripts.cmake)
-
-  # Prevents prelink from corrupting maxctrl
-  install_custom_file(etc/prelink.conf.d/maxscale.conf /etc/prelink.conf.d/ core)
 endif()
 
 if(PACKAGE)
