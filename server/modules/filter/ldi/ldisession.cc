@@ -117,12 +117,6 @@ LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter)
     pSession->add_variable(CN_S3_PROTOCOL_VERSION, &LDISession::set_protocol_version, this);
 }
 
-// static
-LDISession* LDISession::create(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter)
-{
-    return new LDISession(pSession, pService, pFilter);
-}
-
 bool LDISession::routeQuery(GWBUF&& buffer)
 {
     if (m_state == IDLE)

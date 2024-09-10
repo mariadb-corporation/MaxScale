@@ -21,13 +21,10 @@ class NullFilter;
 class NullFilterSession : public maxscale::FilterSession
 {
 public:
+    NullFilterSession(MXS_SESSION* pSession, SERVICE* pService, const NullFilter* pFilter);
     ~NullFilterSession();
 
-    static NullFilterSession* create(MXS_SESSION* pSession, SERVICE* pService, const NullFilter* pFilter);
-
 private:
-    NullFilterSession(MXS_SESSION* pSession, SERVICE* pService, const NullFilter* pFilter);
-
     NullFilterSession(const NullFilterSession&);
     NullFilterSession& operator=(const NullFilterSession&);
 

@@ -46,14 +46,6 @@ RewriteFilterSession::~RewriteFilterSession()
 {
 }
 
-// static
-RewriteFilterSession* RewriteFilterSession::create(MXS_SESSION* pSession,
-                                                   SERVICE* pService,
-                                                   const std::shared_ptr<const SessionData>& sSettings)
-{
-    return new RewriteFilterSession(pSession, pService, sSettings);
-}
-
 bool RewriteFilterSession::routeQuery(GWBUF&& buffer)
 {
     auto& session_data = *m_sSession_data.get();

@@ -81,20 +81,6 @@ BinlogFilterSession::~BinlogFilterSession()
 {
 }
 
-// static
-/**
- * create new filter session
- *
- * @param pSession    The calling routing/filter session
- * @param pFilter     Pointer to filter configuration
- * @return            The new allocated session
- */
-BinlogFilterSession* BinlogFilterSession::create(MXS_SESSION* pSession, SERVICE* pService,
-                                                 const BinlogFilter* pFilter)
-{
-    return new BinlogFilterSession(pSession, pService, pFilter);
-}
-
 static bool is_matching_query(std::string_view haystack, std::string_view needle)
 {
     return mxb::sv_strcasestr(haystack, needle) != std::string_view::npos;

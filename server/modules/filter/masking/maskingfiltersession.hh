@@ -29,19 +29,15 @@ public:
     typedef std::shared_ptr<MaskingRules> SMaskingRules;
     typedef MaskingFilterConfig           Config;
 
-    ~MaskingFilterSession() = default;
+    MaskingFilterSession(MXS_SESSION* pSession, SERVICE* service, const MaskingFilter* pFilter);
 
-    static MaskingFilterSession* create(MXS_SESSION* pSession,
-                                        SERVICE* pService,
-                                        const MaskingFilter* pFilter);
+    ~MaskingFilterSession() = default;
 
     bool routeQuery(GWBUF&& packet) override;
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
-    MaskingFilterSession(MXS_SESSION* pSession, SERVICE* service, const MaskingFilter* pFilter);
-
     MaskingFilterSession(const MaskingFilterSession&);
     MaskingFilterSession& operator=(const MaskingFilterSession&);
 

@@ -48,19 +48,13 @@ public:
     MaxRowsSession(const MaxRowsSession&) = delete;
     MaxRowsSession& operator=(const MaxRowsSession&) = delete;
 
-    // Create a new filter session
-    static MaxRowsSession* create(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter)
-    {
-        return new(std::nothrow) MaxRowsSession(pSession, pService, pFilter);
-    }
+    MaxRowsSession(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter);
 
     bool routeQuery(GWBUF&& packet) override;
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
-    MaxRowsSession(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter);
-
     uint64_t            m_max_rows;
     uint64_t            m_max_size;
     int64_t             m_debug;
@@ -86,7 +80,7 @@ public:
     // Creates a new session for this filter
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override
     {
-        return std::shared_ptr<mxs::FilterSession>(MaxRowsSession::create(session, service, this));
+        return std::make_shared<MaxRowsSession>(session, service, this);
     }
 
     // Returns JSON form diagnostic data

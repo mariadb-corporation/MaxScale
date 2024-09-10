@@ -164,7 +164,27 @@ Tee* Tee::create(const char* name)
 
 std::shared_ptr<mxs::FilterSession> Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return std::shared_ptr<mxs::FilterSession>(TeeSession::create(this, pSession, pService));
+    std::unique_ptr<LocalClient> client;
+    const auto& config = this->config();
+    bool user_matches = config.user.empty() || pSession->user() == config.user;
+    bool remote_matches = config.source.empty() || pSession->client_remote() == config.source;
+
+    if (is_enabled() && user_matches && remote_matches)
+    {
+        if ((client = LocalClient::create(pSession, config.target)))
+        {
+            client->connect();
+        }
+        else
+        {
+            MXB_ERROR("Failed to create local client connection to '%s'",
+                      config.target->name());
+            return nullptr;
+        }
+    }
+
+    return std::make_shared<TeeSession>(pSession, pService, std::move(client),
+                                        config.match, config.exclude, config.sync);
 }
 
 /**

@@ -170,8 +170,8 @@ public:
     CCRSession(const CCRSession&) = delete;
     CCRSession& operator=(const CCRSession&) = delete;
 
-    static CCRSession* create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
-    bool               routeQuery(GWBUF&& queue) override;
+    CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
+    bool routeQuery(GWBUF&& queue) override;
 
 private:
     CCRFilter& m_instance;
@@ -190,8 +190,6 @@ private:
         CCR_HINT_MATCH,
         CCR_HINT_IGNORE
     };
-
-    CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
 
     static CcrHintValue search_ccr_hint(GWBUF& buffer);
 };
@@ -217,7 +215,7 @@ public:
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override
     {
-        return std::shared_ptr<mxs::FilterSession>(CCRSession::create(session, service, this));
+        return std::make_shared<CCRSession>(session, service, this);
     }
 
     json_t* diagnostics() const override
@@ -277,11 +275,6 @@ CCRSession::CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instan
         m_match = mxs::config::RegexValue(m_match.pattern(), options);
         m_ignore = mxs::config::RegexValue(m_ignore.pattern(), options);
     }
-}
-
-CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance)
-{
-    return new CCRSession(session, service, instance);
 }
 
 bool CCRSession::routeQuery(GWBUF&& queue)

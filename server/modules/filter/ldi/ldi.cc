@@ -103,7 +103,7 @@ LDI* LDI::create(const char* zName)
 
 std::shared_ptr<mxs::FilterSession> LDI::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return std::shared_ptr<mxs::FilterSession>(LDISession::create(pSession, pService, this));
+    return std::make_shared<LDISession>(pSession, pService, this);
 }
 
 json_t* LDI::diagnostics() const

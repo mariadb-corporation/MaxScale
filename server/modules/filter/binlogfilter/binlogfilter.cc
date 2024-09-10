@@ -63,7 +63,7 @@ BinlogFilter* BinlogFilter::create(const char* zName)
 // BinlogFilterSession create routine
 std::shared_ptr<mxs::FilterSession> BinlogFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return std::shared_ptr<mxs::FilterSession>(BinlogFilterSession::create(pSession, pService, this));
+    return std::make_shared<BinlogFilterSession>(pSession, pService, this);
 }
 
 // static

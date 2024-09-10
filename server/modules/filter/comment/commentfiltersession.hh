@@ -26,21 +26,13 @@ class CommentFilterSession : public maxscale::FilterSession
     CommentFilterSession& operator=(const CommentFilterSession&);
 
 public:
-    ~CommentFilterSession();
-
-    // Create a new filter session
-    static CommentFilterSession* create(MXS_SESSION* pSession,
-                                        SERVICE* pService,
-                                        const CommentFilter* pFilter);
+    CommentFilterSession(MXS_SESSION* pSession, SERVICE* pService, const CommentFilter* pFilter);
 
     bool routeQuery(GWBUF&& packet) override;
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
-
-    // Used in the create function
-    CommentFilterSession(MXS_SESSION* pSession, SERVICE* pService, const CommentFilter* pFilter);
     std::string parseComment(std::string comment);
 
     std::string m_inject;

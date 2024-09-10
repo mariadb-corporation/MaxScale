@@ -30,19 +30,18 @@ class TeeSession : public mxs::FilterSession
     const TeeSession& operator=(const TeeSession&);
 
 public:
-    static TeeSession* create(Tee* my_instance, MXS_SESSION* session, SERVICE* service);
-
-    bool    routeQuery(GWBUF&& packet) override;
-    bool    clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-    json_t* diagnostics() const;
-
-private:
     TeeSession(MXS_SESSION* session,
                SERVICE* service,
                std::unique_ptr<LocalClient> client,
                const mxb::Regex& match,
                const mxb::Regex& exclude,
                bool sync);
+
+    bool    routeQuery(GWBUF&& packet) override;
+    bool    clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    json_t* diagnostics() const;
+
+private:
     bool query_matches(const GWBUF& buffer);
     void handle_reply(const mxs::Reply& reply, bool is_branch);
 
