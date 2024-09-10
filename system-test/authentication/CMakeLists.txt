@@ -31,3 +31,7 @@ add_test_executable_ex(NAME wrong_client_auth_plugin SOURCE wrong_client_auth_pl
 # MXS-2916: log_password_mismatch
 add_test_executable_ex(NAME lower_case_table_names SOURCE lower_case_table_names.cc
         CONFIG lower_case_table_names.cnf VMS repl_backend)
+
+# MXS-5239 Users with REQUIRE SSL should only work with SSL-enabled listeners.
+add_test_executable_ex(NAME require_ssl SOURCE require_ssl.cc
+        CONFIG require_ssl.cnf VMS repl_backend backend_ssl)
