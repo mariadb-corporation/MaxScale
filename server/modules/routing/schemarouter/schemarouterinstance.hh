@@ -37,7 +37,9 @@ class SchemaRouterSession;
 class SchemaRouter : public Router
 {
 public:
-    static SchemaRouter* create(SERVICE* pService);
+    SchemaRouter(SERVICE* service);
+
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService);
 
     std::shared_ptr<mxs::RouterSession>
     newSession(MXS_SESSION* pSession, const Endpoints& endpoints) override;
@@ -60,9 +62,6 @@ public:
 
 private:
     friend class SchemaRouterSession;
-
-    /** Internal functions */
-    SchemaRouter(SERVICE* service);
 
     /** Member variables */
     Config       m_config;

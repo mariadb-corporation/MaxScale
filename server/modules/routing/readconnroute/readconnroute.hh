@@ -81,6 +81,8 @@ public:
         static config::ParamSeconds            s_max_replication_lag;
     };
 
+    RCR(SERVICE* service);
+
     /**
      * Create a new RadConn instance
      *
@@ -89,7 +91,7 @@ public:
      *
      * @return The new instance or nullptr on error
      */
-    static RCR* create(SERVICE* service);
+    static std::unique_ptr<mxs::Router> create(SERVICE* service);
 
     /**
      * Create a new session for this router instance
@@ -140,8 +142,6 @@ public:
     maxscale::TargetSessionStats combined_target_stats() const;
 
 private:
-    RCR(SERVICE* service);
-
     mxs::Endpoint* get_connection(const mxs::Endpoints& endpoints);
 
     mxs::WorkerLocal<maxscale::TargetSessionStats> m_target_stats;

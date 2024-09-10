@@ -30,7 +30,9 @@ public:
     Cat(const Cat&) = delete;
     Cat& operator=(const Cat&) = delete;
 
-    static Cat* create(SERVICE* pService);
+    Cat(const std::string& name);
+
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService);
 
     std::shared_ptr<mxs::RouterSession>
     newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
@@ -50,8 +52,6 @@ public:
 
 private:
     friend class CatSession;
-
-    Cat(const std::string& name);
 
     mxs::config::Configuration m_config;
 };

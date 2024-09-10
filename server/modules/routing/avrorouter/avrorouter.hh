@@ -114,7 +114,9 @@ class Avro : public mxs::Router
     Avro& operator=(const Avro&) = delete;
 
 public:
-    static Avro* create(SERVICE* service);
+    Avro(SERVICE* service);
+
+    static std::unique_ptr<mxs::Router> create(SERVICE* service);
 
     std::shared_ptr<mxs::RouterSession>
     newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints) override;
@@ -169,8 +171,6 @@ public:
 private:
     std::unique_ptr<cdc::Replicator> m_replicator;
     AvroConfig                       m_config;
-
-    Avro(SERVICE* service);
 };
 
 class AvroSession : public mxs::RouterSession

@@ -398,10 +398,10 @@ bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters
  * API function definitions
  */
 
-RWSplit* RWSplit::create(SERVICE* service)
+std::unique_ptr<mxs::Router> RWSplit::create(SERVICE* service)
 {
     service->track_variable(CN_SESSION_TRACK_SYSTEM_VARIABLES);
-    return new RWSplit(service);
+    return std::make_unique<RWSplit>(service);
 }
 
 std::shared_ptr<mxs::RouterSession> RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)

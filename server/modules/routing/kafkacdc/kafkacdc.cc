@@ -465,9 +465,9 @@ bool KafkaCDC::Config::post_configure(const std::map<std::string, mxs::ConfigPar
 }
 
 // static
-KafkaCDC* KafkaCDC::create(SERVICE* pService)
+std::unique_ptr<mxs::Router> KafkaCDC::create(SERVICE* pService)
 {
-    return new KafkaCDC(pService);
+    return std::make_unique<KafkaCDC>(pService);
 }
 
 bool KafkaCDC::post_configure()

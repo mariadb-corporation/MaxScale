@@ -43,8 +43,9 @@ public:
 
     static const int64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT;
 
+    Pinloki(SERVICE* pService);
     ~Pinloki();
-    static Pinloki* create(SERVICE* pService);
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService);
 
     std::shared_ptr<mxs::RouterSession>
     newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
@@ -77,8 +78,6 @@ public:
     void          set_gtid_slave_pos(const maxsql::GtidList& gtid);
 
 private:
-    Pinloki(SERVICE* pService);
-
     bool update_details();
 
     maxsql::Connection::ConnectionDetails generate_details();

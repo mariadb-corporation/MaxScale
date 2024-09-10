@@ -155,9 +155,9 @@ static mxs::Endpoint* get_root_master(const mxs::Endpoints& endpoints)
 }
 
 // static
-RCR* RCR::create(SERVICE* service)
+std::unique_ptr<mxs::Router> RCR::create(SERVICE* service)
 {
-    return new RCR(service);
+    return std::make_unique<RCR>(service);
 }
 
 RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,

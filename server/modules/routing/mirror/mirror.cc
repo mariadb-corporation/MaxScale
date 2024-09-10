@@ -16,9 +16,9 @@
 #include "mirrorsession.hh"
 
 // static
-Mirror* Mirror::create(SERVICE* pService)
+std::unique_ptr<mxs::Router> Mirror::create(SERVICE* pService)
 {
-    return new Mirror(pService);
+    return std::make_unique<Mirror>(pService);
 }
 
 std::shared_ptr<mxs::RouterSession> Mirror::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)

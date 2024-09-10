@@ -155,8 +155,9 @@ public:
     // capabilities given in the module declaration should be the same.
     static constexpr const uint64_t CAPABILITIES {RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT};
 
+    RRRouter(SERVICE* service);
     ~RRRouter();
-    static RRRouter*                    create(SERVICE* pService);
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService);
     std::shared_ptr<mxs::RouterSession> newSession(MXS_SESSION* session,
                                                    const mxs::Endpoints& endpoints) override;
     json_t* diagnostics() const override;
@@ -179,10 +180,7 @@ public:
 private:
     friend class RRRouterSession;
 
-    Config   m_config;
-
-    /* Methods */
-    RRRouter(SERVICE* service);
+    Config m_config;
 
     /* Statistics, written to by multiple threads */
     std::atomic<uint64_t> m_routing_s;      /* Routing success */
@@ -284,9 +282,9 @@ std::shared_ptr<mxs::RouterSession> RRRouter::newSession(MXS_SESSION* session,
  *
  * @return          NULL in failure, pointer to router in success.
  */
-RRRouter* RRRouter::create(SERVICE* pService)
+std::unique_ptr<mxs::Router> RRRouter::create(SERVICE* pService)
 {
-    return new(std::nothrow) RRRouter(pService);
+    return std::make_unique<RRRouter>(pService);
 }
 
 /**

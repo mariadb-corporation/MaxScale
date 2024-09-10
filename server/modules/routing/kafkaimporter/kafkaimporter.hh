@@ -30,14 +30,20 @@ public:
     KafkaImporter(const KafkaImporter&) = delete;
     KafkaImporter& operator=(const KafkaImporter&) = delete;
 
+    KafkaImporter(SERVICE* pService)
+        : m_service(pService)
+        , m_config(pService->name(), this)
+    {
+    }
+
     ~KafkaImporter() = default;
 
     // Router capabilities
     static constexpr uint64_t CAPS = RCAP_TYPE_RUNTIME_CONFIG;
 
-    static KafkaImporter* create(SERVICE* pService)
+    static std::unique_ptr<mxs::Router> create(SERVICE* pService)
     {
-        return new KafkaImporter(pService);
+        return std::make_unique<KafkaImporter>(pService);
     }
 
     std::shared_ptr<mxs::RouterSession>
@@ -69,12 +75,6 @@ public:
     bool post_configure() override final;
 
 private:
-    KafkaImporter(SERVICE* pService)
-        : m_service(pService)
-        , m_config(pService->name(), this)
-    {
-    }
-
     SERVICE*                  m_service;
     Config                    m_config;
     std::unique_ptr<Consumer> m_consumer;
