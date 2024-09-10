@@ -233,12 +233,6 @@ install_file(${CMAKE_SOURCE_DIR}/etc/logrotate.d/maxscale_logrotate core)
 install_file(${CMAKE_BINARY_DIR}/maxscale.conf core)
 install_file(${CMAKE_BINARY_DIR}/maxscale.service core)
 
-# Install startup scripts and other system configuration files
-if(WITH_SCRIPTS)
-  # Prevents prelink from corrupting maxctrl
-  install_custom_file(etc/prelink.conf.d/maxscale.conf /etc/prelink.conf.d/ core)
-endif()
-
 if(PACKAGE)
   # Configure packaging
   include(cmake/package.cmake)
