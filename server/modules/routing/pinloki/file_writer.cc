@@ -207,10 +207,16 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplE
     }
 
     WritePosition previous_pos {std::move(m_current_pos)};
+    // The ROTATE event at the end of the old file must be encrypted with the old context. Opening a new
+    // binlog resets the context and sets it up for the next one.
+    std::unique_ptr<mxq::EncryptCtx> tmp(m_encrypt.release());
+    create_binlog(to_file_name, fmt_event);
 
     if (previous_pos.file.is_open())
     {
+        m_encrypt.swap(tmp);
         write_rotate(previous_pos, to_file_name);
+        m_encrypt.swap(tmp);
         previous_pos.file.close();
 
         if (!previous_pos.file.good())
@@ -220,8 +226,6 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplE
                                                 << errno << ", " << mxb_strerror(errno));
         }
     }
-
-    create_binlog(to_file_name, fmt_event);
 }
 
 void FileWriter::create_binlog(const std::string& file_name, const maxsql::RplEvent& fmt_event)
