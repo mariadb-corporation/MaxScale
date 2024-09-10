@@ -478,7 +478,7 @@ bool compare_get_trx_type(const Parser& parser1,
             ss << ", AND custom: ";
         }
 
-        string types = Parser::type_mask_to_string(rv1);
+        string types = Parser::type_mask_to_string(rv3);
 
         ss << types;
     }
