@@ -126,9 +126,9 @@ CacheFilter::~CacheFilter()
 }
 
 // static
-CacheFilter* CacheFilter::create(const char* zName)
+std::unique_ptr<mxs::Filter> CacheFilter::create(const char* zName)
 {
-    return new CacheFilter(zName);
+    return std::make_unique<CacheFilter>(zName);
 }
 
 bool CacheFilter::post_configure()

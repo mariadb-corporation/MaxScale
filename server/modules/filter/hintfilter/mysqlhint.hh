@@ -24,7 +24,9 @@ class HintSession;
 class HintInstance : public mxs::Filter
 {
 public:
-    static HintInstance*                create(const char* zName);
+    HintInstance(const char* zName);
+
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
     json_t*                             diagnostics() const override;
     uint64_t                            getCapabilities() const override;
@@ -36,8 +38,6 @@ public:
     }
 
 private:
-    HintInstance(const char* zName);
-
     // This is mainly here to improve error reporting when an unsupported parameter is used
     mxs::config::Configuration m_config;
 };

@@ -63,7 +63,9 @@ public:
         mxs::WorkerGlobal<Values> m_values;
     };
 
-    static Tee*                         create(const char* zName);
+    Tee(const char* name);
+
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
     json_t*                             diagnostics() const override;
 
@@ -98,8 +100,6 @@ public:
     }
 
 private:
-    Tee(const char* name);
-
     std::string m_name;
     Config      m_config;
     bool        m_enabled;

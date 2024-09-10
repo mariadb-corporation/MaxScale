@@ -93,7 +93,12 @@ public:
         LuaFilter* m_instance;
     };
 
-    static LuaFilter* create(const char* name);
+    LuaFilter(const char* name)
+        : m_config(this, name)
+    {
+    }
+
+    static std::unique_ptr<mxs::Filter> create(const char* name);
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
 
@@ -120,12 +125,6 @@ public:
     mutable std::mutex m_lock;
 
 private:
-
-    LuaFilter(const char* name)
-        : m_config(this, name)
-    {
-    }
-
     std::unique_ptr<LuaContext> m_context;
     Config                      m_config;
 };
@@ -173,9 +172,9 @@ LuaFilter::Config::Config(LuaFilter* instance, const char* name)
  * @param params  Filter parameters
  * @return The instance data for this new instance
  */
-LuaFilter* LuaFilter::create(const char* name)
+std::unique_ptr<mxs::Filter> LuaFilter::create(const char* name)
 {
-    return new LuaFilter(name);
+    return std::make_unique<LuaFilter>(name);
 }
 
 bool LuaFilter::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

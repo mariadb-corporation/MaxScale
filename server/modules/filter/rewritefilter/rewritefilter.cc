@@ -154,9 +154,9 @@ std::shared_ptr<const SessionData> RewriteFilter::get_session_data() const
 }
 
 // static
-RewriteFilter* RewriteFilter::create(const char* zName)
+std::unique_ptr<mxs::Filter> RewriteFilter::create(const char* zName)
 {
-    return new RewriteFilter(zName);
+    return std::make_unique<RewriteFilter>(zName);
 }
 
 std::shared_ptr<mxs::FilterSession> RewriteFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)

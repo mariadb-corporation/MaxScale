@@ -27,10 +27,13 @@ class BinlogFilter : public mxs::Filter
     BinlogFilter& operator=(const BinlogFilter&);
 
 public:
+    // Constructor: used in the create function
+    BinlogFilter(const char* name);
+
     ~BinlogFilter();
 
     // Creates a new filter instance
-    static BinlogFilter* create(const char* zName);
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
 
     // Creates a new session for this filter
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
@@ -56,10 +59,6 @@ public:
     {
         return m_config.values();
     }
-
-private:
-    // Constructor: used in the create function
-    BinlogFilter(const char* name);
 
 private:
     BinlogConfig m_config;

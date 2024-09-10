@@ -312,9 +312,9 @@ bool QlaInstance::LogManager::prepare()
     return true;
 }
 
-QlaInstance* QlaInstance::create(const char* name)
+std::unique_ptr<mxs::Filter> QlaInstance::create(const char* name)
 {
-    return new QlaInstance(name);
+    return std::make_unique<QlaInstance>(name);
 }
 
 std::shared_ptr<mxs::FilterSession> QlaInstance::newSession(MXS_SESSION* session, SERVICE* service)

@@ -30,8 +30,9 @@ public:
     typedef std::shared_ptr<MaskingRules> SMaskingRules;
     typedef MaskingFilterConfig           Config;
 
+    MaskingFilter(const char* zName);
     ~MaskingFilter();
-    static MaskingFilter* create(const char* zName);
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
@@ -57,8 +58,6 @@ public:
     }
 
 private:
-    MaskingFilter(const char* zName);
-
     MaskingFilter(const MaskingFilter&);
     MaskingFilter& operator=(const MaskingFilter&);
 

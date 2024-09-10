@@ -76,7 +76,8 @@ bool ProtocolModule::post_configure(const std::map<std::string, mxs::ConfigParam
             string name("@@Cache-for-");
             name += m_config.name();
 
-            m_sCache_filter.reset(CacheFilter::create(name.c_str()));
+            auto cache_filter = CacheFilter::create(name.c_str());
+            m_sCache_filter.reset(static_cast<CacheFilter*>(cache_filter.release()));
 
             rv = m_sCache_filter->getConfiguration().configure(cache_config);
         }

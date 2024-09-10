@@ -92,9 +92,9 @@ NullFilter::NullFilter(const std::string& name)
 }
 
 // static
-NullFilter* NullFilter::create(const char* zName)
+std::unique_ptr<mxs::Filter> NullFilter::create(const char* zName)
 {
-    return new NullFilter(zName);
+    return std::make_unique<NullFilter>(zName);
 }
 
 

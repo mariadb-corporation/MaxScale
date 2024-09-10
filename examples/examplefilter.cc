@@ -89,9 +89,9 @@ ExampleFilter::~ExampleFilter()
 }
 
 // static
-ExampleFilter* ExampleFilter::create(const char* zName)
+std::unique_ptr<mxs::Filter> ExampleFilter::create(const char* zName)
 {
-    return new ExampleFilter(zName);
+    return std::make_unique<ExampleFilter>(zName);
 }
 
 std::shared_ptr<mxs::FilterSession> ExampleFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)

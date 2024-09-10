@@ -32,7 +32,9 @@ public:
         uint32_t capabilities;
     };
 
-    static NullFilter* create(const char* zName);
+    NullFilter(const std::string& name);
+
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
@@ -49,9 +51,6 @@ public:
     {
         return {MXS_ANY_PROTOCOL};
     }
-
-private:
-    NullFilter(const std::string& name);
 
 private:
     Config m_config;

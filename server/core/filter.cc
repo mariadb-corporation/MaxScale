@@ -88,7 +88,7 @@ SFilterDef do_filter_alloc(const char* name, Params params, Unrecognized unrecog
 
             if (auto instance = func->createInstance(name))
             {
-                filter = std::make_shared<FilterDef>(name, module->name, instance);
+                filter = std::make_shared<FilterDef>(name, module->name, std::move(instance));
 
                 if (filter->configuration().configure(params))
                 {
@@ -122,10 +122,10 @@ SFilterDef filter_alloc(const char* name, json_t* params)
     return do_filter_alloc(name, params, &unrecognized);
 }
 
-FilterDef::FilterDef(std::string name, std::string module, Filter* instance)
+FilterDef::FilterDef(std::string name, std::string module, std::unique_ptr<Filter> instance)
     : m_name(std::move(name))
     , m_module(std::move(module))
-    , m_filter(instance)
+    , m_filter(std::move(instance))
 {
 }
 

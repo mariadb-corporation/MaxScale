@@ -27,9 +27,11 @@
 class CacheFilter : public mxs::Filter
 {
 public:
+    CacheFilter(const char* zName);
+
     ~CacheFilter();
 
-    static CacheFilter* create(const char* zName);
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
 
     Cache& cache()
     {
@@ -61,8 +63,6 @@ public:
     bool post_configure();
 
 private:
-    CacheFilter(const char* zName);
-
     CacheFilter(const CacheFilter&);
     CacheFilter& operator=(const CacheFilter&);
 

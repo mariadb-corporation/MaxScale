@@ -54,7 +54,9 @@ public:
     RewriteFilter(const RewriteFilter&) = delete;
     RewriteFilter& operator=(const RewriteFilter&) = delete;
 
-    static RewriteFilter* create(const char* zName);
+    RewriteFilter(const std::string& name);
+
+    static std::unique_ptr<mxs::Filter> create(const char* zName);
 
     std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
@@ -71,9 +73,6 @@ public:
     {
         return {MXS_MARIADB_PROTOCOL_NAME};
     }
-
-private:
-    RewriteFilter(const std::string& name);
 
 private:
     class Config : public mxs::config::Configuration

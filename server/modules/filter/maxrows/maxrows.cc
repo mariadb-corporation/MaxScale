@@ -196,9 +196,9 @@ bool MaxRowsSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, co
 }
 
 // static
-MaxRows* MaxRows::create(const char* name)
+std::unique_ptr<mxs::Filter> MaxRows::create(const char* name)
 {
-    return new MaxRows(name);
+    return std::make_unique<MaxRows>(name);
 }
 
 extern "C"

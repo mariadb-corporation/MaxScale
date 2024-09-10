@@ -157,9 +157,9 @@ Tee::Tee(const char* name)
  *
  * @return The instance data for this new instance
  */
-Tee* Tee::create(const char* name)
+std::unique_ptr<mxs::Filter> Tee::create(const char* name)
 {
-    return new Tee(name);
+    return std::make_unique<Tee>(name);
 }
 
 std::shared_ptr<mxs::FilterSession> Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)

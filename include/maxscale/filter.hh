@@ -261,15 +261,14 @@ struct FILTER_API
     /**
      * @brief Create a new instance of the filter
      *
-     * This function is called when a new filter instance is created. The return
-     * value of this function will be passed as the first parameter to the
-     * other API functions.
+     * This function is called when a new filter instance is created. Never call this directly, the FilterApi
+     * class will do it for you.
      *
      * @param name    Name of the filter instance
      *
-     * @return New filter instance on NULL on error
+     * @return New filter instance or NULL on error
      */
-    Filter* (* createInstance)(const char* name);
+    std::unique_ptr<Filter> (* createInstance)(const char* name);
 };
 }
 
@@ -293,9 +292,9 @@ public:
     FilterApi(const FilterApi&) = delete;
     FilterApi& operator=(const FilterApi&) = delete;
 
-    static Filter* createInstance(const char* name)
+    static std::unique_ptr<Filter> createInstance(const char* name)
     {
-        Filter* inst = nullptr;
+        std::unique_ptr<Filter> inst;
         MXS_EXCEPTION_GUARD(inst = FilterClass::create(name));
         return inst;
     }

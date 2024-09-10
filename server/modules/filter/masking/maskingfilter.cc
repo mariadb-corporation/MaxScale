@@ -119,9 +119,9 @@ MaskingFilter::~MaskingFilter()
 }
 
 // static
-MaskingFilter* MaskingFilter::create(const char* zName)
+std::unique_ptr<mxs::Filter> MaskingFilter::create(const char* zName)
 {
-    return new MaskingFilter(zName);
+    return std::make_unique<MaskingFilter>(zName);
 }
 
 std::shared_ptr<mxs::FilterSession> MaskingFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
