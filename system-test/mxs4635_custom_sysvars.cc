@@ -98,9 +98,10 @@ void test_connection_counts(TestConnections& test)
 }
 
 
-std::map<std::string, std::string> update_and_get_variables(TestConnections& test, std::string value)
+std::map<std::string, std::string>
+update_and_get_variables(TestConnections& test, std::string key, std::string value)
 {
-    test.check_maxctrl("alter listener RW-Split-Listener connection_metadata=" + value);
+    test.check_maxctrl("alter listener RW-Split-Listener " + key + "=" + value);
     // The "show threads" should help avoid the unlikely case where a worker hasn't received the new
     // version of the config when it accepts this client. By pinging all workers, we make sure prior
     // messages have been processed.
@@ -108,6 +109,11 @@ std::map<std::string, std::string> update_and_get_variables(TestConnections& tes
     // Waiting two monitor intervals makes sure the variables get updated
     test.maxscale->wait_for_monitor(2);
     return get_system_variables(test);
+}
+
+std::map<std::string, std::string> update_and_get_variables(TestConnections& test, std::string value)
+{
+    return update_and_get_variables(test, "connection_metadata", value);
 }
 
 void test_custom_metadata(TestConnections& test)
@@ -225,6 +231,30 @@ void test_auto_metadata(TestConnections& test)
     MXT_EXPECT(vars["hello"] == "world");
 }
 
+void test_redirect_url(TestConnections& test)
+{
+    // MXS-5238: Connection redirection: add redirect_url parameter
+    // Use the redirect_url and make sure it overrides the connection_metadata value
+    const std::string URL = "mariadb://localhost:3306";
+    auto vars = update_and_get_variables(test, "redirect_url", URL);
+    MXT_EXPECT_F(vars["redirect_url"] == URL, "Expected 'redirect_url' to be '%s' but it was '%s'",
+                 URL.c_str(), vars["redirect_url"].c_str());
+
+    for (std::string url : {
+        "foobar", "www.mariadb.com",
+        "file:///dev/null", "https://www.mariadb.com",
+        "MariaDB://localhost", "MySQL://localhost", "Oracle://localhost",
+        "jdbc:mariadb://localhost:3306/test?useServerPrepStmts=true",
+        "mariadb://", "mariadb://localhost:", "mariadb://localhost:foo"
+    })
+    {
+        test.expect(test.maxctrl("alter listener RW-Split-Listener redirect_url=" + url).rc != 0,
+                    "Bad URL value was accepted: %s", url.c_str());
+    }
+
+    test.check_maxctrl("alter listener RW-Split-Listener redirect_url=");
+}
+
 void test_main(TestConnections& test)
 {
     test.tprintf("Testing connection counts");
@@ -235,6 +265,9 @@ void test_main(TestConnections& test)
 
     test.tprintf("Testing automatic metadata");
     test_auto_metadata(test);
+
+    test.tprintf("Testing redirect_url");
+    test_redirect_url(test);
 }
 
 int main(int argc, char** argv)

@@ -9,6 +9,16 @@
 
 * By default, MaxScale no longer generates a core file in case of a crash.
 
+* The [system variable tracker value](https://mariadb.com/kb/en/server-system-variables/#session_track_system_variables)
+  for `redirect_url` is intercepted and renamed by MaxScale to
+  `mxs_rdir_url`. This is done to prevent accidental redirections away from
+  MaxScale.
+
+* The new [redirect_url](./Getting-Started/Configuration-Guide.md#redirect_url)
+  parameter can be used to implement
+  [connection redirection](./Protocols/MariaDB.md#connection-redirection)
+  in MaxScale.
+
 ## MariaDB MaxScale 24.08
 
 * The functionality that was enabled by the `reuse_prepared_statements`

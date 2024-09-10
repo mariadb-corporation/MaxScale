@@ -130,6 +130,7 @@ public:
         std::string              connection_init_sql_file;
         std::string              user_mapping_file;
         std::string              proxy_networks;
+        std::string              redirect_url;
         std::vector<std::string> connection_metadata;
 
         // TLS configuration parameters
