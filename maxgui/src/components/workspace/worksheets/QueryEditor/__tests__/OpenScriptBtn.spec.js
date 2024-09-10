@@ -40,7 +40,7 @@ describe(`OpenScriptBtn`, () => {
   let wrapper
 
   it('Should call handleOpenFile when the button is clicked', async () => {
-    wrapper = mountFactory()
+    wrapper = mountFactory({ props: { hasFileSystemReadOnlyAccess: true } })
     const spy = vi.spyOn(wrapper.vm, 'handleOpenFile')
     await wrapper.find('button').trigger('click')
     expect(spy).toHaveBeenCalled()

@@ -17,8 +17,9 @@ import viteConfig from './vite.config'
 export default mergeConfig(
   viteConfig,
   defineConfig({
+    define: process.env.VITEST ? {} : { global: 'window' },
     test: {
-      environment: 'jsdom',
+      environment: 'happy-dom',
       exclude: [...configDefaults.exclude, 'e2e/*'],
       root: fileURLToPath(new URL('./', import.meta.url)),
       globals: true,

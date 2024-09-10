@@ -34,6 +34,7 @@ document.execCommand = vi.fn()
 global.Worker = vi.fn(() => ({ postMessage: vi.fn(), onmessage: vi.fn(), terminate: vi.fn() }))
 
 global.ResizeObserver = require('resize-observer-polyfill')
+global.WebSocket = vi.fn()
 
 vi.mock('vue-i18n')
 useI18n.mockReturnValue({ t: (tKey) => tKey, tm: (tKey) => tKey })

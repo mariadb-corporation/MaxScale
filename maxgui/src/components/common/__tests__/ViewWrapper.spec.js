@@ -36,10 +36,10 @@ describe('ViewWrapper', () => {
 
   it('renders with custom spacer style when spacerStyle prop is provided', () => {
     const wrapper = mount(ViewWrapper, {
-      props: { spacerStyle: { borderBottom: 'thin solid #e7eef1' } },
+      props: { spacerStyle: { borderBottomWidth: 'thin' } },
     })
     expect(wrapper.findComponent({ name: 'v-spacer' }).attributes('style')).toBe(
-      'border-bottom: thin solid #e7eef1;'
+      'border-bottom-width: thin;'
     )
   })
 })

@@ -66,7 +66,7 @@
     "@vue/test-utils": "~2.4.6",
     "eslint": "~8.57.0",
     "eslint-plugin-vue": "~9.27.0",
-    "jsdom": "~24.1.1",
+    "happy-dom": "^15.7.3",
     "prettier": "~3.3.3",
     "resize-observer-polyfill": "~1.5.1",
     "vitest": "~2.0.4"
