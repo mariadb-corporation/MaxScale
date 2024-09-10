@@ -1,3 +1,13 @@
+find_package(Boost REQUIRED)
+
+if (Boost_VERSION VERSION_LESS_EQUAL "1.66")
+  # Compilation with GCC on Rocky Linux 8 fails with an internal compiler error
+  # if LTO is enabled. Disabling LTO for older boost versions avoids it.
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO FALSE)
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE FALSE)
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL FALSE)
+endif()
+
 add_library(pinloki-core OBJECT
   file_transformer.cc
   binlog_file.cc
