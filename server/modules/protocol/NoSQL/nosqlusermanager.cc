@@ -782,7 +782,7 @@ void UserManager::check_initial_user(const SERVER* pMaster)
 
 void UserManager::create_initial_user(const SERVER* pMaster)
 {
-    MYSQL* pMysql = mysql_init(nullptr);
+    MYSQL* pMysql = mxq::mysql_init();
 
     if (pMaster->proxy_protocol())
     {

@@ -107,6 +107,8 @@ public:
         : m_config(config)
     {
         mysql_init(&m_mysql);
+        my_bool verify = 0;
+        mysql_optionsv(&m_mysql, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
     }
 
     const Config& config() const
@@ -125,6 +127,8 @@ public:
 
         mysql_close(&m_mysql);
         mysql_init(&m_mysql);
+        my_bool verify = 0;
+        mysql_optionsv(&m_mysql, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
 
         const char* zHost = m_config.host.c_str();
         int port = m_config.port;

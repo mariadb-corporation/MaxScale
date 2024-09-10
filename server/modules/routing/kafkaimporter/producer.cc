@@ -110,7 +110,7 @@ bool Producer::connect()
         if (auto master = find_master())
         {
             int timeout = m_config.timeout.get().count();
-            m_mysql = mysql_init(nullptr);
+            m_mysql = mxq::mysql_init();
 
             mysql_optionsv(m_mysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
             mysql_optionsv(m_mysql, MYSQL_OPT_READ_TIMEOUT, &timeout);

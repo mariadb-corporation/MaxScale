@@ -86,7 +86,7 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
     server.set_address(zHost);
     server.set_port(3306);
 
-    MYSQL* pMysql = mysql_init(NULL);
+    MYSQL* pMysql = mxq::mysql_init();
 
     MYSQL* pConn = mxs_mysql_real_connect(pMysql, &server, server.port(), zUser, zPassword);
 
