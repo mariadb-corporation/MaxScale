@@ -60,7 +60,6 @@ of their use.
  - [Avrorouter](Routers/Avrorouter.md)
  - [Binlogrouter](Routers/Binlogrouter.md)
  - [Cat](Routers/Cat.md)
- - [HintRouter](Routers/HintRouter.md)
  - [KafkaCDC](Routers/KafkaCDC.md)
  - [MirrorRouter](Routers/Mirror.md)
  - [Read Connection Router](Routers/ReadConnRoute.md)
