@@ -7,6 +7,8 @@
   See [configuration guide](Getting-Started/Configuration-Guide.md#TLS/SSL-encryption)
   for more information.
 
+* By default, MaxScale no longer generates a core file in case of a crash.
+
 ## MariaDB MaxScale 24.08
 
 * The functionality that was enabled by the `reuse_prepared_statements`

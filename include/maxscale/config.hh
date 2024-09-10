@@ -513,6 +513,8 @@ public:
     std::string  debug;
     int64_t      max_read_amount;               /**< Max amount read before return to epoll_wait. */
     int64_t      host_cache_size;
+    bool         core_file;                     /**< Whether a core-file should be created */
+
 
     // The following will not be configured via the configuration mechanism.
     mxs::ConfigParameters key_manager_options;
@@ -667,5 +669,6 @@ private:
     static config::ParamString                          s_debug;
     static config::ParamSize                            s_max_read_amount;
     static ParamKeyManager                              s_key_manager;
+    static config::ParamBool                            s_core_file;
 };
 }
