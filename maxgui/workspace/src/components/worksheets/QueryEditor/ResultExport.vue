@@ -130,72 +130,44 @@
                         <template v-if="$typy(selectedFormat, 'extension').safeString === 'csv'">
                             <v-row class="ma-n1">
                                 <v-col
-                                    v-for="(_, key) in csvTerminatedOpts"
+                                    v-for="(_, key) in csvOpts"
                                     :key="key"
                                     cols="12"
                                     md="12"
                                     class="pa-1"
                                 >
-                                    <label
-                                        class="field__label mxs-color-helper text-small-text label-required"
-                                    >
-                                        {{ $mxs_t(key) }}
-                                    </label>
-                                    <v-text-field
-                                        v-model="csvTerminatedOpts[key]"
-                                        class="vuetify-input--override error--text__bottom"
-                                        dense
-                                        outlined
-                                        :height="36"
-                                        :rules="[
-                                            v =>
-                                                !!v ||
-                                                $mxs_t('errors.requiredInput', {
-                                                    inputName: $mxs_t(key),
-                                                }),
-                                        ]"
-                                        hide-details="auto"
-                                        required
-                                    />
-                                </v-col>
-                            </v-row>
-                            <v-row class="mt-3 mx-n1 mb-n1">
-                                <v-col
-                                    v-for="(_, key) in csvCheckboxOpts"
-                                    :key="key"
-                                    cols="12"
-                                    class="pa-1"
-                                >
-                                    <v-checkbox
-                                        v-model="csvCheckboxOpts[key]"
-                                        class="pa-0 ma-0 v-checkbox--mariadb"
-                                        color="primary"
-                                        hide-details="auto"
-                                    >
-                                        <template v-slot:label>
-                                            <label class="v-label pointer">
-                                                {{ $mxs_t(key) }}
-                                            </label>
-                                            <v-tooltip
-                                                v-if="key === 'noBackslashEscapes'"
-                                                top
-                                                transition="slide-y-transition"
-                                                max-width="400"
-                                            >
-                                                <template v-slot:activator="{ on }">
-                                                    <v-icon
-                                                        class="ml-1 pointer"
-                                                        size="16"
-                                                        color="info"
-                                                        v-on="on"
-                                                    >
-                                                        mdi-information-outline
-                                                    </v-icon>
-                                                </template>
-                                                <span>{{ $mxs_t(`info.${key}`) }}</span>
-                                            </v-tooltip>
-                                        </template>
-                                    </v-checkbox>
+                                    <template v-if="key === 'withHeaders'">
+                                        <v-checkbox
+                                            v-model="csvOpts[key]"
+                                            class="pa-0 mt-2 v-checkbox--mariadb"
+                                            color="primary"
+                                            hide-details="auto"
+                                            :label="$mxs_t(key)"
+                                        />
+                                    </template>
+                                    <template v-else>
+                                        <label
+                                            class="field__label mxs-color-helper text-small-text label-required"
+                                        >
+                                            {{ $mxs_t(key) }}
+                                        </label>
+                                        <v-text-field
+                                            v-model="csvOpts[key]"
+                                            class="vuetify-input--override error--text__bottom"
+                                            dense
+                                            outlined
+                                            :height="36"
+                                            :rules="[
+                                                v =>
+                                                    !!v ||
+                                                    $mxs_t('errors.requiredInput', {
+                                                        inputName: $mxs_t(key),
+                                                    }),
+                                            ]"
+                                            hide-details="auto"
+                                            required
+                                        />
+                                    </template>
                                 </v-col>
                             </v-row>
                         </template>
@@ -294,12 +266,10 @@ export default {
             excludedFieldIndexes: [],
             fileName: '',
             // csv export options
-            csvTerminatedOpts: {
+            csvOpts: {
                 fieldsTerminatedBy: '',
                 linesTerminatedBy: '',
-            },
-            csvCheckboxOpts: {
-                noBackslashEscapes: false,
+                nullReplacedBy: '',
                 withHeaders: false,
             },
             chosenSqlOpt: SQL_EXPORT_OPTS.BOTH,
@@ -385,8 +355,7 @@ export default {
          */
         escapeForCSV(v) {
             // NULL is returned as js null in the query result.
-            if (this.$typy(v).isNull)
-                return this.csvCheckboxOpts.noBackslashEscapes ? 'NULL' : '\\N' // db escape
+            if (this.$typy(v).isNull) return this.csvOpts.nullReplacedBy
             if (this.$typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
             return v
         },
@@ -437,14 +406,10 @@ export default {
             )
         },
         toCsv() {
-            const fieldsTerminatedBy = this.unescapedUserInput(
-                this.csvTerminatedOpts.fieldsTerminatedBy
-            )
-            const linesTerminatedBy = this.unescapedUserInput(
-                this.csvTerminatedOpts.linesTerminatedBy
-            )
+            const fieldsTerminatedBy = this.unescapedUserInput(this.csvOpts.fieldsTerminatedBy)
+            const linesTerminatedBy = this.unescapedUserInput(this.csvOpts.linesTerminatedBy)
             let str = ''
-            if (this.csvCheckboxOpts.withHeaders) {
+            if (this.csvOpts.withHeaders) {
                 const fields = this.selectedFields.map(field => this.escapeForCSV(field))
                 str = `${fields.join(fieldsTerminatedBy)}${linesTerminatedBy}`
             }
@@ -528,9 +493,11 @@ export default {
         assignDefOpt() {
             //TODO: Determine OS newline and store it as user preferences
             // escape reserved single character escape sequences so it can be rendered to the DOM
-            this.csvTerminatedOpts = {
+            this.csvOpts = {
                 fieldsTerminatedBy: '\\t',
                 linesTerminatedBy: '\\n',
+                nullReplacedBy: '\\N',
+                withHeaders: false,
             }
             this.selectedFormat = this.fileFormats[0] // csv
         },
