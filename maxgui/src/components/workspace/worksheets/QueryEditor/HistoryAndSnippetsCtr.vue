@@ -26,7 +26,6 @@ const props = defineProps({
   dim: { type: Object, required: true },
   queryMode: { type: String, required: true },
   queryTabId: { type: String, required: true },
-  resultDataTableAttrs: { type: Object, default: () => ({}) },
   dataTableProps: { type: Object, required: true },
 })
 
@@ -49,6 +48,16 @@ const TABS = [
   { id: SNIPPETS, label: t('snippets') },
 ]
 const TAB_NAV_HEIGHT = 20
+const MENU_OPTS = [
+  {
+    title: t('copyToClipboard'),
+    children: [{ title: 'SQL', type: CLIPBOARD, action: txtOptHandler }],
+  },
+  {
+    title: t('placeToEditor'),
+    children: [{ title: 'SQL', type: INSERT, action: txtOptHandler }],
+  },
+]
 
 const selectedItems = ref([])
 const logTypesToShow = ref([])
@@ -63,21 +72,21 @@ const query_history = computed(() => store.state.prefAndStorage.query_history)
 const query_snippets = computed(() => store.state.prefAndStorage.query_snippets)
 const activeMode = computed({
   get: () => props.queryMode,
-  set(v) {
-    if (props.queryMode === HISTORY || props.queryMode === SNIPPETS)
-      QueryResult.update({ where: props.queryTabId, data: { query_mode: v } })
-  },
+  set: (v) => QueryResult.update({ where: props.queryTabId, data: { query_mode: v } }),
 })
-const headers = computed(() => {
-  let data = []
+const persistedQueryData = computed(() => {
   switch (activeMode.value) {
     case HISTORY:
-      data = query_history.value
-      break
+      return query_history.value
     case SNIPPETS:
-      data = query_snippets.value
+      return query_snippets.value
+    default:
+      return []
   }
-  return Object.keys(typy(data[0]).safeObjectOrEmpty).map((field) => {
+})
+const fields = computed(() => Object.keys(typy(persistedQueryData.value, '[0]').safeObjectOrEmpty))
+const headers = computed(() =>
+  fields.value.map((field) => {
     const header = {
       text: field,
       capitalize: true,
@@ -99,7 +108,7 @@ const headers = computed(() => {
         header.useCellSlot = true
         header.valuePath = 'name'
         break
-      // Fields for QUERY_MODE_MAP.SNIPPETS
+      // Fields for SNIPPETS
       case 'name':
         header.width = 240
         header.useCellSlot = isEditing.value
@@ -109,20 +118,9 @@ const headers = computed(() => {
     }
     return header
   })
-})
-const fields = computed(() => headers.value.map((h) => h.text))
+)
 // result-data-table auto adds an order number header, so plus 1
-const idxOfDateCol = computed(() => headers.value.findIndex((h) => h.text === 'date') + 1)
-const persistedQueryData = computed(() => {
-  switch (activeMode.value) {
-    case HISTORY:
-      return query_history.value
-    case SNIPPETS:
-      return query_snippets.value
-    default:
-      return []
-  }
-})
+const idxOfDateCol = computed(() => fields.value.findIndex((h) => h === 'date') + 1)
 const rows = computed(() => persistedQueryData.value.map((item) => Object.values(item)))
 const currRows = computed(() => {
   let data = persistedQueryData.value
@@ -138,32 +136,14 @@ const tableData = computed(() => {
   if (persistedQueryData.value.length) return { data: currRows.value, fields: fields.value }
   return {}
 })
-const menuOpts = computed(() => {
-  return [
-    {
-      title: t('copyToClipboard'),
-      children: [
-        {
-          title: 'SQL',
-          type: CLIPBOARD,
-          action: ({ opt, data }) => txtOptHandler({ opt, data }),
-        },
-      ],
-    },
-    {
-      title: t('placeToEditor'),
-      children: [
-        {
-          title: 'SQL',
-          type: INSERT,
-          action: ({ opt, data }) => txtOptHandler({ opt, data }),
-        },
-      ],
-    },
-  ]
-})
-const editableCols = computed(() =>
-  tableHeaders.value.filter((h) => h.text === 'name' || h.text === 'sql')
+const editableFields = computed(() => fields.value.filter((f) => f === 'name' || f === 'sql'))
+const defExportFileName = computed(
+  () => `MaxScale Query ${activeMode.value === HISTORY ? 'History' : 'Snippets'}`
+)
+const confDlgTitle = computed(() =>
+  activeMode.value === HISTORY
+    ? t('clearSelectedQueries', { targetType: t('queryHistory') })
+    : t('deleteSnippets')
 )
 
 function onDelete() {
@@ -176,10 +156,7 @@ function deleteSelectedRows() {
   )
   const newMaxtrices = xorWith(rows.value, targetMatrices, isEqual)
   // Convert to array of objects
-  const newData = map2dArr({
-    fields: fields.value,
-    arr: newMaxtrices,
-  })
+  const newData = map2dArr({ fields: fields.value, arr: newMaxtrices })
   store.commit(`prefAndStorage/SET_QUERY_${activeMode.value}`, newData)
   selectedItems.value = []
 }
@@ -219,18 +196,20 @@ function formatDate(cell) {
   })
 }
 
-function handleEdit() {
+function toggleEditMode() {
   isEditing.value = !isEditing.value
-  if (!isEditing.value) {
-    const cells = cloneDeep(changedCells.value)
-    const snippets = cloneDeep(query_snippets.value)
-    cells.forEach((c) => {
-      delete c.objRow['#'] // Remove # col
-      const idxOfRow = query_snippets.value.findIndex((item) => isEqual(item, c.objRow))
-      if (idxOfRow > -1) snippets[idxOfRow] = { ...snippets[idxOfRow], [c.colName]: c.value }
-    })
-    store.commit('prefAndStorage/SET_QUERY_SNIPPETS', snippets)
-  }
+}
+
+function confirmEditSnippets() {
+  const cells = cloneDeep(changedCells.value)
+  const snippets = cloneDeep(query_snippets.value)
+  cells.forEach((c) => {
+    delete c.objRow['#'] // Remove # col
+    const idxOfRow = query_snippets.value.findIndex((item) => isEqual(item, c.objRow))
+    if (idxOfRow > -1) snippets[idxOfRow] = { ...snippets[idxOfRow], [c.colName]: c.value }
+  })
+  store.commit('prefAndStorage/SET_QUERY_SNIPPETS', snippets)
+  toggleEditMode()
 }
 
 function toCellData({ rowData, cell, colName }) {
@@ -261,13 +240,11 @@ function onChangeCell({ item, hasChanged }) {
           :width="tblDim.width"
           :groupByColIdx="idxOfDateCol"
           :draggableCell="!isEditing"
-          :menuOpts="menuOpts"
+          :menuOpts="MENU_OPTS"
           showSelect
           :toolbarProps="{
             customFilterActive: Boolean(logTypesToShow.length),
-            defExportFileName: `MaxScale Query ${
-              activeMode === QUERY_MODE_MAP.HISTORY ? 'History' : 'Snippets'
-            }`,
+            defExportFileName,
             exportAsSQL: false,
             onDelete,
           }"
@@ -292,7 +269,7 @@ function onChangeCell({ item, hasChanged }) {
               </VTab>
             </VTabs>
           </template>
-          <template v-if="activeMode === QUERY_MODE_MAP.HISTORY" #filter-menu-content-append>
+          <template v-if="activeMode === HISTORY" #filter-menu-content-append>
             <FilterList
               v-model="logTypesToShow"
               :label="$t('logTypes')"
@@ -305,12 +282,12 @@ function onChangeCell({ item, hasChanged }) {
           </template>
           <template #toolbar-right-prepend="{ showBtn }">
             <TooltipBtn
-              v-if="showBtn && activeMode === QUERY_MODE_MAP.SNIPPETS"
+              v-if="showBtn && activeMode === SNIPPETS"
               square
               variant="text"
               size="small"
               color="primary"
-              @click="handleEdit"
+              @click="isEditing ? confirmEditSnippets() : toggleEditMode()"
             >
               <template #btn-content>
                 <VIcon
@@ -328,7 +305,7 @@ function onChangeCell({ item, hasChanged }) {
               :maxWidth="maxWidth"
             />
           </template>
-          <template v-if="activeMode === QUERY_MODE_MAP.SNIPPETS" #header-name>
+          <template v-if="activeMode === SNIPPETS" #header-name>
             {{ $t('prefix') }}
           </template>
           <template #date="{ on, highlighterData, data: { cell } }">
@@ -353,23 +330,21 @@ function onChangeCell({ item, hasChanged }) {
           <!-- TODO: Redesign the edit feature, so that editable cols will be rendered in a dialog. The 
           SqlEditor should be used for editing sql text' -->
           <template
-            v-for="h in editableCols"
-            #[h.text]="props"
-            :key="`${h.text}-${props.data.cell}`"
+            v-for="field in editableFields"
+            #[field]="props"
+            :key="`${field}-${props.data.cell}`"
           >
             <EditableCell
               v-if="isEditing"
               :data="
-                toCellData({ rowData: props.data.rowData, cell: props.data.cell, colName: h.text })
+                toCellData({ rowData: props.data.rowData, cell: props.data.cell, colName: field })
               "
               @on-change="onChangeCell"
             />
           </template>
           <template #result-msg-append>
             <i18n-t
-              :keypath="
-                activeMode === QUERY_MODE_MAP.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'
-              "
+              :keypath="activeMode === HISTORY ? 'historyTabGuide' : 'snippetTabGuide'"
               class="d-flex align-center pt-2"
               tag="span"
               scope="global"
@@ -388,13 +363,7 @@ function onChangeCell({ item, hasChanged }) {
       </KeepAlive>
       <BaseDlg
         v-model="isConfDlgOpened"
-        :title="
-          activeMode === QUERY_MODE_MAP.HISTORY
-            ? $t('clearSelectedQueries', {
-                targetType: $t('queryHistory'),
-              })
-            : $t('deleteSnippets')
-        "
+        :title="confDlgTitle"
         saveText="delete"
         minBodyWidth="624px"
         :onSave="deleteSelectedRows"
@@ -404,7 +373,7 @@ function onChangeCell({ item, hasChanged }) {
             {{
               $t('info.clearSelectedQueries', {
                 quantity: selectedItems.length === rows.length ? $t('entire') : $t('selected'),
-                targetType: $t(activeMode === QUERY_MODE_MAP.HISTORY ? 'queryHistory' : 'snippets'),
+                targetType: $t(activeMode === HISTORY ? 'queryHistory' : 'snippets'),
               })
             }}
           </p>
