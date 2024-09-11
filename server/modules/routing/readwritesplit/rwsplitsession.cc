@@ -1296,7 +1296,7 @@ std::string RWSplitSession::get_delayed_retry_failure_reason() const
     if (only_failed_masters)
     {
         extra = ". Found servers with the 'Master' status but the connections "
-                "have been marked as broken due to fatal errors.";
+                "have been marked as broken due to fatal errors";
     }
 
     return "'delayed_retry_timeout' exceeded before a server with the 'Master' status could be found"
