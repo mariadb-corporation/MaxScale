@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#define MXB_MODULE_NAME "rewitefilter"
+#define MXB_MODULE_NAME "rewritefilter"
 #include "rewritesession.hh"
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "rewritefilter.hh"
