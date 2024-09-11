@@ -54,7 +54,6 @@ of their use.
  - [Avrorouter](Routers/Avrorouter.md)
  - [Binlogrouter](Routers/Binlogrouter.md)
  - [Cat](Routers/Cat.md)
- - [HintRouter](Routers/HintRouter.md)
  - [KafkaCDC](Routers/KafkaCDC.md)
  - [KafkaImporter](Routers/KafkaImporter.md)
  - [MirrorRouter](Routers/Mirror.md)
