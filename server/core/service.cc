@@ -353,6 +353,38 @@ std::set<std::string> get_target_protocols(std::set<std::string>protocols,
 
     return protocols;
 }
+
+class Closer
+{
+public:
+    Closer(std::vector<mxs::Endpoint*>* pEndpoints)
+        : m_pEndpoints(pEndpoints)
+    {
+    }
+
+    ~Closer()
+    {
+        if (!m_commit)
+        {
+            for (auto e : *m_pEndpoints)
+            {
+                if (e->is_open())
+                {
+                    e->close();
+                }
+            }
+        }
+    }
+
+    void commit()
+    {
+        m_commit = true;
+    }
+
+private:
+    std::vector<mxs::Endpoint*>* m_pEndpoints;
+    bool                         m_commit {false};
+};
 }
 
 // static
@@ -1524,6 +1556,9 @@ void ServiceEndpoint::connect()
                    std::mem_fn(&std::shared_ptr<mxs::Endpoint>::get));
     std::shared_ptr<mxs::RouterSession> router_session;
 
+    // If the newSession call throws an exception, any endpoints that were opened need to be closed.
+    Closer closer(&endpoints);
+
     try
     {
         router_session = m_service->router()->newSession(m_session, endpoints);
@@ -1542,6 +1577,9 @@ void ServiceEndpoint::connect()
             mxb::cat("Failed to create new router session for service '",
                      m_service->name(), "'. See previous errors for more details."));
     }
+
+    // The router session has been created, it is now responsible for closing the endpoints.
+    closer.commit();
 
     router_session->setEndpoint(this);
 
