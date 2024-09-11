@@ -14,6 +14,28 @@ By default, the Galera Monitor will choose the node with the lowest
 `wsrep_local_index` value as the primary. This will mean that two MaxScales
 running on different servers will choose the same server as the primary.
 
+### WSREP Variables and Their Effects
+
+The following WSREP variables are inspected by galeramon to see whether a node is
+usable. If the node is not usable, it loses the `Master` and `Slave` labels and
+will be in the `Running` state.
+
+- If `wsrep_ready=0`, the WSREP system is not yet ready and the Galera node
+  cannot accept queries.
+
+- If `wsrep_desync=1` is set, the node is desynced and is not participating in
+  the Galera replication.
+
+- If `wsrep_reject_queries=[ALL|ALL_KILL]` is set, queries are refused and the
+  node is unusable.
+
+- With `wsrep_sst_donor_rejects_queries=1`, donor nodes reject
+  queries. Galeramon treats this the same as if `wsrep_reject_queries=ALL` was
+  set.
+
+- If `wsrep_local_state` is not 4 (or 2 with `available_when_donor=true`), the
+  node is not in the correct state and is not used.
+
 ### Galera clusters and replicas replicating from it
 
 MaxScale 2.4.0 added support for replicas replicating off of Galera nodes. If a
