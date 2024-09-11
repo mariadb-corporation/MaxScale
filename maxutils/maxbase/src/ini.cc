@@ -31,7 +31,7 @@ namespace
  * Duplicate headers and settings are allowed. Multiline settings are concatenated.
  */
 int standard_handler(void* userdata, const char* section, const char* name,
-                     const char* value, int lineno)
+                     const char* value, int lineno, const char* line)
 {
     using namespace mxb::ini::array_result;
     auto* sections = static_cast<Configuration*>(userdata);
@@ -41,6 +41,7 @@ int standard_handler(void* userdata, const char* section, const char* name,
         ConfigSection new_section;
         new_section.header = section;
         new_section.lineno = lineno;
+        new_section.line = line;
         sections->push_back(move(new_section));
     }
     else
@@ -59,7 +60,8 @@ int standard_handler(void* userdata, const char* section, const char* name,
             // Key-value for a new anonymous section.
             ConfigSection new_section;
             new_section.lineno = lineno;
-            new_section.key_values.emplace_back(name, value, lineno);
+            new_section.line = line;
+            new_section.key_values.emplace_back(name, value, lineno, line);
 
             sections->push_back(move(new_section));
         }
@@ -71,11 +73,12 @@ int standard_handler(void* userdata, const char* section, const char* name,
                 && curr_section.key_values.back().name == name;
             if (is_continuation)
             {
+                curr_section.line += line;
                 curr_section.key_values.back().value += value;
             }
             else
             {
-                curr_section.key_values.emplace_back(name, value, lineno);
+                curr_section.key_values.emplace_back(name, value, lineno, line);
             }
         }
     }
@@ -114,10 +117,11 @@ array_result::ParseResult parse_config_text(const std::string& config_text)
     return rval;
 }
 
-array_result::ValueDef::ValueDef(std::string name, std::string value, int lineno)
+array_result::ValueDef::ValueDef(std::string name, std::string value, int lineno, std::string line)
     : name(move(name))
     , value(move(value))
     , lineno(lineno)
+    , line(move(line))
 {
 }
 
@@ -273,7 +277,7 @@ ParseResult convert_to_map(ini::array_result::Configuration&& config_in)
         if (section_in.header.empty())
         {
             errors.push_back(mxb::string_printf("Section starting at line %i has no name or name "
-                                                "is empty.", section_in.lineno));
+                                                "is empty: %s", section_in.lineno, section_in.line.c_str()));
         }
         else
         {
@@ -290,6 +294,7 @@ ParseResult convert_to_map(ini::array_result::Configuration&& config_in)
                 // Got a new section. Check that all keys are unique.
                 ConfigSection section_out;
                 section_out.lineno = section_in.lineno;
+                section_out.line = section_in.line;
                 auto& new_kvs = section_out.key_values;
 
                 for (auto& kv_in : section_in.key_values)
@@ -297,8 +302,9 @@ ParseResult convert_to_map(ini::array_result::Configuration&& config_in)
                     if (kv_in.name.empty())
                     {
                         errors.push_back(mxb::string_printf(
-                                             "Setting starting at line %i in section '%s' has no name.",
-                                             kv_in.lineno, section_in.header.c_str()));
+                                             "Setting starting at line %i in section '%s' has no name: %s",
+                                             kv_in.lineno, section_in.header.c_str(),
+                                             kv_in.line.c_str()));
                     }
                     else
                     {
@@ -313,7 +319,7 @@ ParseResult convert_to_map(ini::array_result::Configuration&& config_in)
                         }
                         else
                         {
-                            ValueDef val_out(move(kv_in.value), kv_in.lineno);
+                            ValueDef val_out(move(kv_in.value), kv_in.lineno, kv_in.line);
                             section_out.key_values.emplace(move(kv_in.name), move(val_out));
                         }
                     }
@@ -331,9 +337,10 @@ ParseResult convert_to_map(ini::array_result::Configuration&& config_in)
     return rval;
 }
 
-ValueDef::ValueDef(std::string value, int lineno)
+ValueDef::ValueDef(std::string value, int lineno, std::string line)
     : value(std::move(value))
     , lineno(lineno)
+    , line(line)
 {
 }
 }

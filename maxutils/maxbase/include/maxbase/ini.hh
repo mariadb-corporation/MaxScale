@@ -34,8 +34,9 @@ struct ValueDef
     std::string name;
     std::string value;
     int         lineno {-1};
+    std::string line;
 
-    ValueDef(std::string name, std::string value, int lineno = -1);
+    ValueDef(std::string name, std::string value, int lineno = -1, std::string line = "");
 };
 
 struct ConfigSection
@@ -43,6 +44,7 @@ struct ConfigSection
     std::string           header;
     std::vector<ValueDef> key_values;
     int                   lineno {-1};
+    std::string           line;
 };
 
 using Configuration = std::vector<ConfigSection>;
@@ -65,17 +67,19 @@ struct ValueDef
 {
     std::string value;
     int         lineno {-1};
+    std::string line;
 
     explicit ValueDef()
     {
     }
-    explicit ValueDef(std::string value, int lineno = -1);
+    explicit ValueDef(std::string value, int lineno = -1, std::string line = "");
 };
 
 struct ConfigSection
 {
     std::map<std::string, ValueDef> key_values;
     int                             lineno{-1};
+    std::string                     line;
 };
 
 using Configuration = std::map<std::string, ConfigSection>;
@@ -92,7 +96,7 @@ ParseResult convert_to_map(mxb::ini::array_result::Configuration&& config_in);
 // This should match the type expected by inih. The type can change depending on compilation settings
 // so best define it here and hide the library type.
 using IniHandler = int (*)(void* userdata, const char* section, const char* name, const char* value,
-                           int lineno);
+                           int lineno, const char* line);
 
 /**
  * Calls ini_parse.

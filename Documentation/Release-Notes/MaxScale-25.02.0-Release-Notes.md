@@ -16,6 +16,12 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## New Features
 
+### [MXS-5149](https://jira.mariadb.org/browse/MXS-5149) Include actual line content in parse error message
+
+When configuration file parsing fails in an early phase, the actual offending
+line will now be logged in the error message to make it easier to pinpoint
+the problem.
+
 ### [MXS-5177](https://jira.mariadb.org/browse/MXS-5177) Introduce a new core_file variable in MaxScale
 
 By default, MaxScale no longer generates a core file when it crashes.

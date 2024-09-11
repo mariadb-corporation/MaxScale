@@ -30,7 +30,7 @@ extern "C" {
 #if INI_HANDLER_LINENO
 typedef int (*ini_handler)(void* user, const char* section,
                            const char* name, const char* value,
-                           int lineno);
+                           int lineno, const char* line);
 #else
 typedef int (*ini_handler)(void* user, const char* section,
                            const char* name, const char* value);
