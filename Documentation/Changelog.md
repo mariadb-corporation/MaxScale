@@ -141,6 +141,8 @@ identical. 21.06 denotes the year and month when the first 6 release was made.
  for a backend connection to become available when using connection sharing
  (i.e. `idle_session_pool_time`).
 
+* The `hintrouter` module was removed in MaxScale 21.06.18. The module was non-functional.
+
 For more details, please refer to:
 
 * [MariaDB MaxScale 21.06.17 Release Notes](Release-Notes/MaxScale-21.06.17-Release-Notes.md)
