@@ -28,6 +28,12 @@ By default, MaxScale no longer generates a core file when it crashes.
 Please see [core_file](../Getting-Started/Configuration-Guide.md#core_file)
 for more information.
 
+### [MXS-4699](https://jira.mariadb.org/browse/MXS-4699) Add global setting require_secure_transport
+
+The global setting
+[require_secure_transport](../Getting-Started/Configuration-Guide.md#require_secure_transport)
+forces encryption to be configured everywhere.
+
 ## Bug fixes
 
 ## Known Issues and Limitations

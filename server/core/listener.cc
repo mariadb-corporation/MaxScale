@@ -192,6 +192,12 @@ bool ListenerSpecification::do_post_validate(Params& params) const
             ok = false;
         }
     }
+    else if (s_socket.get(params).empty() && mxs::Config::get().require_secure_transport)
+    {
+        MXB_ERROR("Listener must be configured for SSL when '%s' is enabled. Please set '%s=true'.",
+                  CN_REQUIRE_SECURE_TRANSPORT, CN_SSL);
+        ok = false;
+    }
 
     if (auto values = s_connection_metadata.get(params); !values.empty())
     {

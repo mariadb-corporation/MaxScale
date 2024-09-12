@@ -15,6 +15,8 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/assert.hh>
+#include <maxscale/cn_strings.hh>
+#include <maxscale/config.hh>
 #include <maxscale/config2.hh>
 
 #include <librdkafka/rdkafkacpp.h>
@@ -86,6 +88,13 @@ struct KafkaCommonConfig
     bool post_validate(Param param)
     {
         bool ok = true;
+
+        if (mxs::Config::get().require_secure_transport && !kafka_ssl.get(param))
+        {
+            MXB_ERROR("Kafka must be configured to use SSL when '%s' is enabled. Please set '%s=true'.",
+                      CN_REQUIRE_SECURE_TRANSPORT, kafka_ssl.name().c_str());
+            ok = false;
+        }
 
         if (kafka_ssl_key.get(param).empty() != kafka_ssl_cert.get(param).empty())
         {

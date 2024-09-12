@@ -147,8 +147,8 @@ and [Administration Tutorial](../Tutorials/Administration-Tutorial.md#administra
 
 ## Static Configuration Parameters
 
-The following list of global configuration parameters can **NOT** be changed at
-runtime and can only be defined in a configuration file:
+The following global configuration parameters can **NOT** be
+changed at runtime and can only be defined in a configuration file:
 
 * `admin_auth`
 * `admin_enabled`
@@ -184,6 +184,7 @@ runtime and can only be defined in a configuration file:
 * `persistdir`
 * `piddir`
 * `query_retries`
+* `require_secure_transport`
 * `secretsdir`
 * `sharedir`
 * `sql_mode`
@@ -1392,6 +1393,19 @@ threads.
 Define debug options from the --debug command line option. Either the command
 line option or the parameter should be used, not both. The debug options are
 only for testing purposes and are not to be used in production.
+
+### `require_secure_transport`
+
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: No
+
+If enabled, listeners, servers and REST-API must be configured to use SSL. Any
+static configuration or runtime configuration change that disables SSL will
+fail. Kafka connections created by the KafkaCDC and KafkaImporter modules must
+also be configured for SSL. ODBC connection strings used with the REST-API SQL
+Connection Interface are not affected. Listeners and servers that use Unix
+socket connections are ignored as they are considered secure even without SSL.
 
 ### REST API Configuration
 

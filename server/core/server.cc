@@ -261,9 +261,18 @@ bool ServerSpec::do_post_validate(Params& params) const
         rval = false;
     }
 
-    if (s_ssl.get(params) && s_ssl_cert.get(params).empty() != s_ssl_key.get(params).empty())
+    if (s_ssl.get(params))
     {
-        MXB_ERROR("Both '%s' and '%s' must be defined", s_ssl_cert.name().c_str(), s_ssl_key.name().c_str());
+        if (s_ssl_cert.get(params).empty() != s_ssl_key.get(params).empty())
+        {
+            MXB_ERROR("Both '%s' and '%s' must be defined", s_ssl_cert.name().c_str(), s_ssl_key.name().c_str());
+            rval = false;
+        }
+    }
+    else if (have_address && mxs::Config::get().require_secure_transport)
+    {
+        MXB_ERROR("Server must be configured for SSL when '%s' is enabled. Please set '%s=true'.",
+                  CN_REQUIRE_SECURE_TRANSPORT, CN_SSL);
         rval = false;
     }
 

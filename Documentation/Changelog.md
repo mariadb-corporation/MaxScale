@@ -7,6 +7,10 @@
   See [configuration guide](Getting-Started/Configuration-Guide.md#TLS/SSL-encryption)
   for more information.
 
+* Added global setting
+  [require_secure_transport](Getting-Started/Configuration-Guide.md#require_secure_transport)
+  which forces encryption to be configured everywhere.
+
 * By default, MaxScale no longer generates a core file in case of a crash.
 
 * The [system variable tracker value](https://mariadb.com/kb/en/server-system-variables/#session_track_system_variables)

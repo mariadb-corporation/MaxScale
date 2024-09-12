@@ -622,6 +622,14 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
         }
     }
 
+    if (s_require_secure_transport.get(params)
+        && (s_admin_ssl_key.get(params).empty() || s_admin_ssl_cert.get(params).empty()))
+    {
+        MXB_ERROR("REST API encryption must be enabled if '%s' is set. Please configure "
+                  "'%s' and '%s'.", CN_REQUIRE_SECURE_TRANSPORT, CN_ADMIN_SSL_KEY, CN_ADMIN_SSL_CERT);
+        rv = false;
+    }
+
     int nRunning = RoutingWorker::nRunning();
     int nRequested = s_n_threads.get(params);
     int nThreads_max = s_n_threads_max.get(params);
@@ -1273,6 +1281,12 @@ config::ParamBool Config::s_secure_gui(
     "Only serve GUI over HTTPS.",
     true);
 
+config::ParamBool Config::s_require_secure_transport(
+    &Config::s_specification,
+    CN_REQUIRE_SECURE_TRANSPORT,
+    "All connections must use SSL.",
+    false);
+
 config::ParamPath Config::s_secretsdir(
     &Config::s_specification,
     "secretsdir",
@@ -1505,6 +1519,7 @@ Config::Config()
     add_native(&Config::log_warn_super_user, &s_log_warn_super_user);
     add_native(&Config::gui, &s_gui);
     add_native(&Config::secure_gui, &s_secure_gui);
+    add_native(&Config::require_secure_transport, &s_require_secure_transport);
     add_native(&Config::secretsdir, &s_secretsdir);
     add_native(&Config::debug, &s_debug);
     add_native(&Config::max_read_amount, &s_max_read_amount);
