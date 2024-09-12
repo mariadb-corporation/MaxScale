@@ -1092,6 +1092,12 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
         reasons.cat("it's down");
     }
 
+    if (server_is_excluded(cand))
+    {
+        is_valid = false;
+        reasons.cat("it's excluded");
+    }
+
     // Check the following only if the other requirements are fulfilled.
     if (is_valid && is_slave_maxscale())
     {
