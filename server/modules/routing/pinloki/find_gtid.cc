@@ -300,6 +300,8 @@ maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv)
         {
             MXB_ERROR("Failed to truncate '%s': %d, %s", file_name.c_str(), errno, mxb_strerror(errno));
         }
+
+        std::cout << "truncate_to = " << truncate_to << std::endl;
     }
 
     return ret;

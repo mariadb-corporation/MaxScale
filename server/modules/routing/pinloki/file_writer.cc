@@ -126,6 +126,13 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
 
         m_rotate.file_name.clear();
     }
+
+    if (etype == ANNOTATE_ROWS_EVENT)
+    {
+        std::cout << "Handled = " << to_string(rpl_event.event_type()) << " ...." << std::flush;
+        std::this_thread::sleep_for(2s);
+        std::cout << " wait done." << std::endl;
+    }
 }
 
 bool FileWriter::open_for_appending(const maxsql::RplEvent& fmt_event)

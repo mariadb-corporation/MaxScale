@@ -143,6 +143,7 @@ void FileReader::fd_notify(uint32_t events)
     for (auto ptr = buf; ptr < buf + len; ptr += sizeof(inotify_event) + event->len)
     {
         event = reinterpret_cast<inotify_event*>(ptr);
+        std::cout << "event = " << std::hex << event << std::endl << std::dec;
         // We only expect the file to be modified. The IN_IGNORED event is sent when we close the previous
         // file and open a new one.
         mxb_assert(event->mask & (IN_MODIFY | IN_IGNORED));
@@ -244,7 +245,9 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     }
 
     m_read_pos.file.clear();
+    std::cout << "m_read_pos.next_pos = " << m_read_pos.next_pos << std::endl;
     m_read_pos.file.seekg(m_read_pos.next_pos);
+    std::cout << "m_read_pos actual = " << m_read_pos.file.tellg() << std::endl;
     maxsql::RplEvent rpl = mxq::RplEvent::read_event(m_read_pos.file, m_encrypt);
 
     if (rpl.is_empty())
