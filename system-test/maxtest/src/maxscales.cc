@@ -14,6 +14,7 @@
 
 #include <maxtest/maxscales.hh>
 #include <string>
+#include <iostream>
 #include <maxbase/format.hh>
 #include <maxbase/jansson.hh>
 #include <maxbase/json.hh>
@@ -714,6 +715,15 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
         else if (rc == 42)
         {
             log().add_failure("Test should not generate core files");
+
+            // Dump stacktraces from all coredumps. This helps figure out exactly where the problem is if it
+            // happens during shutdown. Printing the stacktrace from the coredump on the system where it was
+            // generates makes sure that the information is shown.
+            for (std::string line : mxb::strtok(ssh_output("ls -1 /tmp/core*", true).output, "\n"))
+            {
+                std::string cmd = "gdb /usr/bin/maxscale --core=" + line + " -batch -ex bt";
+                std::cout << ssh_output(cmd, true).output << std::endl;
+            }
         }
         else if (rc != 0)
         {
