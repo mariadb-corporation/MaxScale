@@ -11,7 +11,7 @@
     "build": "NODE_OPTIONS='--no-warnings' vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
-    "test:report": "vitest --ui",
+    "test:report": "vitest --ui --coverage.enabled",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "format": "prettier --write . --ignore-path .prettierignore"
   },

@@ -27,7 +27,6 @@ export default mergeConfig(
       coverage: {
         provider: 'istanbul',
         reporter: ['text', 'html'],
-        enabled: true,
         include: [
           'src/components/**/*.{js,vue}',
           'src/composables/**/*.{js,vue}',
