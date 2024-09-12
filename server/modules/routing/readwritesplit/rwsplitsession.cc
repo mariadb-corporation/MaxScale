@@ -940,7 +940,8 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
                     can_continue = true;
                 }
             }
-            else if (can_retry_query() && can_recover_master())
+            else if (m_config.retry_failed_reads && m_prev_plan.route_target != TARGET_MASTER
+                     && !trx_is_open() && can_recover_master())
             {
                 can_continue = retry_master_query(backend);
             }
