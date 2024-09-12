@@ -18,11 +18,30 @@ import { WS_KEY } from '@/constants/injectionKeys'
 import workspace from '@/composables/workspace'
 
 const props = defineProps({
-  graphConfig: { type: Object, required: true },
+  graphConfig: {
+    type: Object,
+    required: true,
+    validator: (cnf) =>
+      typeof cnf.linkShape === 'object' &&
+      typeof cnf.linkShape.type === 'string' &&
+      typeof cnf.link === 'object' &&
+      typeof cnf.link.isAttrToAttr === 'boolean' &&
+      typeof cnf.link.isHighlightAll === 'boolean',
+  },
   height: { type: Number, required: true },
   zoom: { type: Number, required: true },
   isFitIntoView: { type: Boolean, required: true },
-  exportOptions: { type: Array, required: true },
+  exportOptions: {
+    type: Array,
+    required: true,
+    validator: (arr) =>
+      arr.every(
+        (item) =>
+          typeof item === 'object' &&
+          typeof item.title === 'string' &&
+          typeof item.action === 'function'
+      ),
+  },
   conn: { type: Object, required: true },
   nodesHistory: { type: Array, required: true },
   activeHistoryIdx: { type: Number, required: true },
