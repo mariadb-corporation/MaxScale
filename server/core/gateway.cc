@@ -1457,6 +1457,10 @@ public:
         {
             unload_all_modules();
         }
+        else
+        {
+            leak_all_modules();
+        }
 
         log_exit_status();
         restore_signals();

@@ -76,6 +76,9 @@ bool is_mxs_module(const std::string& name);
  */
 void unload_all_modules();
 
+// NOTE: This will cause the dlclose call for modules to be skipped
+void leak_all_modules();
+
 /**
  * @brief Print Modules
  *

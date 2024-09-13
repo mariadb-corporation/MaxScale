@@ -54,6 +54,8 @@ namespace
 {
 const char wrong_mod_type[] = "Module '%s' is a %s, not a %s.";
 
+static bool s_unload_modules = true;
+
 struct LOADED_MODULE
 {
     MXS_MODULE* info {nullptr};     /**< The module information */
@@ -70,7 +72,7 @@ struct LOADED_MODULE
     ~LOADED_MODULE()
     {
         // Built-in modules cannot be closed.
-        if (handle)
+        if (handle && s_unload_modules)
         {
             dlclose(handle);
         }
@@ -481,6 +483,11 @@ void unload_all_modules()
     // This is only ran when exiting, at which point threads have stopped and ran their own finish functions.
     modules_process_finish();
     this_unit.loaded_modules.clear();
+}
+
+void leak_all_modules()
+{
+    s_unload_modules = false;
 }
 
 namespace
