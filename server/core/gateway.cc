@@ -124,7 +124,7 @@ static struct ThisUnit
     pthread_mutex_t* ssl_locks = nullptr;
 #endif
     const mxb::WatchdogNotifier* watchdog = nullptr;
-    bool                         core_file = true; // Start with core-file enabled, change later.
+    bool                         core_file = true;  // Start with core-file enabled, change later.
 } this_unit;
 }
 
@@ -256,14 +256,14 @@ string resolve_maxscale_conf_fname(const string& cnf_file_arg);
 }
 
 #define VA_MESSAGE(message, format) \
-    va_list ap ## __LINE__; \
-    va_start(ap ## __LINE__, format); \
-    int len ## __LINE__ = vsnprintf(nullptr, 0, format, ap ## __LINE__); \
-    va_end(ap ## __LINE__); \
-    char message[len ## __LINE__ + 1]; \
-    va_start(ap ## __LINE__, format); \
-    vsnprintf(message, sizeof(message), format, ap ## __LINE__); \
-    va_end(ap ## __LINE__);
+        va_list ap ## __LINE__; \
+        va_start(ap ## __LINE__, format); \
+        int len ## __LINE__ = vsnprintf(nullptr, 0, format, ap ## __LINE__); \
+        va_end(ap ## __LINE__); \
+        char message[len ## __LINE__ + 1]; \
+        va_start(ap ## __LINE__, format); \
+        vsnprintf(message, sizeof(message), format, ap ## __LINE__); \
+        va_end(ap ## __LINE__);
 
 #define PRINT_AND_LOG(format, ...) fprintf(stderr, format, ##__VA_ARGS__); MXB_ALERT(format, ##__VA_ARGS__);
 
@@ -313,7 +313,8 @@ const DEBUG_ARGUMENT debug_arguments[] =
         "allow multiple servers to have the same address/port combination"
     },
     {
-        "gdb-stacktrace", use_gdb, "Use GDB to generate stacktraces, if available. Disable with gdb-stacktrace=false."
+        "gdb-stacktrace", use_gdb,
+        "Use GDB to generate stacktraces, if available. Disable with gdb-stacktrace=false."
     },
     {
         "sql-batch-size", set_sql_batch_size, "Set maximum batch size for the REST-API (default: 10MiB)"
@@ -2107,157 +2108,157 @@ int main(int argc, char** argv)
      * the order of the events would be the way they appear to be.
      */
     auto do_startup = [&]() {
-            bool use_static_cnf = !manager.load_cached_config();
+        bool use_static_cnf = !manager.load_cached_config();
 
-            if (use_static_cnf || cnf.config_check)
+        if (use_static_cnf || cnf.config_check)
+        {
+            if (!config_process(config_context))
             {
-                if (!config_process(config_context))
-                {
-                    MXB_ALERT("Failed to process the MaxScale configuration file %s.",
-                              cnf_file_path.c_str());
-                    rc = MAXSCALE_BADCONFIG;
-                    main_worker.start_shutdown();
-                    return;
-                }
-
-                if (cnf.config_check)
-                {
-                    MXB_NOTICE("Configuration was successfully verified.");
-
-                    if (*export_cnf && export_config_file(export_cnf, config_context))
-                    {
-                        MXB_NOTICE("Configuration exported to '%s'", export_cnf);
-                    }
-
-                    rc = MAXSCALE_SHUTDOWN;
-                    main_worker.start_shutdown();
-                    return;
-                }
-            }
-            else
-            {
-                auto res = manager.process_cached_config();
-
-                if (res != mxs::ConfigManager::Startup::OK)
-                {
-                    if (res == mxs::ConfigManager::Startup::RESTART)
-                    {
-                        MXB_NOTICE("Attempting to restart MaxScale");
-
-                        if (this_unit.daemon_mode)
-                        {
-                            // We have to fake success on the main process since we are using Type=forking.
-                            // This has to be done because systemd only considers the final process as the
-                            // main process whose return code is checked against RestartForceExitStatus. For
-                            // more information, refer to the following issues:
-                            //   https://github.com/systemd/systemd/issues/19295
-                            //   https://github.com/systemd/systemd/pull/19685
-
-                            write_child_exit_code(child_pipe, MAXSCALE_SHUTDOWN);
-                        }
-
-                        rc = MAXSCALE_RESTARTING;
-                    }
-                    else
-                    {
-                        MXB_ALERT("Failed to apply cached configuration, cannot continue. "
-                                  "To start MaxScale without the cached configuration, disable "
-                                  "configuration synchronization or remove the cached file.");
-                        rc = MAXSCALE_BADCONFIG;
-                    }
-
-                    main_worker.start_shutdown();
-                    return;
-                }
-            }
-
-            if (cnf.admin_enabled)
-            {
-                bool success = mxs_admin_init();
-
-                if (!success && (cnf.admin_host == "::"))
-                {
-                    MXB_WARNING("Failed to bind on address '::', attempting to "
-                                "bind on IPv4 address '0.0.0.0'.");
-                    cnf.admin_host = "0.0.0.0";
-                    success = mxs_admin_init();
-                }
-
-                if (success)
-                {
-                    MXB_NOTICE("Started REST API on [%s]:%d",
-                               cnf.admin_host.c_str(), (int)cnf.admin_port);
-                    // Start HttpSql cleanup thread.
-                    HttpSql::init();
-                }
-                else
-                {
-                    MXB_ALERT("Failed to initialize REST API.");
-                    rc = MAXSCALE_INTERNALERROR;
-                    main_worker.start_shutdown();
-                    return;
-                }
-            }
-
-            // If the configuration was read from the static configuration file, the objects need to be
-            // started after they have been created.
-            if (use_static_cnf)
-            {
-                // Ideally we'd do this in mxs::Config::Specification::validate but since it is configured
-                // before the objects are created, it's simpler to do the check here. For runtime changes it
-                // is done inside the validation function.
-                auto cluster = cnf.config_sync_cluster;
-
-                if (!cluster.empty() && !MonitorManager::find_monitor(cluster.c_str()))
-                {
-                    MXB_ALERT("The value of '%s' is not the name of a monitor: %s.",
-                              CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
-                    rc = MAXSCALE_BADCONFIG;
-                    main_worker.start_shutdown();
-                    return;
-                }
-
-                // Also waits for a tick.
-                MonitorManager::start_all_monitors();
-
-                if (!Service::launch_all())
-                {
-                    MXB_ALERT("Failed to start all MaxScale services.");
-                    rc = MAXSCALE_NOSERVICES;
-                    main_worker.start_shutdown();
-                    return;
-                }
-            }
-
-            if (RoutingWorker::start_workers(config_threadcount()))
-            {
-                MXB_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
-            }
-            else
-            {
-                MXB_ALERT("Failed to start routing workers.");
-                rc = MAXSCALE_INTERNALERROR;
-                maxscale_shutdown();
+                MXB_ALERT("Failed to process the MaxScale configuration file %s.",
+                          cnf_file_path.c_str());
+                rc = MAXSCALE_BADCONFIG;
+                main_worker.start_shutdown();
                 return;
             }
 
-            manager.start_sync();
-
-            if (this_unit.daemon_mode)
+            if (cnf.config_check)
             {
-                // Successful start, notify the parent process that it can exit.
-                write_child_exit_code(child_pipe, rc);
+                MXB_NOTICE("Configuration was successfully verified.");
+
+                if (*export_cnf && export_config_file(export_cnf, config_context))
+                {
+                    MXB_NOTICE("Configuration exported to '%s'", export_cnf);
+                }
+
+                rc = MAXSCALE_SHUTDOWN;
+                main_worker.start_shutdown();
+                return;
+            }
+        }
+        else
+        {
+            auto res = manager.process_cached_config();
+
+            if (res != mxs::ConfigManager::Startup::OK)
+            {
+                if (res == mxs::ConfigManager::Startup::RESTART)
+                {
+                    MXB_NOTICE("Attempting to restart MaxScale");
+
+                    if (this_unit.daemon_mode)
+                    {
+                        // We have to fake success on the main process since we are using Type=forking.
+                        // This has to be done because systemd only considers the final process as the
+                        // main process whose return code is checked against RestartForceExitStatus. For
+                        // more information, refer to the following issues:
+                        //   https://github.com/systemd/systemd/issues/19295
+                        //   https://github.com/systemd/systemd/pull/19685
+
+                        write_child_exit_code(child_pipe, MAXSCALE_SHUTDOWN);
+                    }
+
+                    rc = MAXSCALE_RESTARTING;
+                }
+                else
+                {
+                    MXB_ALERT("Failed to apply cached configuration, cannot continue. "
+                              "To start MaxScale without the cached configuration, disable "
+                              "configuration synchronization or remove the cached file.");
+                    rc = MAXSCALE_BADCONFIG;
+                }
+
+                main_worker.start_shutdown();
+                return;
+            }
+        }
+
+        if (cnf.admin_enabled)
+        {
+            bool success = mxs_admin_init();
+
+            if (!success && (cnf.admin_host == "::"))
+            {
+                MXB_WARNING("Failed to bind on address '::', attempting to "
+                            "bind on IPv4 address '0.0.0.0'.");
+                cnf.admin_host = "0.0.0.0";
+                success = mxs_admin_init();
+            }
+
+            if (success)
+            {
+                MXB_NOTICE("Started REST API on [%s]:%d",
+                           cnf.admin_host.c_str(), (int)cnf.admin_port);
+                // Start HttpSql cleanup thread.
+                HttpSql::init();
             }
             else
             {
-                // If MaxScale is run as a systemd service with Type=notify, we need to send a READY=1
-                // notification to tell systemd that startup has completed. Outside of systemd services, this does
-                // nothing.
-#ifdef HAVE_SYSTEMD
-                sd_notify(false, "READY=1");
-#endif
+                MXB_ALERT("Failed to initialize REST API.");
+                rc = MAXSCALE_INTERNALERROR;
+                main_worker.start_shutdown();
+                return;
             }
-        };
+        }
+
+        // If the configuration was read from the static configuration file, the objects need to be
+        // started after they have been created.
+        if (use_static_cnf)
+        {
+            // Ideally we'd do this in mxs::Config::Specification::validate but since it is configured
+            // before the objects are created, it's simpler to do the check here. For runtime changes it
+            // is done inside the validation function.
+            auto cluster = cnf.config_sync_cluster;
+
+            if (!cluster.empty() && !MonitorManager::find_monitor(cluster.c_str()))
+            {
+                MXB_ALERT("The value of '%s' is not the name of a monitor: %s.",
+                          CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
+                rc = MAXSCALE_BADCONFIG;
+                main_worker.start_shutdown();
+                return;
+            }
+
+            // Also waits for a tick.
+            MonitorManager::start_all_monitors();
+
+            if (!Service::launch_all())
+            {
+                MXB_ALERT("Failed to start all MaxScale services.");
+                rc = MAXSCALE_NOSERVICES;
+                main_worker.start_shutdown();
+                return;
+            }
+        }
+
+        if (RoutingWorker::start_workers(config_threadcount()))
+        {
+            MXB_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
+        }
+        else
+        {
+            MXB_ALERT("Failed to start routing workers.");
+            rc = MAXSCALE_INTERNALERROR;
+            maxscale_shutdown();
+            return;
+        }
+
+        manager.start_sync();
+
+        if (this_unit.daemon_mode)
+        {
+            // Successful start, notify the parent process that it can exit.
+            write_child_exit_code(child_pipe, rc);
+        }
+        else
+        {
+            // If MaxScale is run as a systemd service with Type=notify, we need to send a READY=1
+            // notification to tell systemd that startup has completed. Outside of systemd services, this does
+            // nothing.
+#ifdef HAVE_SYSTEMD
+            sd_notify(false, "READY=1");
+#endif
+        }
+    };
 
     watchdog_notifier.start();
 
@@ -2587,7 +2588,7 @@ static int set_user(const char* user)
     if (rval != 0)
     {
         printf("Error: Failed to initialize groups for '%s: %d %s\n",
-               user,  errno, mxb_strerror(errno));
+               user, errno, mxb_strerror(errno));
         return rval;
     }
 
@@ -3028,9 +3029,9 @@ static void unlock_directories()
     std::for_each(this_unit.directory_locks.begin(),
                   this_unit.directory_locks.end(),
                   [&](std::pair<std::string, int> pair) {
-                      close(pair.second);
-                      unlink(pair.first.c_str());
-                  });
+        close(pair.second);
+        unlink(pair.first.c_str());
+    });
 }
 
 static bool init_ssl()
