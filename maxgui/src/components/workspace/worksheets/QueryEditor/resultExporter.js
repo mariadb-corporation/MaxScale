@@ -13,9 +13,7 @@
 import { t as typy } from 'typy'
 import { escapeBackslashes, lodash, quotingIdentifier } from '@/utils/helpers'
 import { formatSQL } from '@/utils/queryUtils'
-import workspace from '@/composables/workspace'
-
-const sqlCommenter = workspace.useSqlCommenter()
+import sqlCommenter from '@/utils/sqlCommenter.js'
 
 // values are used for i18n
 export const SQL_EXPORT_OPTS = Object.freeze({

@@ -18,10 +18,8 @@ import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 import erdTaskService from '@wsServices/erdTaskService'
 import workspaceService from '@wsServices/workspaceService'
-import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
-import workspace from '@/composables/workspace'
+import scriptGenerator from '@wkeComps/ErdWke/scriptGenerator'
 import erdHelper from '@/utils/erdHelper'
-import { formatSQL } from '@/utils/queryUtils'
 
 const props = defineProps({
   ctrDim: { type: Object, required: true },
@@ -39,13 +37,11 @@ const {
   lodash: { keyBy },
   pctToPx,
   pxToPct,
-  quotingIdentifier,
   dateFormat,
   exportToJpeg,
   copyTextToClipboard,
   immutableUpdate,
 } = useHelpers()
-const sqlCommenter = workspace.useSqlCommenter()
 
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 const taskId = computed(() => props.wke.erd_task_id)
@@ -88,43 +84,14 @@ const conn = computed(() => QueryConn.query().where('erd_task_id', taskId.value)
 const connId = computed(() => typy(conn.value, 'id').safeString)
 
 function genScript() {
-  const parts = [],
-    tablesFks = []
-  // new schemas
-  schemas.value.forEach((s, i) => {
-    if (i === 0) parts.push(sqlCommenter.genSection('Create schemas'))
-    const schema = quotingIdentifier(s)
-    parts.push(`CREATE SCHEMA IF NOT EXISTS ${schema};`)
+  const { name, time, sql } = scriptGenerator({
+    schemas: schemas.value,
+    tables: tables.value,
+    refTargetMap: refTargetMap.value,
+    tablesColNameMap: tablesColNameMap.value,
   })
-  // new tables
-  tables.value.forEach((tbl, i) => {
-    if (i === 0) parts.push(sqlCommenter.genSection('Create tables'))
-    const builder = new TableScriptBuilder({
-      initialData: {},
-      stagingData: tbl,
-      refTargetMap: refTargetMap.value,
-      tablesColNameMap: tablesColNameMap.value,
-      options: {
-        isCreating: true,
-        skipSchemaCreation: true,
-        skipFkCreation: true,
-      },
-    })
-    parts.push(builder.build())
-    const fks = builder.buildNewFkSQL()
-    if (fks) tablesFks.push(fks)
-  })
-
-  if (tablesFks.length) {
-    parts.push(sqlCommenter.genSection('Add new tables constraints'))
-    parts.push(tablesFks.join(''))
-  }
-
-  const { name, time, content } = sqlCommenter.genHeader()
   scriptName.value = name
   scriptGeneratedTime.value = time
-  let sql = formatSQL(parts.join('\n'))
-  sql = `${content}\n\n${sql}`
   return sql
 }
 
@@ -166,9 +133,11 @@ async function exportAsJpeg() {
 function copyScriptToClipboard() {
   copyTextToClipboard(genScript())
 }
+
 function updateDiagramNode(param) {
   diagramCtrRef.value.updateNode(param)
 }
+
 function updateNode(data) {
   const id = activeEntityId.value
   nodeMap.value = immutableUpdate(nodeMap.value, {
