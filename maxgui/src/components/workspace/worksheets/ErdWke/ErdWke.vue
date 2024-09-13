@@ -16,6 +16,7 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
+import erdTaskService from '@wsServices/erdTaskService'
 import workspaceService from '@wsServices/workspaceService'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import workspace from '@/composables/workspace'
@@ -42,6 +43,7 @@ const {
   dateFormat,
   exportToJpeg,
   copyTextToClipboard,
+  immutableUpdate,
 } = useHelpers()
 const sqlCommenter = workspace.useSqlCommenter()
 
@@ -55,7 +57,10 @@ const erdTaskTmp = computed(() => ErdTaskTmp.find(taskId.value) || {})
  * so the diagram must be reinitialized
  */
 const erdTaskKey = computed(() => typy(erdTaskTmp.value, 'key').safeString)
-const nodeMap = computed(() => typy(erdTask.value, 'nodeMap').safeObjectOrEmpty)
+const nodeMap = computed({
+  get: () => typy(erdTask.value, 'nodeMap').safeObjectOrEmpty,
+  set: (v) => ErdTask.update({ where: taskId.value, data: { nodeMap: v } }),
+})
 const nodes = computed(() => Object.values(nodeMap.value))
 const tables = computed(() => nodes.value.map((n) => n.data))
 const schemas = computed(() => [...new Set(nodes.value.map((n) => n.data.options.schema))])
@@ -164,6 +169,14 @@ function copyScriptToClipboard() {
 function updateDiagramNode(param) {
   diagramCtrRef.value.updateNode(param)
 }
+function updateNode(data) {
+  const id = activeEntityId.value
+  nodeMap.value = immutableUpdate(nodeMap.value, {
+    [id]: { data: { $set: data } },
+  })
+  erdTaskService.updateNodesHistory(nodeMap.value)
+  updateDiagramNode({ id, data })
+}
 </script>
 
 <template>
@@ -203,14 +216,13 @@ function updateDiagramNode(param) {
       <EntityEditorCtr
         v-if="activeEntityId"
         :dim="editorDim"
+        :data="$typy(nodeMap, `[${activeEntityId}].data`).safeObjectOrEmpty"
         :taskId="taskId"
         :connId="connId"
-        :nodeMap="nodeMap"
         :tables="tables"
         :schemas="schemas"
-        :activeEntityId="activeEntityId"
         :erdTaskTmp="erdTaskTmp"
-        :updateNode="updateDiagramNode"
+        @change="updateNode"
         @is-form-valid="isFormValid = $event"
       />
     </template>
