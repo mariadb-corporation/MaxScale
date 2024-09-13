@@ -117,6 +117,7 @@ function openCnnDlg() {
           :max-width="64"
           density="compact"
           hide-details
+          data-test="link-shape-select"
           @update:modelValue="
             emit('change-graph-config-attr-value', { path: 'linkShape.type', value: $event })
           "
@@ -150,6 +151,7 @@ function openCnnDlg() {
       size="small"
       :variant="graphConfig.link.isAttrToAttr ? 'flat' : 'text'"
       color="primary"
+      data-test="attr-to-attr-btn"
       @click="
         emit('change-graph-config-attr-value', {
           path: 'link.isAttrToAttr',
@@ -167,6 +169,7 @@ function openCnnDlg() {
       size="small"
       variant="text"
       color="primary"
+      data-test="auto-arrange-btn"
       @click="emit('click-auto-arrange')"
     >
       <template #btn-content>
@@ -180,6 +183,7 @@ function openCnnDlg() {
       size="small"
       :variant="graphConfig.link.isHighlightAll ? 'flat' : 'text'"
       color="primary"
+      data-test="relationship-highlight-btn"
       @click="
         emit('change-graph-config-attr-value', {
           path: 'link.isHighlightAll',
@@ -208,6 +212,7 @@ function openCnnDlg() {
       :isFitIntoView="isFitIntoView"
       class="borderless-input"
       :max-width="76"
+      data-test="zoom-controller-btn"
       @update:isFitIntoView="emit('set-zoom', { isFitIntoView: $event })"
     />
     <VDivider class="align-self-center er-toolbar__separator mx-2" vertical />
@@ -217,6 +222,7 @@ function openCnnDlg() {
       variant="text"
       color="primary"
       :disabled="isUndoDisabled"
+      data-test="undo-btn"
       @click="emit('on-undo')"
     >
       <template #btn-content>
@@ -232,6 +238,7 @@ function openCnnDlg() {
       variant="text"
       color="primary"
       :disabled="isRedoDisabled"
+      data-test="redo-btn"
       @click="emit('on-redo')"
     >
       <template #btn-content>
@@ -242,7 +249,14 @@ function openCnnDlg() {
       <kbd>{{ OS_CMD }} + SHIFT + Z</kbd>
     </TooltipBtn>
     <VDivider class="align-self-center er-toolbar__separator mx-2" vertical />
-    <TooltipBtn square size="small" variant="text" color="primary" @click="emit('on-create-table')">
+    <TooltipBtn
+      square
+      size="small"
+      variant="text"
+      color="primary"
+      data-test="create-tbl-btn"
+      @click="emit('on-create-table')"
+    >
       <template #btn-content>
         <VIcon size="22" color="primary" icon="$mdiTablePlus" />
       </template>
@@ -250,7 +264,14 @@ function openCnnDlg() {
     </TooltipBtn>
     <VMenu location="bottom" content-class="with-shadow-border--none">
       <template #activator="{ props }">
-        <TooltipBtn square size="small" variant="text" color="primary" v-bind="props">
+        <TooltipBtn
+          square
+          size="small"
+          variant="text"
+          color="primary"
+          data-test="export-btn"
+          v-bind="props"
+        >
           <template #btn-content>
             <VIcon size="20" icon="$mdiDownload" />
           </template>
@@ -269,6 +290,7 @@ function openCnnDlg() {
       variant="text"
       color="primary"
       :disabled="!hasConnId"
+      data-test="apply-btn"
       @click="emit('on-apply-script')"
     >
       <template #btn-content>
@@ -285,7 +307,8 @@ function openCnnDlg() {
       variant="text"
       :disabled="!hasConnId"
       :color="hasConnId ? 'primary' : ''"
-      @click="genErd"
+      data-test="gen-erd-btn"
+      @click="genErd()"
     >
       <template #btn-content>
         <VIcon size="20" icon="mxs:reports" />
@@ -293,10 +316,11 @@ function openCnnDlg() {
       {{ $t('genErd') }}
     </TooltipBtn>
     <ConnectionBtn
-      class="connection-btn rounded-0"
+      class="rounded-0"
       :height="BTN_HEIGHT"
       :activeConn="conn"
-      @click="openCnnDlg"
+      data-test="conn-btn"
+      @click="openCnnDlg()"
     />
   </div>
 </template>
