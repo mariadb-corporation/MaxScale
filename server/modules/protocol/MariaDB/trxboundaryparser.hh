@@ -48,6 +48,7 @@ public:
     {
         TK_AUTOCOMMIT,
         TK_BEGIN,
+        TK_COLLATE,
         TK_COMMA,
         TK_COMMIT,
         TK_COMMITTED,
@@ -60,6 +61,7 @@ public:
         TK_GLOBAL_VAR,
         TK_ISOLATION,
         TK_LEVEL,
+        TK_NAMES,
         TK_ONE,
         TK_ONLY,
         TK_READ,
@@ -507,6 +509,17 @@ private:
 
     uint32_t parse_set(uint32_t type_mask)
     {
+        do
+        {
+            type_mask |= parse_set_value(0);
+        }
+        while (next_token() == TK_COMMA);
+
+        return type_mask;
+    }
+
+    uint32_t parse_set_value(uint32_t type_mask)
+    {
         token_t token = next_token(TOKEN_REQUIRED);
 
         switch (token)
@@ -572,6 +585,16 @@ private:
         case TK_TRANSACTION:
             type_mask |= QUERY_TYPE_NEXT_TRX;
             type_mask = parse_set_transaction(type_mask);
+            break;
+
+        case TK_NAMES:
+            // Ignore the <name> and <coll> in SET NAMES <name> COLLATE <coll>
+            next_token();
+
+            if (expect_token(MXS_CP_EXPECT_TOKEN("COLLATE"), TK_COLLATE) == TK_COLLATE)
+            {
+                next_token();
+            }
             break;
 
         case PARSER_EXHAUSTED:
@@ -852,6 +875,10 @@ private:
                     {
                         token = expect_token(TBP_EXPECT_TOKEN("CONSISTENT"), TK_CONSISTENT);
                     }
+                    else if (is_next_alpha('L', 2))
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("COLLATE"), TK_COLLATE);
+                    }
                 }
                 break;
 
@@ -899,6 +926,11 @@ private:
             case 'l':
             case 'L':
                 token = expect_token(TBP_EXPECT_TOKEN("LEVEL"), TK_LEVEL);
+                break;
+
+            case 'n':
+            case 'N':
+                token = expect_token(TBP_EXPECT_TOKEN("NAMES"), TK_NAMES);
                 break;
 
             case 'o':
