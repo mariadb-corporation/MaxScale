@@ -32,7 +32,12 @@ if (CMAKE_BUILD_TYPE MATCHES "(D|d)(E|e)(B|b)(U|u)(G|g)")
   set(SERVICE_FILE_DEBUG_OPTIONS "LimitCORE=infinity")
 endif()
 
-configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.service.in ${CMAKE_BINARY_DIR}/maxscale.service @ONLY)
+if (WITH_VALGRIND)
+  # For builds that invoke valgrind automatically, use the custom service file.
+  configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale-valgrind.service.in ${CMAKE_BINARY_DIR}/maxscale.service @ONLY)
+else()
+  configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.service.in ${CMAKE_BINARY_DIR}/maxscale.service @ONLY)
+endif()
 
 if(PACKAGE)
   message(STATUS "maxscale.conf will unpack to: /etc/ld.so.conf.d")

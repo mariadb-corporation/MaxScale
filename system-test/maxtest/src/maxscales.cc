@@ -73,13 +73,6 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
     string key_pw = mxb::string_printf("%s_password", prefixc);
     m_password = envvar_get_set(key_pw.c_str(), "skysql");
 
-    m_use_valgrind = readenv_bool("use_valgrind", false);
-    m_use_callgrind = readenv_bool("use_callgrind", false);
-    if (m_use_callgrind)
-    {
-        m_use_valgrind = true;
-    }
-
     m_vmnode = nullptr;
     bool rval = false;
 
@@ -243,21 +236,13 @@ int MaxScale::disconnect()
 int MaxScale::restart_maxscale()
 {
     int res;
-    if (m_use_valgrind)
+    if (m_vmnode->is_remote())
     {
-        res = stop_maxscale();
-        res += start_maxscale();
+        res = m_vmnode->start_process("") ? 0 : 1;
     }
     else
     {
-        if (m_vmnode->is_remote())
-        {
-            res = m_vmnode->start_process("") ? 0 : 1;
-        }
-        else
-        {
-            res = start_local_maxscale();
-        }
+        res = start_local_maxscale();
     }
     return res;
 }
@@ -265,39 +250,13 @@ int MaxScale::restart_maxscale()
 int MaxScale::start_maxscale()
 {
     int res;
-    if (m_use_valgrind)
+    if (m_vmnode->is_remote())
     {
-        auto log_dir = m_log_dir.c_str();
-        if (m_use_callgrind)
-        {
-            res = ssh_node_f(false,
-                             "sudo --user=maxscale valgrind -d "
-                             "--log-file=/%s/valgrind%02d.log --trace-children=yes "
-                             " --tool=callgrind --callgrind-out-file=/%s/callgrind%02d.log "
-                             " /usr/bin/maxscale",
-                             log_dir, m_valgrind_log_num,
-                             log_dir, m_valgrind_log_num);
-        }
-        else
-        {
-            res = ssh_node_f(false,
-                             "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
-                             "--log-file=/%s/valgrind%02d.log --trace-children=yes "
-                             "--track-origins=yes /usr/bin/maxscale",
-                             log_dir, m_valgrind_log_num);
-        }
-        m_valgrind_log_num++;
+        res = m_vmnode->start_process("") ? 0 : 1;
     }
     else
     {
-        if (m_vmnode->is_remote())
-        {
-            res = m_vmnode->start_process("") ? 0 : 1;
-        }
-        else
-        {
-            res = start_local_maxscale();
-        }
+        res = start_local_maxscale();
     }
     return res;
 }
@@ -312,24 +271,7 @@ int MaxScale::start_local_maxscale()
 
 int MaxScale::stop_maxscale()
 {
-    int res;
-    if (m_use_valgrind)
-    {
-        const char kill_vgrind[] = "kill $(pidof valgrind) 2>&1 > /dev/null";
-        res = ssh_node(kill_vgrind, true);
-        auto vgrind_pid = ssh_output("pidof valgrind");
-        bool still_running = (atoi(vgrind_pid.output.c_str()) > 0);
-        if ((res != 0) || still_running)
-        {
-            // Try again, maybe it will work.
-            res = ssh_node(kill_vgrind, true);
-        }
-    }
-    else
-    {
-        res = m_vmnode->stop_process() ? 0 : 1;
-    }
-    return res;
+    return m_vmnode->stop_process() ? 0 : 1;
 }
 
 long unsigned MaxScale::get_maxscale_memsize(int m)
@@ -498,11 +440,6 @@ mxt::CmdResult MaxScale::vmaxctrl(MaxScale::Expect expect, const char* format, v
     return res;
 }
 
-bool MaxScale::use_valgrind() const
-{
-    return m_use_valgrind;
-}
-
 int MaxScale::restart()
 {
     return restart_maxscale();
@@ -528,14 +465,6 @@ bool MaxScale::prepare_for_test()
     {
         if (m_vmnode->init_connection())
         {
-            if (m_use_valgrind)
-            {
-                auto vm = m_vmnode.get();
-                vm->run_cmd_sudo("yum install -y valgrind gdb 2>&1");
-                vm->run_cmd_sudo("apt install -y --force-yes valgrind gdb 2>&1");
-                vm->run_cmd_sudo("zypper -n install valgrind gdb 2>&1");
-                vm->run_cmd_sudo("rm -rf /var/cache/maxscale/maxscale.lock");
-            }
             rval = true;
         }
     }
@@ -585,9 +514,7 @@ void MaxScale::expect_running_status(bool expected)
 
 int MaxScale::get_n_running_processes()
 {
-    const char* ps_cmd = m_use_valgrind ?
-        "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
-        "ps -C maxscale | grep maxscale | wc -l";
+    const char* ps_cmd = "ps -eo comm|grep -E \"memcheck|maxscale\"|wc -l";
 
     int rval = -1;
     auto cmd_res = ssh_output(ps_cmd, false);
@@ -701,6 +628,10 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
             temp_logdirc,
             mxs_cnf_file, temp_logdirc,
             temp_logdirc);
+
+        remote_cmd += mxb::string_printf(
+            "; if grep VALGRIND_ERROR %s/* 1> /dev/null 2>&1; then exit 44; fi", temp_logdirc);
+
         if (m_leak_check)
         {
             remote_cmd += mxb::string_printf(
@@ -708,7 +639,11 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
         }
 
         int rc = ssh_node(remote_cmd, true);
-        if (rc == 43)
+        if (rc == 44)
+        {
+            log().add_failure("Valgrind found errors in MaxScale");
+        }
+        else if (rc == 43)
         {
             log().add_failure("MaxScale should not leak memory");
         }
