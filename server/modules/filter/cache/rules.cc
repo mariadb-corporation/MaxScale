@@ -603,7 +603,7 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
     {
         // We do not care about the result. If JIT is not present, we have
         // complained about it already.
-        pcre2_jit_compile(code, PCRE2_JIT_COMPLETE);
+        MXS_PCRE2_JIT_COMPILE(code, PCRE2_JIT_COMPLETE);
 
         int n_threads = config_threadcount();
         mxb_assert(n_threads > 0);
