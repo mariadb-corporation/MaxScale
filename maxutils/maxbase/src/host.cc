@@ -16,6 +16,7 @@
 #include <ostream>
 #include <vector>
 #include <algorithm>
+#include <array>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/un.h>
@@ -34,32 +35,46 @@ class HostKey
 {
 public:
     HostKey(const sockaddr_storage& sock)
-        : m_sock(sock)
     {
+        if (sock.ss_family == AF_INET)
+        {
+            const auto* ipv4 = reinterpret_cast<const sockaddr_in*>(&sock);
+            m_size = sizeof(ipv4->sin_addr);
+            memcpy(m_data.data(), &ipv4->sin_addr, m_size);
+        }
+        else if (sock.ss_family == AF_INET6)
+        {
+            const auto* ipv6 = reinterpret_cast<const sockaddr_in6*>(&sock);
+            m_size = sizeof(ipv6->sin6_addr);
+            memcpy(m_data.data(), &ipv6->sin6_addr, m_size);
+        }
+        else
+        {
+            mxb_assert(!true);
+        }
     }
 
     const void* data() const
     {
-        if (m_sock.ss_family == AF_INET)
-        {
-            return &reinterpret_cast<const sockaddr_in&>(m_sock).sin_addr;
-        }
-
-        return &reinterpret_cast<const sockaddr_in6&>(m_sock).sin6_addr;
+        return m_data.data();
     }
 
     size_t size() const
     {
-        return m_sock.ss_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+        return m_size;
     }
 
     bool operator==(const HostKey& other) const
     {
-        return m_sock.ss_family == other.m_sock.ss_family && memcmp(data(), other.data(), size()) == 0;
+        return size() == other.size() && memcmp(data(), other.data(), size()) == 0;
     }
 
 private:
-    const sockaddr_storage m_sock;
+    std::array<uint8_t, sizeof(struct in6_addr)> m_data {0};
+    uint8_t                                      m_size {0};
+
+    static_assert(sizeof(m_data) == std::max(sizeof(struct in_addr), sizeof(struct in6_addr)));
+    static_assert(sizeof(m_data) < std::numeric_limits<uint8_t>::max());
 };
 
 struct HostEntry
