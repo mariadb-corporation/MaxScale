@@ -1,0 +1,47 @@
+# MaxScale with Valgrind
+#
+# This systemd service file runs MaxScale with Valgrind and differs from the
+# real MaxScale service file mainly by the fact that it is a notify type
+# service. The watchdog timeout is also set to a higher value to cope with the
+# fact that valgrind makes things about ten times as slow as normal.
+#
+# The environment variables LOGNAME and HOST define the files that Valgrind used
+# when it's interacting with vgdb. To connect to MaxScale while under Valgrind,
+# define the LOGNAME and HOST environment variables to the same ones that are
+# here.
+
+[Unit]
+Description=MariaDB MaxScale Database Proxy
+After=network.target
+
+[Service]
+Type=notify
+Restart=on-abort
+Environment=LOGNAME=maxscale
+Environment=HOST=maxscale
+
+# Make sure /var/cache/maxscale exists. Downgrading from 24.02 to 23.08 will
+# remove it due to how the packaging has been changed.
+ExecStartPre=+/usr/bin/install -d @MAXSCALE_VARDIR@/cache/maxscale -o maxscale -g maxscale
+
+# This makes sure /run/maxscale exists.
+RuntimeDirectory=maxscale
+PIDFile=/run/maxscale/maxscale.pid
+
+# Use the default user and group
+User=maxscale
+Group=maxscale
+
+ExecStart=/usr/bin/valgrind --num-callers=25 --keep-debuginfo=yes --track-origins=yes --exit-on-first-error=yes --error-exitcode=1 @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale -d
+
+TimeoutStartSec=120
+LimitNOFILE=65535
+StartLimitBurst=0
+WatchdogSec=240s
+NotifyAccess=all
+
+# MaxScale should be restarted if it exits with 75 (BSD's EX_TEMPFAIL)
+RestartForceExitStatus=75
+
+[Install]
+WantedBy=multi-user.target
