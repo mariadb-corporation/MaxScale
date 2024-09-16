@@ -578,6 +578,8 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
         ss << ", conn_id=" << m_thread_id;
     }
 
+    ss << ", idle=" << std::chrono::duration_cast<std::chrono::seconds>(dcb->idle_time()).count() << "s";
+
     if (int err = gw_getsockerrno(dcb->fd()))
     {
         ss << ": " << err << ", " << mxb_strerror(err);

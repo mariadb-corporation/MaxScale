@@ -561,6 +561,14 @@ void test_mxs5127(TestConnections& test)
     test.repl->execute_query_all_nodes("SET GLOBAL max_prepared_stmt_count=DEFAULT");
 }
 
+void test_mxs5256(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+    c.query("SET names UTF8MB4,autocommit=1,tx_isolation='REPEATABLE-READ',session_track_schema=1,"
+            "session_track_system_variables=CONCAT(@@session_track_system_variables,',autocommit,tx_isolation')");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -609,6 +617,9 @@ int main(int argc, char** argv)
 
     // MXS-5127: DEALLOCATE PREPARE is not routed to all nodes
     test_mxs5127(test);
+
+    // MXS-5256: TrxBoundaryParser doesn't detect autocommit=0 and hits a debug assertion
+    test_mxs5256(test);
 
     return test.global_result;
 }

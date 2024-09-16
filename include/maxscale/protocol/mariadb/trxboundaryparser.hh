@@ -49,6 +49,7 @@ public:
         // TK_ would conflict with tokens of sqlite.
         TOK_AUTOCOMMIT,
         TOK_BEGIN,
+        TOK_COLLATE,
         TOK_COMMA,
         TOK_COMMIT,
         TOK_COMMITTED,
@@ -61,6 +62,7 @@ public:
         TOK_GLOBAL_VAR,
         TOK_ISOLATION,
         TOK_LEVEL,
+        TOK_NAMES,
         TOK_ONE,
         TOK_ONLY,
         TOK_READ,
@@ -508,6 +510,17 @@ private:
 
     uint32_t parse_set(uint32_t type_mask)
     {
+        do
+        {
+            type_mask |= parse_set_value(0);
+        }
+        while (next_token() == TOK_COMMA);
+
+        return type_mask;
+    }
+
+    uint32_t parse_set_value(uint32_t type_mask)
+    {
         token_t token = next_token(TOKEN_REQUIRED);
 
         switch (token)
@@ -573,6 +586,16 @@ private:
         case TOK_TRANSACTION:
             type_mask |= mxs::sql::TYPE_NEXT_TRX;
             type_mask = parse_set_transaction(type_mask);
+            break;
+
+        case TOK_NAMES:
+            // Ignore the <name> and <coll> in SET NAMES <name> COLLATE <coll>
+            next_token();
+
+            if (expect_token(MXS_CP_EXPECT_TOKEN("COLLATE"), TOK_COLLATE) == TOK_COLLATE)
+            {
+                next_token();
+            }
             break;
 
         case PARSER_EXHAUSTED:
@@ -848,6 +871,10 @@ private:
                     {
                         token = expect_token(TBP_EXPECT_TOKEN("CONSISTENT"), TOK_CONSISTENT);
                     }
+                    else if (is_next_alpha('L', 2))
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("COLLATE"), TOK_COLLATE);
+                    }
                 }
                 break;
 
@@ -895,6 +922,11 @@ private:
             case 'l':
             case 'L':
                 token = expect_token(TBP_EXPECT_TOKEN("LEVEL"), TOK_LEVEL);
+                break;
+
+            case 'n':
+            case 'N':
+                token = expect_token(TBP_EXPECT_TOKEN("NAMES"), TOK_NAMES);
                 break;
 
             case 'o':
