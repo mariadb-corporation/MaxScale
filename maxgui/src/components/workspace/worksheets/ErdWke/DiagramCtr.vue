@@ -32,7 +32,7 @@ import {
 import html2canvas from 'html2canvas'
 
 const props = defineProps({
-  isFormValid: { type: Boolean, required: true },
+  disabled: { type: Boolean, required: true },
   dim: { type: Object, required: true },
   graphHeightPct: { type: Number, required: true },
   erdTask: { type: Object, required: true },
@@ -777,7 +777,7 @@ defineExpose({ updateNode, getCanvas })
       class="entity-diagram"
       @on-rendered.once="onRendered"
       @on-node-drag-end="onNodeDragEnd"
-      @dblclick="isFormValid ? handleDblClickNode($event) : null"
+      @dblclick="disabled ? null : handleDblClickNode($event)"
       @on-create-new-fk="onCreateNewFk"
       @on-node-contextmenu="
         handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.NODE, e: $event.e, item: $event.node })
@@ -799,7 +799,7 @@ defineExpose({ updateNode, getCanvas })
           variant="text"
           density="compact"
           color="primary"
-          :disabled="!isFormValid"
+          :disabled="disabled"
           @click.stop="
             handleOpenCtxMenu({ e: $event, type: DIAGRAM_CTX_TYPE_MAP.NODE, item: node })
           "

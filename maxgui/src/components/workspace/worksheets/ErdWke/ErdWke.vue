@@ -29,7 +29,7 @@ const props = defineProps({
 const diagramCtrRef = ref(null)
 const scriptName = ref('')
 const scriptGeneratedTime = ref(null)
-const isFormValid = ref(true)
+const formValidity = ref(true)
 
 const store = useStore()
 const typy = useTypy()
@@ -82,6 +82,13 @@ const maxErdPct = computed(() => 100 - minErdPct.value)
 const taskName = computed(() => props.wke.name)
 const conn = computed(() => QueryConn.query().where('erd_task_id', taskId.value).first() || {})
 const connId = computed(() => typy(conn.value, 'id').safeString)
+const activeNodeData = computed(
+  () => typy(nodeMap.value, `[${activeEntityId.value}].data`).safeObjectOrEmpty
+)
+const isDiagramDisabled = computed(() => Boolean(!formValidity.value))
+const actionName = computed(
+  () => `Apply script ${scriptName.value} at ${scriptGeneratedTime.value}`
+)
 
 function genScript() {
   const { name, time, sql } = scriptGenerator({
@@ -108,7 +115,7 @@ function applyScript() {
 async function onExecuteScript() {
   await workspaceService.exeDdlScript({
     connId: connId.value,
-    actionName: `Apply script ${scriptName.value} at ${scriptGeneratedTime.value}`,
+    actionName: actionName.value,
   })
 }
 
@@ -127,7 +134,10 @@ function exportScript() {
 }
 
 async function exportAsJpeg() {
-  exportToJpeg({ canvas: await diagramCtrRef.value.getCanvas(), fileName: taskName.value })
+  exportToJpeg({
+    canvas: await typy(diagramCtrRef.value, 'getCanvas').safeFunction(),
+    fileName: taskName.value,
+  })
 }
 
 function copyScriptToClipboard() {
@@ -135,16 +145,20 @@ function copyScriptToClipboard() {
 }
 
 function updateDiagramNode(param) {
-  diagramCtrRef.value.updateNode(param)
+  typy(diagramCtrRef.value, 'updateNode').safeFunction(param)
 }
 
-function updateNode(data) {
+function updateNodeData(data) {
   const id = activeEntityId.value
   nodeMap.value = immutableUpdate(nodeMap.value, {
     [id]: { data: { $set: data } },
   })
   erdTaskService.updateNodesHistory(nodeMap.value)
   updateDiagramNode({ id, data })
+}
+
+function setFormValidity(v) {
+  formValidity.value = v
 }
 </script>
 
@@ -162,7 +176,7 @@ function updateNode(data) {
       <DiagramCtr
         ref="diagramCtrRef"
         :key="erdTaskKey"
-        :isFormValid="isFormValid"
+        :disabled="isDiagramDisabled"
         :dim="erdDim"
         :graphHeightPct="graphHeightPct"
         :erdTask="erdTask"
@@ -176,23 +190,23 @@ function updateNode(data) {
         :refTargetMap="refTargetMap"
         :tablesColNameMap="tablesColNameMap"
         :applyScript="applyScript"
-        @on-export-script="exportScript"
-        @on-export-as-jpeg="exportAsJpeg"
-        @on-copy-script-to-clipboard="copyScriptToClipboard"
+        @on-export-script="exportScript()"
+        @on-export-as-jpeg="exportAsJpeg()"
+        @on-copy-script-to-clipboard="copyScriptToClipboard()"
       />
     </template>
     <template #pane-right>
       <EntityEditorCtr
         v-if="activeEntityId"
         :dim="editorDim"
-        :data="$typy(nodeMap, `[${activeEntityId}].data`).safeObjectOrEmpty"
+        :data="activeNodeData"
         :taskId="taskId"
         :connId="connId"
         :tables="tables"
         :schemas="schemas"
         :erdTaskTmp="erdTaskTmp"
-        @change="updateNode"
-        @is-form-valid="isFormValid = $event"
+        @change="updateNodeData($event)"
+        @is-form-valid="setFormValidity($event)"
       />
     </template>
   </ResizablePanels>
