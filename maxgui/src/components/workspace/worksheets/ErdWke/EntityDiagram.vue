@@ -19,7 +19,7 @@ import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { getConfig } from '@wkeComps/ErdWke/config'
 import erdHelper from '@/utils/erdHelper'
 import { CREATE_TBL_TOKEN_MAP, REF_OPT_MAP } from '@/constants/workspace'
-import ErdKeyIcon from '@wkeComps/ErdWke/ErdKeyIcon.vue'
+import EntityNode from '@wkeComps/ErdWke/EntityNode.vue'
 import RefPoints from '@wkeComps/ErdWke/RefPoints.vue'
 
 defineOptions({ inheritAttrs: false })
@@ -46,7 +46,7 @@ const emit = defineEmits([
 ])
 
 const {
-  lodash: { cloneDeep, keyBy, merge },
+  lodash: { cloneDeep, keyBy, merge, set },
   delay,
   deepDiff,
   uuidv1,
@@ -54,7 +54,6 @@ const {
   getGraphExtent,
 } = useHelpers()
 const typy = useTypy()
-const tdMaxWidth = 320 / 2 - 27 // entity max-width / 2 - offset. Offset includes padding and border
 
 const graphNodesRef = ref(null)
 const isRendering = ref(false)
@@ -82,14 +81,14 @@ const panAndZoomData = computed({
   set: (v) => emit('update:panAndZoom', v),
 })
 const entityKeyCategoryMap = computed(() =>
-  graphNodes.value.reduce((map, node) => {
-    map[node.id] = node.data.defs.key_category_map
-    return map
-  }, {})
+  graphNodes.value.reduce(
+    (map, node) => ((map[node.id] = node.data.defs.key_category_map), map),
+    {}
+  )
 )
 const nodeMap = computed(() => keyBy(graphNodes.value, 'id'))
 const entitySizeConfig = computed(() => props.graphConfigData.linkShape.entitySizeConfig)
-const highlightColStyleMap = computed(() =>
+const entityHighlightColStyleMap = computed(() =>
   chosenLinks.value.reduce((map, link) => {
     const {
       source,
@@ -98,14 +97,11 @@ const highlightColStyleMap = computed(() =>
       styles: { invisibleHighlightColor },
     } = link
 
-    if (!map[source.id]) map[source.id] = []
-    if (!map[target.id]) map[target.id] = []
-    const style = {
-      backgroundColor: invisibleHighlightColor,
-      color: 'white',
-    }
-    map[source.id].push({ col: src_attr_id, ...style })
-    map[target.id].push({ col: target_attr_id, ...style })
+    if (!map[source.id]) map[source.id] = {}
+    if (!map[target.id]) map[target.id] = {}
+    const style = { backgroundColor: invisibleHighlightColor, color: 'white' }
+    set(map, [source.id, src_attr_id], style)
+    set(map, [target.id, target_attr_id], style)
     return map
   }, {})
 )
@@ -337,6 +333,7 @@ function setGraphNodeCoordMap() {
 function getLinks() {
   return simulation.value.force('link').links()
 }
+
 function setEventStyles({ links, eventType }) {
   entityLink.value.setEventStyles({
     links,
@@ -435,45 +432,6 @@ function mouseleaveNode() {
     setEventLinkStyles(EVENT_TYPES.NONE)
     chosenLinks.value = []
   }
-}
-
-function getKeyIcon({ node, colId }) {
-  const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKEN_MAP
-
-  const { color } = getHighlightColStyle({ node, colId }) || {}
-  const categories = props.colKeyCategoryMap[colId] || []
-
-  let isUQ = false
-  if (categories.includes(uniqueKey)) {
-    isUQ = erdHelper.isSingleUQ({
-      keyCategoryMap: entityKeyCategoryMap.value[node.id],
-      colId,
-    })
-  }
-
-  if (categories.includes(primaryKey))
-    return {
-      icon: '$mdiKey',
-      color: color ? color : 'primary',
-      size: 18,
-    }
-  else if (isUQ)
-    return {
-      icon: 'mxs:uniqueIndexKey',
-      color: color ? color : 'navigation',
-      size: 16,
-    }
-  else if ([key, fullTextKey, spatialKey, foreignKey].some((k) => categories.includes(k)))
-    return {
-      icon: 'mxs:indexKey',
-      color: color ? color : 'navigation',
-      size: 16,
-    }
-}
-
-function getHighlightColStyle({ node, colId }) {
-  const cols = highlightColStyleMap.value[node.id] || []
-  return cols.find((item) => item.col === colId)
 }
 
 function watchConfig() {
@@ -621,79 +579,21 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
               @drawing="onDrawingFk"
               @draw-end="onEndDrawFk"
             />
-            <VHover>
-              <template #default="{ isHovering, props }">
-                <table
-                  class="entity-table"
-                  :style="{ borderColor: node.styles.highlightColor }"
-                  v-bind="props"
-                >
-                  <thead>
-                    <tr :style="{ height: `${entitySizeConfig.headerHeight}px` }">
-                      <th
-                        class="text-center font-weight-bold text-no-wrap rounded-t-lg pl-4 pr-1"
-                        colspan="3"
-                      >
-                        <div class="d-flex flex-row align-center justify-center">
-                          <div class="flex-grow-1">
-                            {{ node.data.options.name }}
-                          </div>
-                          <slot name="entity-setting-btn" :node="node" :isHovering="isHovering" />
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(col, colId) in node.data.defs.col_map"
-                      :key="colId"
-                      :style="{
-                        height: `${entitySizeConfig.rowHeight}px`,
-                        ...getHighlightColStyle({ node, colId }),
-                      }"
-                      v-on="
-                        isDrawingFk
-                          ? {
-                              mouseenter: () => setRefTargetData({ node, col }),
-                              mouseleave: () => (refTarget = null),
-                            }
-                          : {}
-                      "
-                    >
-                      <td>
-                        <ErdKeyIcon
-                          class="fill-height d-flex align-center"
-                          :data="getKeyIcon({ node, colId })"
-                        />
-                      </td>
-                      <td>
-                        <GblTooltipActivator
-                          :data="{ txt: col.name }"
-                          fillHeight
-                          :maxWidth="tdMaxWidth"
-                          activateOnTruncation
-                        />
-                      </td>
-                      <td
-                        class="text-end"
-                        :style="{
-                          color:
-                            $typy(getHighlightColStyle({ node, colId }), 'color').safeString ||
-                            '#6c7c7b',
-                        }"
-                      >
-                        <GblTooltipActivator
-                          :data="{ txt: col.data_type }"
-                          fillHeight
-                          :maxWidth="tdMaxWidth"
-                          activateOnTruncation
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+            <EntityNode
+              :node="node"
+              :headerHeight="`${entitySizeConfig.headerHeight}px`"
+              :rowHeight="`${entitySizeConfig.rowHeight}px`"
+              :colKeyCategoryMap="colKeyCategoryMap"
+              :keyCategoryMap="$typy(entityKeyCategoryMap[node.id]).safeObjectOrEmpty"
+              :highlightColStyleMap="$typy(entityHighlightColStyleMap[node.id]).safeObjectOrEmpty"
+              :isDrawingFk="isDrawingFk"
+              @mouseenter-attr="setRefTargetData({ node, col: $event })"
+              @mouseleave-attr="refTarget = null"
+            >
+              <template v-for="(_, name) in $slots" #[name]="slotData">
+                <slot :name="name" v-bind="slotData" />
               </template>
-            </VHover>
+            </EntityNode>
           </template>
         </SvgGraphNodes>
       </template>
@@ -710,61 +610,6 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
 </template>
 
 <style lang="scss" scoped>
-.entity-table {
-  background: white;
-  width: 100%;
-  border-spacing: 0px;
-  tr,
-  thead,
-  tbody {
-    border-color: inherit;
-  }
-  thead {
-    th {
-      border-top: 7px solid;
-      border-right: 1px solid;
-      border-bottom: 1px solid;
-      border-left: 1px solid;
-      border-color: inherit;
-    }
-  }
-  tbody {
-    tr {
-      &:hover {
-        background: colors.$tr-hovered-color;
-      }
-      td {
-        white-space: nowrap;
-        padding: 0px 8px;
-        &:first-of-type {
-          padding-left: 8px;
-          padding-right: 0px;
-          border-left: 1px solid;
-          border-color: inherit;
-        }
-        &:nth-of-type(2) {
-          padding-left: 2px;
-        }
-        &:last-of-type {
-          border-right: 1px solid;
-          border-color: inherit;
-        }
-      }
-      &:last-of-type {
-        td {
-          border-bottom: 1px solid;
-          border-color: inherit;
-          &:first-of-type {
-            border-bottom-left-radius: 8px !important;
-          }
-          &:last-of-type {
-            border-bottom-right-radius: 8px !important;
-          }
-        }
-      }
-    }
-  }
-}
 .active-node-border-div {
   width: calc(100% + 12px);
   height: calc(100% + 12px);
