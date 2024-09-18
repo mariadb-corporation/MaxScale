@@ -18,9 +18,8 @@ router=readwritesplit
 servers=server1
 user=maxskysql
 password=skysql
-delayed_retry_timeout=45s
-transaction_replay=true
-transaction_replay_safe_commit=false
+master_reconnection=true
+master_failure_mode=fail_on_write
 
 [RW-Split-Listener]
 type=listener

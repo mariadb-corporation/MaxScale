@@ -24,6 +24,12 @@
 
 #include <pcre2.h>
 
+#ifdef MXS_PCRE2_NO_JIT
+#define MXS_PCRE2_JIT_COMPILE(code, opts) [](){return 0;}()
+#else
+#define MXS_PCRE2_JIT_COMPILE(code, opts) pcre2_jit_compile(code, opts)
+#endif
+
 #include <memory>
 #include <string>
 #include <vector>

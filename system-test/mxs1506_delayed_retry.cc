@@ -144,26 +144,26 @@ int main(int argc, char** argv)
             }
         },
         {
-            "Interrupted insert (should cause duplicate statement execution)",
+            "Interrupted insert (would cause duplicate statement execution)",
             [&](){
                 send("INSERT INTO test.t1 VALUES ((SELECT SLEEP(1) + 6))");
                 block();
                 sleep(3);
                 unblock();
-                ok();
-                check("SELECT COUNT(*) FROM test.t1 WHERE id = 6", "2");
+                err();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 6", "1");
             }
         },
         {
-            "Interrupted insert with user variable (should cause duplicate statement execution)",
+            "Interrupted insert with user variable (would cause duplicate statement execution)",
             [&](){
                 query("SET @b = 7");
                 send("INSERT INTO test.t1 VALUES ((SELECT SLEEP(1) + @b))");
                 block();
                 sleep(3);
                 unblock();
-                ok();
-                check("SELECT COUNT(*) FROM test.t1 WHERE id = 7", "2");
+                err();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 7", "1");
             }
         },
         {
@@ -228,14 +228,14 @@ int main(int argc, char** argv)
             }
         },
         {
-            "MXS-3383: Interrupted insert after session command with slow slaves (causes duplicate insert)",
+            "MXS-3383: Interrupted insert after session command with slow slaves (would cause duplicate insert)",
             [&](){
                 query("SET @b = (SELECT SLEEP(@@server_id))");
                 send("INSERT INTO test.t1 VALUES ((SELECT SLEEP(1) + @b))");
                 block();
                 unblock();
-                ok();
-                check("SELECT COUNT(*) FROM test.t1", "2");
+                err();
+                check("SELECT COUNT(*) FROM test.t1", "1");
             }
         },
     });

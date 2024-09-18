@@ -2248,6 +2248,15 @@ int main(int argc, char** argv)
                 // Successful start, notify the parent process that it can exit.
                 write_child_exit_code(child_pipe, rc);
             }
+            else
+            {
+                // If MaxScale is run as a systemd service with Type=notify, we need to send a READY=1
+                // notification to tell systemd that startup has completed. Outside of systemd services, this does
+                // nothing.
+#ifdef HAVE_SYSTEMD
+                sd_notify(false, "READY=1");
+#endif
+            }
         };
 
     watchdog_notifier.start();
