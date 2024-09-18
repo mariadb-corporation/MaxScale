@@ -1000,11 +1000,22 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 
         uint32_t type = qc_get_trx_type_mask_using(packetbuf, parser_type);
 
-        mxb_assert_message(!rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION)
-                           || qc_get_trx_type_mask_using(packetbuf, QC_TRX_PARSE_USING_QC)
-                           == qc_get_trx_type_mask_using(packetbuf, QC_TRX_PARSE_USING_PARSER),
-                           "Parser and query classifier should parse transactions identically: %s",
-                           mxs::extract_sql(packetbuf).c_str());
+#ifdef SS_DEBUG
+        if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
+        {
+            auto mask_qc = qc_get_trx_type_mask_using(packetbuf, QC_TRX_PARSE_USING_QC);
+            auto mask_parser = qc_get_trx_type_mask_using(packetbuf, QC_TRX_PARSE_USING_PARSER);
+            char* txt_qc = qc_typemask_to_string(mask_qc);
+            char* txt_parser = qc_typemask_to_string(mask_parser);
+            mxb_assert_message(mask_qc == mask_parser,
+                               "Parser and query classifier should parse transactions identically: %s\n"
+                               "Trx type mask from QC:     %s\n"
+                               "Trx type mask from parser: %s\n",
+                               mxs::extract_sql(packetbuf).c_str(), txt_qc, txt_parser);
+            MXB_FREE(txt_qc);
+            MXB_FREE(txt_parser);
+        }
+#endif
 
         if (type & QUERY_TYPE_BEGIN_TRX)
         {
