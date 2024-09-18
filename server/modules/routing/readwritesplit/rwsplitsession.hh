@@ -255,7 +255,11 @@ private:
          * @see handle_trx_replay
          */
         return m_config->delayed_retry
-               && (!m_config->trx_retry_safe_commit || !m_config->transaction_replay)
+                // If responses are expected, it means that the write was already routed and retrying it is
+                // unsafe. Replaying would potentially cause duplicate execution of the same statement.
+                // For example, retrying an INSERT would generate two rows instead of just one if done with
+                // autocommit=1.
+               && m_expected_responses == 0
                && m_retry_duration < m_config->delayed_retry_timeout.count()
                && !trx_is_open();
     }

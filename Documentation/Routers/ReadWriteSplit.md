@@ -486,19 +486,22 @@ behavior and returns an error.
 
 When combined with the `master_reconnection` parameter, failures of writes done
 outside of transactions can be hidden from the client connection. This allows a
-primary to be replaced while a write is in progress.
+primary to be replaced while writes are being sent.
 
-The delayed query retrying mode in readwritesplit does not do any sort of
-duplicate write detection. To prevent accidental data duplication, it is highly
-recommended to tune the monitor timeouts to values that produce accurate
-results.
+Starting with MaxScale 21.06.18, 22.08.15, 23.02.12, 23.08.8, 24.02.4 and
+24.08.1, `delayed_retry` will no longer attempt to retry a query if it was
+already sent to the database. If a query is received while a valid target server
+is not available, the execution of the query is delayed until a valid target is
+found or the delayed retry timeout is hit. If a query was already sent, it will
+not be replayed to prevent duplicate execution of statements.
 
-Duplicate execution of a statement can occur if the connection to the server is
-lost or the server crashes but the server comes back up before the timeout for
-the retrying is exceeded. At this point, if the server managed to read the
-client's statement, it will be executed. For this reason, it is recommended to
-only enable `delayed_retry` when the possibility of duplicate statement
-execution is an acceptable risk.
+In older versions of MaxScale, duplicate execution of a statement can occur if
+the connection to the server is lost or the server crashes but the server comes
+back up before the timeout for the retrying is exceeded. At this point, if the
+server managed to read the client's statement, it will be executed. For this
+reason, it is recommended to only enable `delayed_retry` for older versions of
+MaxScale when the possibility of duplicate statement execution is an acceptable
+risk.
 
 ### `delayed_retry_timeout`
 
@@ -649,12 +652,16 @@ This parameter was added in MaxScale 23.08.0 and is enabled by default. The
 older version of MaxScale always attempted to replay the transaction even if
 there was a risk of duplicating the transaction.
 
-Starting with MaxScale 24.08, this parameter will also disable the replaying of
-individual DML statements that `delayed_retry` enables. The result of this is
-that only statements done inside of an explicit transactions or with autocommit
-disabled are replayed and writes done with autocommit enabled are never
-replayed. This means that when `transaction_replay_safe_commit` is enabled,
-statements that may commit transactions are never replayed.
+In MaxScale 24.08.0, this parameter also disabled the replaying of individual
+DML statements that `delayed_retry` enabled. The result of this was that only
+statements done inside of an explicit transactions or with autocommit disabled
+were replayed and writes done with autocommit enabled were never replayed.
+
+In MaxScale 24.08.1 and newer versions, where `delayed_retry no longer attempts
+to retry a query if it was already sent to the database, write queries outside
+of transactions are delayed if no valid target is found but they are never
+retried. Thus `transaction_replay_safe_commit` again only affects how the
+`COMMIT` of a transaction is handled.
 
 If the data that is about to be modified is read before it is modified and it is
 locked in an appropriate manner (e.g. with `SELECT ... FOR UPDATE` or with the

@@ -512,7 +512,6 @@ public:
 
     bool reinstall(const std::string& target, const std::string& mdbci_config_name);
 
-    bool use_valgrind() const;
     bool prepare_for_test();
     void write_env_vars();
 
@@ -559,8 +558,6 @@ private:
     bool m_leak_check {true};
 
     int  m_valgrind_log_num {0};    /**< Counter for Maxscale restarts to avoid Valgrind log overwriting */
-    bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */
-    bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
 
     std::string m_rest_user {"admin"};
     std::string m_rest_pw {"mariadb"};

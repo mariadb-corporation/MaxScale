@@ -344,10 +344,6 @@ int TestConnections::cleanup()
         {
             auto mxs = my_maxscale(i);
             mxs->stop_and_check_stopped();
-            if (mxs->use_valgrind())
-            {
-                sleep_more = true;
-            }
         }
 
         if (sleep_more)
