@@ -279,7 +279,7 @@ void FileWriter::write_rotate(WritePosition& pos, const std::string& to_file_nam
 void FileWriter::write_gtid_list(WritePosition& pos)
 {
     constexpr int HEADER_LEN = 19;
-    auto gtid_list = m_writer.get_gtid_io_pos();
+    auto gtid_list = m_writer.current_gtid_list();
     const auto NUM_GTIDS = gtid_list.gtids().size();
     const size_t EVENT_LEN = HEADER_LEN + 4 + NUM_GTIDS * (4 + 4 + 8) + 4;
 

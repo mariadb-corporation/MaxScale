@@ -46,12 +46,13 @@ public:
     void run();
 
     // These are thread safe on their own, but can be inconsistent as a group.
-    mxq::GtidList get_gtid_io_pos() const;
-    Error         get_err() const;
-
-    void set_connection_details(const mxq::Connection::ConnectionDetails& details);
-
+    Error get_err() const;
+    void  set_connection_details(
+        const mxq::Connection::ConnectionDetails& details);
     std::pair<std::string, uint32_t> master_log_pos() const;
+
+    // internal
+    const mxq::GtidList& current_gtid_list() const;
 
 private:
     InventoryWriter&  m_inventory;

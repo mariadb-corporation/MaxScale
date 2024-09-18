@@ -88,9 +88,8 @@ mxq::Connection::ConnectionDetails Writer::get_connection_details()
     return m_details;
 }
 
-mxq::GtidList Writer::get_gtid_io_pos() const
+const maxsql::GtidList& Writer::current_gtid_list() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
     return m_current_gtid_list;
 }
 
@@ -102,7 +101,6 @@ Error Writer::get_err() const
 
 void Writer::update_gtid_list(const mxq::Gtid& gtid)
 {
-    std::lock_guard<std::mutex> guard(m_lock);
     m_current_gtid_list.replace(gtid);
 }
 
@@ -163,6 +161,7 @@ void Writer::run()
             host = ss.str();
 
             maxbase::Timer timer(1s);   // Check if the master has changed at the most once a second
+            maxsql::Gtid current_gtid;
 
             while (m_running)
             {
@@ -197,7 +196,7 @@ void Writer::run()
                     {
                         maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
                         file.begin_txn();
-                        update_gtid_list(gtid_event.gtid);
+                        current_gtid = gtid_event.gtid;
 
                         if (gtid_event.flags & mxq::F_STANDALONE)
                         {
@@ -229,6 +228,8 @@ void Writer::run()
                 file.add_event(rpl_event);
                 if (do_save_gtid_list)
                 {
+                    mxb_assert(current_gtid.is_valid());
+                    update_gtid_list(current_gtid);
                     save_gtid_list(file);
                 }
 
