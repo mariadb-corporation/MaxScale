@@ -18,7 +18,6 @@ import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { getConfig } from '@wkeComps/ErdWke/config'
 import erdHelper from '@/utils/erdHelper'
-import { CREATE_TBL_TOKEN_MAP } from '@/constants/workspace'
 import EntityNodes from '@wkeComps/ErdWke/EntityNodes.vue'
 
 defineOptions({ inheritAttrs: false })
@@ -202,7 +201,7 @@ function getExtent() {
  */
 function update(nodes) {
   assignData(nodes)
-  // setNodeSizeMap will trigger updateNodeSizes method
+  // setSizeMap will trigger updateNodeSizes method
   nextTick(() => entityNodesRef.value.setSizeMap())
 }
 
@@ -336,16 +335,8 @@ function drawLinks() {
     containerEle: linkContainer.value,
     data: getLinks().filter((link) => !link.hidden),
     events: {
-      mouseover: (param) =>
-        handleMouseOverOut({
-          ...param,
-          eventType: EVENT_TYPES.HOVER,
-        }),
-      mouseout: (param) =>
-        handleMouseOverOut({
-          ...param,
-          eventType: EVENT_TYPES.NONE,
-        }),
+      mouseover: (param) => handleMouseOverOut({ ...param, eventType: EVENT_TYPES.HOVER }),
+      mouseout: (param) => handleMouseOverOut({ ...param, eventType: EVENT_TYPES.NONE }),
       contextmenu: (param) => openContextMenu(param),
       click: (param) => openContextMenu(param),
     },
@@ -371,7 +362,7 @@ function watchConfig() {
     (v, oV) => {
       /**
        * Because only one attribute can be changed at a time, so it's safe to
-       * access the diff with hard-code indexes.
+       * access the diff with a hard-code index.
        */
       const diff = typy(deepDiff(oV, v), '[0]').safeObjectOrEmpty
       const path = diff.path.join('.')
@@ -408,13 +399,10 @@ function handleIsAttrToAttrMode(v) {
   simulation.value.force('link').links(graphLinks.value)
 }
 
-function getFkMap(node) {
-  return typy(entityKeyCategoryMap.value, `[${node.id}][${CREATE_TBL_TOKEN_MAP.foreignKey}]`)
-    .safeObjectOrEmpty
-}
-
 function getFks(node) {
-  return Object.values(getFkMap(node))
+  return Object.values(
+    erdHelper.getFkMap(typy(entityKeyCategoryMap.value, `[${node.id}]`).safeObjectOrEmpty)
+  )
 }
 
 function onDraggingNode({ id, diffX, diffY }) {
@@ -448,7 +436,6 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
           :graphConfigData="graphConfigData"
           :chosenLinks="chosenLinks"
           :boardZoom="panAndZoomData.k"
-          :getFkMap="getFkMap"
           :activeNodeId="activeNodeId"
           :linkContainer="linkContainer"
           :colKeyCategoryMap="colKeyCategoryMap"

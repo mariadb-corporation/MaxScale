@@ -488,6 +488,14 @@ function genIdxColOpts({ tableColMap, disableHandler = () => false }) {
   }, [])
 }
 
+/**
+ * @param {object} keyCategoryMap - data.defs.key_category_map of a parsed table
+ * @returns {object}  foreign key map
+ */
+function getFkMap(keyCategoryMap) {
+  return typy(keyCategoryMap, `[${tokens.foreignKey}]`).safeObjectOrEmpty
+}
+
 export default {
   genColKeyTypeMap,
   isSingleUQ,
@@ -503,4 +511,5 @@ export default {
   genKey,
   validateFkColTypes,
   genIdxColOpts,
+  getFkMap,
 }

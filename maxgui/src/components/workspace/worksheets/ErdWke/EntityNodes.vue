@@ -13,6 +13,7 @@
  */
 import EntityNode from '@wkeComps/ErdWke/EntityNode.vue'
 import RefPoints from '@wkeComps/ErdWke/RefPoints.vue'
+import erdHelper from '@/utils/erdHelper'
 import { REF_OPT_MAP } from '@/constants/workspace'
 import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
 
@@ -22,7 +23,6 @@ const props = defineProps({
   graphConfigData: { type: Object, required: true },
   chosenLinks: { type: Array, required: true },
   boardZoom: { type: Number, required: true },
-  getFkMap: { type: Function, required: true },
   activeNodeId: { type: String, required: true },
   linkContainer: { type: Object, required: true },
   colKeyCategoryMap: { type: Object, required: true },
@@ -102,7 +102,9 @@ function onDrawingFk() {
 function onEndDrawFk({ node, cols }) {
   isDrawingFk.value = false
   if (refTarget.value) {
-    const currentFkMap = props.getFkMap(node)
+    const currentFkMap = erdHelper.getFkMap(
+      typy(props.entityKeyCategoryMap[node.id]).safeObjectOrEmpty
+    )
     emit('on-create-new-fk', {
       node,
       currentFkMap,

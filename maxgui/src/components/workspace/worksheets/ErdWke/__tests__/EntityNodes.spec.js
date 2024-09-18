@@ -29,7 +29,6 @@ const mockChosenLinks = [
     styles: { invisibleHighlightColor: 'blue' },
   },
 ]
-const mockGetFkMap = vi.fn(() => ({}))
 const mockActiveNodeId = 'node_1'
 const mockLinkContainer = {}
 const mockColKeyCategoryMap = { col_1: { category: 'primary' } }
@@ -40,7 +39,6 @@ const propsStub = {
   graphConfigData: mockGraphConfigData,
   chosenLinks: mockChosenLinks,
   boardZoom: 1,
-  getFkMap: mockGetFkMap,
   activeNodeId: mockActiveNodeId,
   linkContainer: mockLinkContainer,
   colKeyCategoryMap: mockColKeyCategoryMap,
