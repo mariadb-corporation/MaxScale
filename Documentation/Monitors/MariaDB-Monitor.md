@@ -1011,9 +1011,10 @@ may fail if all valid promotion candidates are in the exclusion list.
 servers_no_promotion=backup_dc_server1,backup_dc_server2
 ```
 
-As of MaxScale 24.02.4 and 24.08.1, this setting also affects normal primary
-server selection. A server listed in `servers_no_promotion` will thus not
-be selected as primary unless manually designated in a *switchover*-command.
+As of MaxScale 24.02.4 and 24.08.1, this setting also affects primary
+server selection during MaxScale startup or due to replication topology
+changes. A server listed in `servers_no_promotion` will thus not be
+selected as primary unless manually designated in a *switchover*-command.
 
 #### `promotion_sql_file` and `demotion_sql_file`
 

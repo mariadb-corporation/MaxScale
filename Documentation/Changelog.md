@@ -23,6 +23,10 @@
   and [mariabackup_parallel](Monitors/MariaDB-Monitor.md#mariabackup_parallel)
   for more information.
 
+* MariaDB-Monitor setting `servers_no_promotion` now affects primary
+  server selection during MaxScale startup or due to replication topology
+  changes.
+
 * Pam authentication now always checks account status. Previously, this check
   was not performed if MaxScale was configured for username mapping
   (`authenticator_options=pam_backend_mapping=mariadb`). This means that if
