@@ -314,29 +314,18 @@ function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr, colKeyCategoryMap 
 /**
  *
  * @param {array} param.links - all links of an ERD
- * @param {object} param.node - node
+ * @param {string} param.id - node id
  * @returns {array} links of the provided node
  */
-function getNodeLinks({ links, node }) {
+function getNodeLinks({ links, id }) {
   return links.filter(
     (d) =>
       /**
        * d3 auto map source/target object in links, but
        * persisted links in IndexedDB stores only the id
        */
-      lodash.get(d.source, 'id', d.source) === node.id ||
-      lodash.get(d.target, 'id', d.target) === node.id
+      lodash.get(d.source, 'id', d.source) === id || lodash.get(d.target, 'id', d.target) === id
   )
-}
-
-/**
- *
- * @param {array} param.links - all links of an ERD
- * @param {object} param.node - node
- * @returns {array} links that are not connected to the provided node
- */
-function getExcludedLinks({ links, node }) {
-  return links.filter((link) => !getNodeLinks({ links, node }).includes(link))
 }
 
 /**
@@ -508,12 +497,10 @@ export default {
   isColMandatory,
   handleGenErdLink,
   getNodeLinks,
-  getExcludedLinks,
   createTablesColNameMap,
   genRefTargets,
   genConstraint,
   genKey,
-  genKeyName,
   validateFkColTypes,
   genIdxColOpts,
 }

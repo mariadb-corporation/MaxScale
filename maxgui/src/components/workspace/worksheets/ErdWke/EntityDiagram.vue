@@ -18,9 +18,8 @@ import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { getConfig } from '@wkeComps/ErdWke/config'
 import erdHelper from '@/utils/erdHelper'
-import { CREATE_TBL_TOKEN_MAP, REF_OPT_MAP } from '@/constants/workspace'
-import EntityNode from '@wkeComps/ErdWke/EntityNode.vue'
-import RefPoints from '@wkeComps/ErdWke/RefPoints.vue'
+import { CREATE_TBL_TOKEN_MAP } from '@/constants/workspace'
+import EntityNodes from '@wkeComps/ErdWke/EntityNodes.vue'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -46,32 +45,25 @@ const emit = defineEmits([
 ])
 
 const {
-  lodash: { cloneDeep, keyBy, merge, set },
+  lodash: { cloneDeep, merge, keyBy },
   delay,
   deepDiff,
-  uuidv1,
-  doubleRAF,
   getGraphExtent,
 } = useHelpers()
 const typy = useTypy()
 
-const graphNodesRef = ref(null)
+const entityNodesRef = ref(null)
 const isRendering = ref(false)
-const linkContainer = ref(null)
-const graphNodeCoordMap = ref({})
+const linkContainer = ref({})
 const graphNodes = ref([])
 const graphLinks = ref([])
 const simulation = ref(null)
-const defNodeSize = ref({ width: 250, height: 100 })
+
 const chosenLinks = ref([])
 const entityLink = ref(null)
 const graphConfig = ref(null)
-const isDraggingNode = ref(false)
 const graphDim = ref({})
-const clickedNodeId = ref('')
-const clickOutside = ref(true)
-const refTarget = ref(null)
-const isDrawingFk = ref(false)
+
 const hoveredLink = ref(null)
 const tooltipX = ref(0)
 const tooltipY = ref(0)
@@ -80,6 +72,7 @@ const panAndZoomData = computed({
   get: () => props.panAndZoom,
   set: (v) => emit('update:panAndZoom', v),
 })
+
 const entityKeyCategoryMap = computed(() =>
   graphNodes.value.reduce(
     (map, node) => ((map[node.id] = node.data.defs.key_category_map), map),
@@ -87,39 +80,25 @@ const entityKeyCategoryMap = computed(() =>
   )
 )
 const nodeMap = computed(() => keyBy(graphNodes.value, 'id'))
-const entitySizeConfig = computed(() => props.graphConfigData.linkShape.entitySizeConfig)
-const entityHighlightColStyleMap = computed(() =>
-  chosenLinks.value.reduce((map, link) => {
-    const {
-      source,
-      target,
-      relationshipData: { src_attr_id, target_attr_id },
-      styles: { invisibleHighlightColor },
-    } = link
 
-    if (!map[source.id]) map[source.id] = {}
-    if (!map[target.id]) map[target.id] = {}
-    const style = { backgroundColor: invisibleHighlightColor, color: 'white' }
-    set(map, [source.id, src_attr_id], style)
-    set(map, [target.id, target_attr_id], style)
-    return map
-  }, {})
-)
 const isAttrToAttr = computed(() => typy(props.graphConfigData, 'link.isAttrToAttr').safeBoolean)
+
 const isHighlightAll = computed(
   () => typy(props.graphConfigData, 'link.isHighlightAll').safeBoolean
 )
+
 const isStraightShape = computed(
   () => typy(props.graphConfigData, 'linkShape.type').safeString === LINK_SHAPES.STRAIGHT
 )
 const globalLinkColor = computed(() => typy(props.graphConfigData, 'link.color').safeString)
-const hoverable = computed(() => Boolean(!clickedNodeId.value))
+
 const hoveredFk = computed(() =>
   hoveredLink.value
     ? getFks(hoveredLink.value.source).find((key) => key.id === hoveredLink.value.id)
     : null
 )
 const hoveredFkId = computed(() => typy(hoveredFk.value, 'id').safeString)
+
 const hoveredFkInfo = computed(() => {
   if (
     hoveredFk.value &&
@@ -134,9 +113,6 @@ const hoveredFkInfo = computed(() => {
     })
   }
   return ''
-})
-watch(hoverable, (v) => {
-  if (!v) mouseleaveNode()
 })
 
 onBeforeMount(() => initGraphConfig())
@@ -198,7 +174,7 @@ function updateNode({ id, data }) {
   if (index >= 0) {
     graphNodes.value[index].data = data
     // Re-calculate the size
-    graphNodesRef.value.onNodeResized(id)
+    entityNodesRef.value.onNodeResized(id)
     genLinks(graphNodes.value)
   }
 }
@@ -227,7 +203,7 @@ function getExtent() {
 function update(nodes) {
   assignData(nodes)
   // setNodeSizeMap will trigger updateNodeSizes method
-  nextTick(() => graphNodesRef.value.setNodeSizeMap())
+  nextTick(() => entityNodesRef.value.setSizeMap())
 }
 
 /**
@@ -316,18 +292,10 @@ function emitOnRendered() {
  * causes memory leaks. initLinkInstance should be called once
  */
 function draw(tickCount) {
-  setGraphNodeCoordMap()
+  typy(entityNodesRef.value, 'updateCoordMap').safeFunction()
   if (tickCount === 1) initLinkInstance()
   drawLinks()
   if (tickCount === 1) isRendering.value = false
-}
-
-function setGraphNodeCoordMap() {
-  graphNodeCoordMap.value = graphNodes.value.reduce((map, n) => {
-    const { x, y, id } = n
-    if (id) map[id] = { x, y }
-    return map
-  }, {})
 }
 
 function getLinks() {
@@ -347,8 +315,9 @@ function handleMouseOverOut({ e, link, linkCtr, pathGenerator, eventType }) {
   tooltipX.value = e.clientX
   tooltipY.value = e.clientY
   if (!isHighlightAll.value) {
-    if (eventType === EVENT_TYPES.HOVER) mouseenterNode({ node: link.source })
-    else mouseleaveNode()
+    if (eventType === EVENT_TYPES.HOVER)
+      highLightNodeLinks({ id: link.source.id, event: EVENT_TYPES.HOVER })
+    else highLightNodeLinks({ event: EVENT_TYPES.NONE })
     setEventStyles({ links: [link], eventType })
     entityLink.value.drawPaths({ linkCtr, joinType: 'update', pathGenerator })
     entityLink.value.drawMarkers({ linkCtr, joinType: 'update' })
@@ -383,54 +352,16 @@ function drawLinks() {
   })
 }
 
-function setChosenLinks(node) {
-  chosenLinks.value = erdHelper.getNodeLinks({ links: getLinks(), node })
-}
-
 function setEventLinkStyles(eventType) {
   setEventStyles({ eventType, links: chosenLinks.value })
   drawLinks()
 }
 
-function onNodeDrag({ node, diffX, diffY }) {
-  const nodeData = nodeMap.value[node.id]
-  nodeData.x = nodeData.x + diffX
-  nodeData.y = nodeData.y + diffY
+function highLightNodeLinks({ id, event }) {
   if (!isHighlightAll.value) {
-    setChosenLinks(node)
-    if (!isDraggingNode.value) setEventLinkStyles(EVENT_TYPES.DRAGGING)
-  }
-  isDraggingNode.value = true
-  /**
-   * drawLinks is called inside setEventLinkStyles method but it run once.
-   * To ensure that the paths of links continue to be redrawn, call it again while
-   * dragging the node
-   */
-  drawLinks()
-}
-
-function onNodeDragEnd({ node }) {
-  if (isDraggingNode.value) {
-    if (!isHighlightAll.value) {
-      setEventLinkStyles(EVENT_TYPES.NONE)
-      chosenLinks.value = []
-    }
-    isDraggingNode.value = false
-    emit('on-node-drag-end', node)
-  }
-}
-
-function mouseenterNode({ node }) {
-  if (!isHighlightAll.value) {
-    setChosenLinks(node)
-    setEventLinkStyles(EVENT_TYPES.HOVER)
-  }
-}
-
-function mouseleaveNode() {
-  if (!isHighlightAll.value) {
-    setEventLinkStyles(EVENT_TYPES.NONE)
-    chosenLinks.value = []
+    setEventLinkStyles(event)
+    chosenLinks.value =
+      event === EVENT_TYPES.NONE ? [] : erdHelper.getNodeLinks({ links: getLinks(), id })
   }
 }
 
@@ -477,11 +408,6 @@ function handleIsAttrToAttrMode(v) {
   simulation.value.force('link').links(graphLinks.value)
 }
 
-function onDrawingFk() {
-  clickOutside.value = false
-  isDrawingFk.value = true
-}
-
 function getFkMap(node) {
   return typy(entityKeyCategoryMap.value, `[${node.id}][${CREATE_TBL_TOKEN_MAP.foreignKey}]`)
     .safeObjectOrEmpty
@@ -491,36 +417,12 @@ function getFks(node) {
   return Object.values(getFkMap(node))
 }
 
-function onEndDrawFk({ node, cols }) {
-  isDrawingFk.value = false
-  if (refTarget.value) {
-    const currentFkMap = getFkMap(node)
-    emit('on-create-new-fk', {
-      node,
-      currentFkMap,
-      newKey: {
-        id: `key_${uuidv1()}`,
-        name: `${node.data.options.name}_ibfk_${Object.keys(currentFkMap).length}`,
-        cols,
-        ...refTarget.value.data,
-      },
-      refNode: refTarget.value.node,
-    })
-    refTarget.value = null
-    clickOutside.value = true // hide ref-points
-  } else doubleRAF(() => (clickOutside.value = true))
-}
-
-function setRefTargetData({ node, col }) {
-  refTarget.value = {
-    data: {
-      ref_cols: [{ id: col.id }],
-      ref_tbl_id: node.id,
-      on_delete: REF_OPT_MAP.NO_ACTION,
-      on_update: REF_OPT_MAP.NO_ACTION,
-    },
-    node,
-  }
+function onDraggingNode({ id, diffX, diffY }) {
+  // mutate each the node via nodeMap as nodeMap has a ref to graphNodes
+  const nodeData = nodeMap.value[id]
+  nodeData.x = nodeData.x + diffX
+  nodeData.y = nodeData.y + diffY
+  drawLinks()
 }
 
 defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
@@ -528,7 +430,6 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
 
 <template>
   <div class="fill-height er-diagram">
-    <div v-if="isDraggingNode" class="dragging-mask" />
     <VProgressLinear v-if="isRendering" indeterminate color="primary" />
     <SvgGraphBoard
       v-model="panAndZoomData"
@@ -540,62 +441,30 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
       v-bind="$attrs"
     >
       <template #append="{ data: { style } }">
-        <SvgGraphNodes
-          ref="graphNodesRef"
-          v-model:coordMap="graphNodeCoordMap"
-          v-model:clickedNodeId="clickedNodeId"
-          :nodes="graphNodes"
+        <EntityNodes
+          ref="entityNodesRef"
           :style="style"
-          :nodeStyle="{ userSelect: 'none' }"
-          :defNodeSize="defNodeSize"
-          draggable
-          :hoverable="hoverable"
+          :nodes="graphNodes"
+          :graphConfigData="graphConfigData"
+          :chosenLinks="chosenLinks"
           :boardZoom="panAndZoomData.k"
-          autoWidth
-          dblclick
-          contextmenu
-          click
-          :clickOutside="clickOutside"
+          :getFkMap="getFkMap"
+          :activeNodeId="activeNodeId"
+          :linkContainer="linkContainer"
+          :colKeyCategoryMap="colKeyCategoryMap"
+          :entityKeyCategoryMap="entityKeyCategoryMap"
           @node-size-map="updateNodeSizes"
-          @drag="onNodeDrag"
-          @drag-end="onNodeDragEnd"
-          @mouseenter="mouseenterNode"
-          @mouseleave="mouseleaveNode"
-          @on-node-contextmenu="emit('on-node-contextmenu', $event)"
-          @dblclick="emit('dblclick', $event)"
+          @highlight-node-links="highLightNodeLinks"
+          @node-dragging="onDraggingNode"
+          @node-dragend="$emit('on-node-drag-end', $event)"
+          @on-node-contextmenu="$emit('on-node-contextmenu', $event)"
+          @dblclick="$emit('dblclick', $event)"
+          @on-create-new-fk="$emit('on-create-new-fk', $event)"
         >
-          <template #default="{ data: { node } }">
-            <div
-              v-if="node.id === activeNodeId"
-              class="active-node-border-div pos--absolute rounded-lg"
-            />
-            <RefPoints
-              v-if="node.id === clickedNodeId"
-              :node="node"
-              :entitySizeConfig="entitySizeConfig"
-              :linkContainer="linkContainer"
-              :boardZoom="panAndZoomData.k"
-              :graphConfig="graphConfig.config"
-              @drawing="onDrawingFk"
-              @draw-end="onEndDrawFk"
-            />
-            <EntityNode
-              :node="node"
-              :headerHeight="`${entitySizeConfig.headerHeight}px`"
-              :rowHeight="`${entitySizeConfig.rowHeight}px`"
-              :colKeyCategoryMap="colKeyCategoryMap"
-              :keyCategoryMap="$typy(entityKeyCategoryMap[node.id]).safeObjectOrEmpty"
-              :highlightColStyleMap="$typy(entityHighlightColStyleMap[node.id]).safeObjectOrEmpty"
-              :isDrawingFk="isDrawingFk"
-              @mouseenter-attr="setRefTargetData({ node, col: $event })"
-              @mouseleave-attr="refTarget = null"
-            >
-              <template v-for="(_, name) in $slots" #[name]="slotData">
-                <slot :name="name" v-bind="slotData" />
-              </template>
-            </EntityNode>
+          <template v-for="(_, name) in $slots" #[name]="slotData">
+            <slot :name="name" v-bind="slotData" />
           </template>
-        </SvgGraphNodes>
+        </EntityNodes>
       </template>
     </SvgGraphBoard>
     <VTooltip
@@ -608,15 +477,3 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
     </VTooltip>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.active-node-border-div {
-  width: calc(100% + 12px);
-  height: calc(100% + 12px);
-  left: -6px;
-  top: -6px;
-  border: 4px solid colors.$primary;
-  z-index: -1;
-  opacity: 0.5;
-}
-</style>

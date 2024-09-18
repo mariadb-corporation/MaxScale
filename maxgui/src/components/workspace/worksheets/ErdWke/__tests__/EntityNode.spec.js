@@ -61,6 +61,10 @@ describe(`EntityNode`, () => {
     },
   }))
 
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('Should render entity name correctly', () => {
     wrapper = mountFactory()
     expect(find(wrapper, 'entity-name').text()).toBe(nodeStub.data.options.name)
