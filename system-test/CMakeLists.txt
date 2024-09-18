@@ -993,6 +993,10 @@ add_test_executable(mxs5193_multistmt_sescmd.cc mxs5193_multistmt_sescmd mxs5193
 # MXS-5231: Connections to servers in maintenance are sometimes not discarded
 add_test_executable(mxs5231_stale_connections.cc mxs5231_stale_connections basic_readwritesplit LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4699: require_secure_transport
+add_test_executable_ex(NAME require_secure_transport SOURCE require_secure_transport.cc
+        CONFIG require_secure_transport.cnf VMS repl_backend)
+
 ############################################
 # END: Normal tests                        #
 ############################################
