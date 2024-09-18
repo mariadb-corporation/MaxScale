@@ -176,3 +176,6 @@ add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring
 add_test_executable_ex(NAME cooperative_monitoring_2srv SOURCE cooperative_monitoring_2srv.cc
         CONFIG cooperative_monitoring_2srv.cnf VMS repl_backend second_maxscale
         LABELS mysqlmon BREAKS_REPL LIBS mariadbmon_utils)
+
+add_test_executable_ex(NAME mariadbmon_servers_no_promotion SOURCE mariadbmon_servers_no_promotion.cc
+        CONFIG mariadbmon_servers_no_promotion.cnf VMS repl_backend)

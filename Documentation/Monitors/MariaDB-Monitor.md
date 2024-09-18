@@ -1061,13 +1061,17 @@ met.
 This is a comma-separated list of server names that will not be chosen for
 primary promotion during a failover or autoselected for switchover. This does not
 affect switchover if the user selects the server to promote. Using this setting
-can disrupt new primary selection for failover such that an non-optimal server is
+can disrupt new primary selection for failover such that a non-optimal server is
 chosen. At worst, this will cause replication to break. Alternatively, failover
 may fail if all valid promotion candidates are in the exclusion list.
 
 ```
 servers_no_promotion=backup_dc_server1,backup_dc_server2
 ```
+
+As of MaxScale 24.02.4 and 24.08.1, this setting also affects normal primary
+server selection. A server listed in `servers_no_promotion` will thus not
+be selected as primary unless manually designated in a *switchover*-command.
 
 #### `promotion_sql_file` and `demotion_sql_file`
 
