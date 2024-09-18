@@ -55,6 +55,8 @@ public:
         mxs::WorkerGlobal<Values> m_shared;
     };
 
+    XRouter(SERVICE& name);
+
     static std::unique_ptr<mxs::Router> create(SERVICE* pService);
 
     std::shared_ptr<mxs::RouterSession>
@@ -88,8 +90,6 @@ public:
     }
 
 private:
-    XRouter(SERVICE& name);
-
     Config   m_config;
     SERVICE& m_service;
 };
