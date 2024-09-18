@@ -487,19 +487,22 @@ behavior and returns an error.
 
 When combined with the `master_reconnection` parameter, failures of writes done
 outside of transactions can be hidden from the client connection. This allows a
-master to be replaced while a write is in progress.
+master to be replaced while writes are being sent.
 
-The delayed query retrying mode in readwritesplit does not do any sort of
-duplicate write detection. To prevent accidental data duplication, it is highly
-recommended to tune the monitor timeouts to values that produce accurate
-results.
+Starting with MaxScale 21.06.18, 22.08.15, 23.02.12, 23.08.8, 24.02.4 and
+24.08.1, `delayed_retry` will no longer attempt to retry a query if it was
+already sent to the database. If a query is received while a valid target server
+is not available, the execution of the query is delayed until a valid target is
+found or the delayed retry timeout is hit. If a query was already sent, it will
+not be replayed to prevent duplicate execution of statements.
 
-Duplicate execution of a statement can occur if the connection to the server is
-lost or the server crashes but the server comes back up before the timeout for
-the retrying is exceeded. At this point, if the server managed to read the
-client's statement, it will be executed. For this reason, it is recommended to
-only enable `delayed_retry` when the possibility of duplicate statement
-execution is an acceptable risk.
+In older versions of MaxScale, duplicate execution of a statement can occur if
+the connection to the server is lost or the server crashes but the server comes
+back up before the timeout for the retrying is exceeded. At this point, if the
+server managed to read the client's statement, it will be executed. For this
+reason, it is recommended to only enable `delayed_retry` for older versions of
+MaxScale when the possibility of duplicate statement execution is an acceptable
+risk.
 
 ### `delayed_retry_timeout`
 
