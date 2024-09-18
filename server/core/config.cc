@@ -3738,7 +3738,7 @@ pcre2_code* compile_regex_string(const char* regex_string,
         if (jit_enabled)
         {
             // Try to compile even further for faster matching
-            if (pcre2_jit_compile(machine, PCRE2_JIT_COMPLETE) < 0)
+            if (MXS_PCRE2_JIT_COMPILE(machine, PCRE2_JIT_COMPLETE) < 0)
             {
                 MXB_WARNING("PCRE2 JIT compilation of pattern '%s' failed, "
                             "falling back to normal compilation.",

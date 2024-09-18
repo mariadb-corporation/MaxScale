@@ -59,6 +59,11 @@ find_package(Jansson REQUIRED)
 find_package(MicroHttpd REQUIRED)
 find_package(LibSSH REQUIRED)
 
+if (PCRE2_VERSION VERSION_LESS_EQUAL "10.32")
+  message(STATUS "PCRE2 ${PCRE2_VERSION} is too old, disabling JIT compilation.")
+  add_definitions(-DMXS_PCRE2_NO_JIT=1)
+endif()
+
 if (WITH_LTO)
   include(CheckIPOSupported)
   check_ipo_supported(RESULT ipo_res OUTPUT ipo_out)

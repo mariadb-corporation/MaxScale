@@ -48,6 +48,8 @@ int main(int argc, char** argv)
         conn.query("SET @a = (SELECT SLEEP(1))");
     }
 
+    conn.query("BEGIN");
+
     test.log_printf("Block the master, wait for 5 second and then block it again");
     block(0);
 
@@ -59,6 +61,7 @@ int main(int argc, char** argv)
                 }).detach();
 
     test.expect(conn.query("SELECT @@last_insert_id"), "Query should work: %s", conn.error());
+    test.expect(conn.query("COMMIT"), "COMMIT should work: %s", conn.error());
 
     conn.disconnect();
 
@@ -71,6 +74,8 @@ int main(int argc, char** argv)
     {
         conn.query("SET @a = (SELECT SLEEP(1))");
     }
+
+    conn.query("BEGIN");
 
     test.log_printf("Block the master, the next query should fail");
     block(0);

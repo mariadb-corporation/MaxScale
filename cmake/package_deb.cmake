@@ -26,4 +26,12 @@ if (WITH_SYSTEM_NODEJS)
   set (CPACK_DEBIAN_PACKAGE_DEPENDS "nodejs (>= ${MINIMUM_NODEJS_VERSION})")
 endif()
 
+if (WITH_VALGRIND)
+  if (CPACK_DEBIAN_PACKAGE_DEPENDS)
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, valgrind")
+  else()
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "valgrind")
+  endif()
+endif()
+
 message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
