@@ -940,8 +940,11 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
                     can_continue = true;
                 }
             }
-            else if (can_retry_query() && can_recover_master())
+            else if (m_config.retry_failed_reads && m_prev_plan.route_target != TARGET_MASTER
+                     && !trx_is_open() && can_recover_master())
             {
+                // This was not a write but it just ended up being routed to the current master. It can be
+                // safely retried if a transaction is not open.
                 can_continue = retry_master_query(backend);
             }
             else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)

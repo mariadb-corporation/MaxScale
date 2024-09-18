@@ -709,7 +709,7 @@ CacheRuleRegex* CacheRuleRegex::create(const CacheConfig* pConfig,
     {
         // We do not care about the result. If JIT is not present, we have
         // complained about it already.
-        pcre2_jit_compile(pCode, PCRE2_JIT_COMPLETE);
+        MXS_PCRE2_JIT_COMPILE(pCode, PCRE2_JIT_COMPLETE);
 
         pRule = new CacheRuleRegex(pConfig, attribute, op, zValue);
         pRule->m_pCode = pCode;
