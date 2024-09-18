@@ -147,12 +147,4 @@ private:
     std::string         m_bucket;
     LDI::Config::Values m_config;
     LDI&                m_filter;
-
-    // This is a non-deleting reference to the same LDISession. We need this to know whether the filter
-    // session is still alive. The S3Download has a reference on the session which guarantees that the
-    // MXS_SESSION remains alive but this does not necessarily guarantee that the filter session remains
-    // alive: the filter sessions get deleted in ClientDCB::shutdown() after the it has been taken out of the
-    // zombie queue. This means that each access to `this` must be done on the worker that owns the session
-    // and the std::weak_ptr derived from this must be locked before use.
-    std::shared_ptr<LDISession> m_self;
 };

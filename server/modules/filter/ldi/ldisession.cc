@@ -35,10 +35,6 @@ const char* CN_S3_HOST = "@maxscale.ldi.s3_host";
 const char* CN_S3_PORT = "@maxscale.ldi.s3_port";
 const char* CN_S3_PROTOCOL_VERSION = "@maxscale.ldi.s3_protocol_version";
 
-void no_delete(LDISession* ignored)
-{
-}
-
 std::string_view unquote(const char* begin, const char* end)
 {
     std::string_view str(begin, std::distance(begin, end));
@@ -107,7 +103,6 @@ LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter)
     : mxs::FilterSession(pSession, pService)
     , m_config(pFilter->m_config.values())
     , m_filter(*pFilter)
-    , m_self(std::shared_ptr<LDISession>(this, no_delete))
 {
     pSession->add_variable(CN_S3_KEY, &LDISession::set_key, this);
     pSession->add_variable(CN_S3_SECRET, &LDISession::set_secret, this);
@@ -300,7 +295,7 @@ void UploadTracker::bytes_uploaded(size_t bytes)
 
 S3Download::S3Download(LDISession* ldi)
     : m_session(session_get_ref(ldi->m_pSession))
-    , m_ldi(ldi->m_self)
+    , m_ldi(std::static_pointer_cast<LDISession>(ldi->shared_from_this()))
     , m_config(ldi->m_config)
     , m_file(ldi->m_file)
     , m_bucket(ldi->m_bucket)
