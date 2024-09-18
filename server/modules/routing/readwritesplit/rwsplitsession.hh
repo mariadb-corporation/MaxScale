@@ -360,9 +360,24 @@ private:
     std::string get_verbose_status()
     {
         return mxb::transform_join(m_backends, [](const auto& a){
+            const char* open_status;
+
+            if (a.has_failed())
+            {
+                open_status = "Broken";
+            }
+            else if (a.in_use())
+            {
+                open_status = "Yes";
+            }
+            else
+            {
+                open_status = "No";
+            }
+
             return mxb::cat("{",
                             " Name: ", a.name(),
-                            " Open: ", a.in_use() ? "Yes" : "No",
+                            " Open: ", open_status,
                             " Status: ", a.target()->status_string(),
                             " }");
         });
