@@ -60,4 +60,12 @@ if (WITH_SYSTEM_NODEJS)
   set(CPACK_RPM_PACKAGE_REQUIRES "nodejs >= ${MINIMUM_NODEJS_VERSION}")
 endif()
 
+if (WITH_VALGRIND)
+  if (CPACK_RPM_PACKAGE_REQUIRES)
+    set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, valgrind")
+  else()
+    set(CPACK_RPM_PACKAGE_REQUIRES "valgrind")
+  endif()
+endif()
+
 message(STATUS "Generating RPM packages")

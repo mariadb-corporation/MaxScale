@@ -758,7 +758,7 @@ bool RegexHintFilter::regex_compile_and_add(const std::shared_ptr<Setup>& setup,
     if (regex)
     {
         // Try to compile even further for faster matching
-        if (pcre2_jit_compile(regex, PCRE2_JIT_COMPLETE) < 0)
+        if (MXS_PCRE2_JIT_COMPILE(regex, PCRE2_JIT_COMPLETE) < 0)
         {
             MXB_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, falling back to normal compilation.",
                        match.c_str());

@@ -84,7 +84,7 @@ Regex::Regex(const std::string& pattern, uint32_t options)
         }
         else
         {
-            if (pcre2_jit_compile(code, PCRE2_JIT_COMPLETE) < 0)
+            if (MXS_PCRE2_JIT_COMPILE(code, PCRE2_JIT_COMPLETE) < 0)
             {
                 MXB_ERROR("PCRE2 JIT compilation of pattern '%s' failed.", pattern.c_str());
             }

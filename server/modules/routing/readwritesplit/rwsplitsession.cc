@@ -1102,8 +1102,11 @@ void RWSplitSession::handle_master_error(const mxs::Reply& reply, const std::str
             // Not inside a transaction, we can retry the original query
             retry_query(std::exchange(m_current_query.buffer, GWBUF()), 0);
         }
-        else if (can_retry_query() && can_recover_master())
+        else if (m_config->retry_failed_reads && m_prev_plan.route_target != TARGET_MASTER
+                 && !trx_is_open() && can_recover_master())
         {
+            // This was not a write but it just ended up being routed to the current master. It can be
+            // safely retried if a transaction is not open.
             retry_query(std::exchange(m_current_query.buffer, GWBUF()));
         }
         else if (m_config->master_failure_mode == RW_ERROR_ON_WRITE)

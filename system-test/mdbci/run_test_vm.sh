@@ -100,8 +100,6 @@ test_env_list=(
     "template"
     "config_to_clone"
     "test_branch"
-    "use_valgrind"
-    "use_callgrind"
     "maxscale_product"
     "force_maxscale_version"
     "force_backend_version"

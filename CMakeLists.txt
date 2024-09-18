@@ -60,6 +60,11 @@ find_package(Jansson REQUIRED)
 find_package(MicroHttpd REQUIRED)
 find_package(LibSSH REQUIRED)
 
+if (PCRE2_VERSION VERSION_LESS_EQUAL "10.32")
+  message(STATUS "PCRE2 ${PCRE2_VERSION} is too old, disabling JIT compilation.")
+  add_definitions(-DMXS_PCRE2_NO_JIT=1)
+endif()
+
 if (WITH_LTO)
   include(CheckIPOSupported)
   check_ipo_supported(RESULT ipo_res OUTPUT ipo_out)
@@ -272,7 +277,13 @@ configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst 
 configure_file(${CMAKE_SOURCE_DIR}/etc/prerm.in ${CMAKE_BINARY_DIR}/prerm @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/test/maxscale_test.cnf ${CMAKE_BINARY_DIR}/maxscale.cnf @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale.conf @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.service.in ${CMAKE_BINARY_DIR}/maxscale.service @ONLY)
+
+if (WITH_VALGRIND)
+  # For builds that invoke valgrind automatically, use the custom service file.
+  configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale-valgrind.service.in ${CMAKE_BINARY_DIR}/maxscale.service @ONLY)
+else()
+  configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.service.in ${CMAKE_BINARY_DIR}/maxscale.service @ONLY)
+endif()
 
 #
 # Custom targets for MaxScale

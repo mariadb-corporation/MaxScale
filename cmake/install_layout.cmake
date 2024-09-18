@@ -100,7 +100,7 @@ endfunction()
 # @param Component where this script should be included
 function(install_script target component)
   install(PROGRAMS ${target} DESTINATION ${MAXSCALE_BINDIR}
-    PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_READ GROUP_READ WORLD_READ
+    PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
     COMPONENT "${component}")
 endfunction()
 
