@@ -61,7 +61,6 @@ const simulation = ref(null)
 const chosenLinks = ref([])
 const entityLink = ref(null)
 const graphConfig = ref(null)
-const graphDim = ref({})
 
 const hoveredLink = ref(null)
 const tooltipX = ref(0)
@@ -74,7 +73,7 @@ const panAndZoomData = computed({
 
 const entityKeyCategoryMap = computed(() =>
   graphNodes.value.reduce(
-    (map, node) => ((map[node.id] = node.data.defs.key_category_map), map),
+    (map, node) => ((map[node.id] = typy(node, 'data.defs.key_category_map').safeObject), map),
     {}
   )
 )
@@ -121,7 +120,6 @@ onMounted(() => {
     isRendering.value = true
     assignData(props.nodes)
   } else emitOnRendered()
-  graphDim.value = props.dim
 })
 
 let unwatch_graphConfigData
@@ -192,7 +190,7 @@ function addNode(node) {
  * Get the correct extent of nodes to control the zoom.
  */
 function getExtent() {
-  return getGraphExtent({ nodes: graphNodes.value, dim: graphDim.value })
+  return getGraphExtent({ nodes: graphNodes.value, dim: props.dim })
 }
 
 /**
@@ -301,15 +299,23 @@ function getLinks() {
   return simulation.value.force('link').links()
 }
 
+/**
+ * @returns {object} custom color for LINK_SHAPES.STRAIGHT
+ */
+function evtStylesMod() {
+  if (isStraightShape.value) return { color: globalLinkColor.value }
+  return null
+}
+
 function setEventStyles({ links, eventType }) {
   entityLink.value.setEventStyles({
     links,
     eventType,
-    evtStylesMod: () => (isStraightShape.value ? { color: globalLinkColor.value } : null),
+    evtStylesMod,
   })
 }
 
-function handleMouseOverOut({ e, link, linkCtr, pathGenerator, eventType }) {
+function handleMouseOverOut(eventType, { e, link, linkCtr, pathGenerator }) {
   hoveredLink.value = link
   tooltipX.value = e.clientX
   tooltipY.value = e.clientY
@@ -335,10 +341,10 @@ function drawLinks() {
     containerEle: linkContainer.value,
     data: getLinks().filter((link) => !link.hidden),
     events: {
-      mouseover: (param) => handleMouseOverOut({ ...param, eventType: EVENT_TYPES.HOVER }),
-      mouseout: (param) => handleMouseOverOut({ ...param, eventType: EVENT_TYPES.NONE }),
-      contextmenu: (param) => openContextMenu(param),
-      click: (param) => openContextMenu(param),
+      mouseover: handleMouseOverOut.bind(null, EVENT_TYPES.HOVER),
+      mouseout: handleMouseOverOut.bind(null, EVENT_TYPES.NONE),
+      contextmenu: openContextMenu,
+      click: openContextMenu,
     },
   })
 }
@@ -383,9 +389,8 @@ function watchConfig() {
 }
 
 function handleHighlightAllLinks() {
-  if (isHighlightAll.value) chosenLinks.value = graphLinks.value
   setEventLinkStyles(isHighlightAll.value ? EVENT_TYPES.HOVER : EVENT_TYPES.NONE)
-  if (!isHighlightAll.value) chosenLinks.value = []
+  chosenLinks.value = isHighlightAll.value ? graphLinks.value : []
 }
 
 /**
@@ -424,7 +429,7 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
       :scaleExtent="scaleExtent"
       :style="{ visibility: isRendering ? 'hidden' : 'visible' }"
       :dim="dim"
-      :graphDim="graphDim"
+      :graphDim="dim"
       @get-graph-ctr="linkContainer = $event"
       v-bind="$attrs"
     >
@@ -440,13 +445,13 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
           :linkContainer="linkContainer"
           :colKeyCategoryMap="colKeyCategoryMap"
           :entityKeyCategoryMap="entityKeyCategoryMap"
-          @node-size-map="updateNodeSizes"
-          @highlight-node-links="highLightNodeLinks"
-          @node-dragging="onDraggingNode"
-          @node-dragend="$emit('on-node-drag-end', $event)"
-          @on-node-contextmenu="$emit('on-node-contextmenu', $event)"
-          @dblclick="$emit('dblclick', $event)"
-          @on-create-new-fk="$emit('on-create-new-fk', $event)"
+          @node-size-map="updateNodeSizes($event)"
+          @highlight-node-links="highLightNodeLinks($event)"
+          @node-dragging="onDraggingNode($event)"
+          @node-dragend="emit('on-node-drag-end', $event)"
+          @on-node-contextmenu="emit('on-node-contextmenu', $event)"
+          @dblclick="emit('dblclick', $event)"
+          @on-create-new-fk="emit('on-create-new-fk', $event)"
         >
           <template v-for="(_, name) in $slots" #[name]="slotData">
             <slot :name="name" v-bind="slotData" />

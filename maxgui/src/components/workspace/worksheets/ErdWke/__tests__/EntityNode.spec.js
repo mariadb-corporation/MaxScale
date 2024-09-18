@@ -55,10 +55,7 @@ describe(`EntityNode`, () => {
   let wrapper
 
   vi.mock('@/utils/erdHelper', async (importOriginal) => ({
-    default: {
-      ...(await importOriginal()),
-      isSingleUQ: vi.fn(() => false),
-    },
+    default: { ...(await importOriginal()).default, isSingleUQ: vi.fn(() => false) },
   }))
 
   afterEach(() => {
