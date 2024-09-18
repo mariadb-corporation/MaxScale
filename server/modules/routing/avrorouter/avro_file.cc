@@ -135,7 +135,8 @@ bool avro_save_conversion_state(Avro* router)
  * @param value Parameter value
  * @return 1 if the parsing should continue, 0 if an error was detected
  */
-static int conv_state_handler(void* data, const char* section, const char* key, const char* value, int lineno)
+static int conv_state_handler(void* data, const char* section, const char* key, const char* value, int lineno,
+                              const char* line_content)
 {
     if (!key && !value)
     {
