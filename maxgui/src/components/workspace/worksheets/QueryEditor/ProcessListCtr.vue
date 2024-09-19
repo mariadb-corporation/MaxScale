@@ -11,8 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
-import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
+import QueryResultTabWrapper from '@wkeComps/QueryEditor/QueryResultTabWrapper.vue'
+import DataTable from '@wkeComps/QueryEditor/DataTable.vue'
 import queryResultService from '@/services/workspace/queryResultService'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'

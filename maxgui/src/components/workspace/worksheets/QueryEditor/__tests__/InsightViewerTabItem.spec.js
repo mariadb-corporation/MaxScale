@@ -14,7 +14,7 @@ import mount from '@/tests/mount'
 import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem.vue'
 import { lodash } from '@/utils/helpers'
 import { NODE_TYPE_MAP, INSIGHT_SPEC_MAP } from '@/constants/workspace'
-import { stmtStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
+import { stmtStub } from '@wkeComps/QueryEditor/__tests__/stubData'
 
 const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPEC_MAP
 

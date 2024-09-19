@@ -12,7 +12,7 @@
  * Public License.
  */
 import ResultSelector from '@wkeComps/QueryEditor/ResultSelector.vue'
-import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
+import ResultView from '@wkeComps/QueryEditor/ResultView.vue'
 import queryResultService from '@wsServices/queryResultService'
 import workspace from '@/composables/workspace'
 import { OS_CMD, QUERY_CANCELED, QUERY_LOG_TYPE_MAP } from '@/constants/workspace'

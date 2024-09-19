@@ -12,8 +12,8 @@
  * Public License.
  */
 import QueryResult from '@wsModels/QueryResult'
-import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
-import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
+import QueryResultTabWrapper from '@wkeComps/QueryEditor/QueryResultTabWrapper.vue'
+import DataTable from '@wkeComps/QueryEditor/DataTable.vue'
 import EditableCell from '@wkeComps/QueryEditor/EditableCell.vue'
 import {
   QUERY_MODE_MAP,

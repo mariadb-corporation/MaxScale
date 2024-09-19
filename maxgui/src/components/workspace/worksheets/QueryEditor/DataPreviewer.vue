@@ -12,7 +12,7 @@
  * Public License.
  */
 import QueryResult from '@wsModels/QueryResult'
-import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
+import ResultView from '@wkeComps/QueryEditor/ResultView.vue'
 import queryResultService from '@wsServices/queryResultService'
 import { QUERY_MODE_MAP } from '@/constants/workspace'
 

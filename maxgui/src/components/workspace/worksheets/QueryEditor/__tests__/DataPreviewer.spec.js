@@ -16,7 +16,7 @@ import DataPreviewer from '@wkeComps/QueryEditor/DataPreviewer.vue'
 import { lodash } from '@/utils/helpers'
 import { QUERY_MODE_MAP } from '@/constants/workspace'
 import queryResultService from '@wsServices/queryResultService'
-import { stmtStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
+import { stmtStub } from '@wkeComps/QueryEditor/__tests__/stubData'
 
 const activeNodeStub = {
   id: 'test.Tables.t1',

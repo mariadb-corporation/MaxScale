@@ -13,7 +13,7 @@
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import QueryTabNavItem from '@wkeComps/QueryEditor/QueryTabNavItem.vue'
-import { queryTabStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
+import { queryTabStub } from '@wkeComps/QueryEditor/__tests__/stubData'
 import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 import { useSaveFile } from '@/composables/fileSysAccess'

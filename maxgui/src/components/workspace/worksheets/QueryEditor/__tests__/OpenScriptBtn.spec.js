@@ -12,7 +12,7 @@
  */
 import mount from '@/tests/mount'
 import OpenScriptBtn from '@wkeComps/QueryEditor/OpenScriptBtn.vue'
-import { queryTabStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
+import { queryTabStub } from '@wkeComps/QueryEditor/__tests__/stubData'
 import { lodash } from '@/utils/helpers'
 
 const fileHandleMock = {

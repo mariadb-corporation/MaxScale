@@ -14,7 +14,7 @@ import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import ResultsViewer from '@wkeComps/QueryEditor/ResultsViewer.vue'
 import { lodash } from '@/utils/helpers'
-import { stmtStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
+import { stmtStub } from '@wkeComps/QueryEditor/__tests__/stubData'
 import { QUERY_CANCELED, QUERY_LOG_TYPE_MAP } from '@/constants/workspace'
 import queryResultService from '@wsServices/queryResultService'
 

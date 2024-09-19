@@ -16,7 +16,7 @@ import InsightViewerModel from '@wsModels/InsightViewer'
 import queryResultService from '@wsServices/queryResultService'
 import { lodash } from '@/utils/helpers'
 import { NODE_TYPE_MAP, INSIGHT_SPEC_MAP } from '@/constants/workspace'
-import { stmtStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
+import { stmtStub } from '@wkeComps/QueryEditor/__tests__/stubData'
 
 const { SCHEMA, TBL, VIEW, TRIGGER, SP, FN } = NODE_TYPE_MAP
 

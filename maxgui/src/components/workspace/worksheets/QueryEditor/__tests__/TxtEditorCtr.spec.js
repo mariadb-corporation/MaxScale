@@ -13,7 +13,7 @@
 import mount from '@/tests/mount'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import TxtEditor from '@wsModels/TxtEditor'
-import { queryTabStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
+import { queryTabStub } from '@wkeComps/QueryEditor/__tests__/stubData'
 import { lodash } from '@/utils/helpers'
 import { COMPACT_TOOLBAR_HEIGHT, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
 import { useEventDispatcher } from '@/composables/common/common'

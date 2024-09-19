@@ -19,7 +19,7 @@ import {
   immutableUpdate,
 } from '@/utils/helpers'
 import { t as typy } from 'typy'
-import { RELATIONSHIP_OPTIONALITY } from '@wsComps/worksheets/ErdWke/config'
+import { RELATIONSHIP_OPTIONALITY } from '@wkeComps/ErdWke/config'
 import { integerTypes } from '@wsComps/TblStructureEditor/utils'
 
 /**
