@@ -80,6 +80,26 @@ FileWriter::FileWriter(InventoryWriter* inv, const Writer& writer)
 {
 }
 
+void FileWriter::begin_txn()
+{
+    mxb_assert(m_in_transaction == false);
+    m_in_transaction = true;
+}
+
+void FileWriter::commit_txn()
+{
+    mxb_assert(m_in_transaction == true);
+    m_in_transaction = false;
+
+    m_current_pos.file.seekp(m_current_pos.write_pos);
+    m_current_pos.file.write(m_tx_buffer.data(), m_tx_buffer.size());
+
+    m_current_pos.write_pos = m_current_pos.file.tellp();
+    m_current_pos.file.flush();
+
+    m_tx_buffer.clear();
+}
+
 void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into here
 {
     auto etype = rpl_event.event_type();
@@ -101,6 +121,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
         if (etype == FORMAT_DESCRIPTION_EVENT
             && (m_ignore_preamble = open_for_appending(rpl_event)) == false)
         {
+            mxb_assert(m_in_transaction == false);
             mxb_assert(m_rotate.file_name.empty() == false);
             rpl_event.set_next_pos(PINLOKI_MAGIC.size() + rpl_event.buffer_size());
             perform_rotate(m_rotate, rpl_event);
@@ -111,9 +132,15 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
 
             if (!m_ignore_preamble)
             {
-                rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size());
+                rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
+                                       + m_tx_buffer.size());
 
-                if (etype == GTID_LIST_EVENT)
+                if (m_in_transaction)
+                {
+                    const char* ptr = rpl_event.pBuffer();
+                    m_tx_buffer.insert(m_tx_buffer.end(), ptr, ptr + rpl_event.buffer_size());
+                }
+                else if (etype == GTID_LIST_EVENT)
                 {
                     write_gtid_list(m_current_pos);
                 }

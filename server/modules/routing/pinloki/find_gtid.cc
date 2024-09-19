@@ -228,7 +228,7 @@ bool search_file(const std::string& file_name,
 }
 
 
-maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv)
+maxsql::GtidList find_last_gtid_list(const InventoryWriter &inv)
 {
     maxsql::GtidList ret;
     if (inv.file_names().empty())
@@ -239,89 +239,45 @@ maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv)
     auto file_name = inv.file_names().back();
     std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
     long file_pos = PINLOKI_MAGIC.size();
-    long prev_pos = file_pos;
-    long truncate_to = 0;
-    bool in_trx = false;
-    mxq::Gtid last_gtid;
-    uint8_t flags = 0;
 
-    while (auto rpl = mxq::RplEvent::read_event(file, &file_pos))
+    while(true)
     {
-        switch (rpl.event_type())
+        maxsql::RplEvent rpl = maxsql::RplEvent::read_header_only(file, &file_pos);
+
+        if (rpl.is_empty())
         {
-        case GTID_LIST_EVENT:
-            {
-                auto event = rpl.gtid_list();
-
-                for (const auto& gtid : event.gtid_list.gtids())
-                {
-                    ret.replace(gtid);
-                }
-            }
-            break;
-
-        case GTID_EVENT:
-            {
-                auto event = rpl.gtid_event();
-                in_trx = true;
-                truncate_to = prev_pos;
-                flags = event.flags;
-                last_gtid = event.gtid;
-            }
-            break;
-
-        case XID_EVENT:
-            in_trx = false;
-            ret.replace(last_gtid);
-            break;
-
-        case QUERY_EVENT:
-            // This was a DDL event that commits the previous transaction. If the F_STANDALONE flag is not
-            // set, an XID_EVENT will follow that commits the transaction.
-            if (flags & mxq::F_STANDALONE)
-            {
-                in_trx = false;
-                ret.replace(last_gtid);
-            }
-            break;
-
-        case STOP_EVENT:
-        case ROTATE_EVENT:
-            // End of the binlog, return the latest GTID we found. We can assume that only complete
-            // transactions are stored in the file if we get this far.
-            return ret;
-
-        default:
-            MXB_SDEBUG("GTID search: " << rpl);
             break;
         }
 
-        if (prev_pos < rpl.next_event_pos())
+        if (rpl.event_type() == STOP_EVENT || rpl.event_type() == ROTATE_EVENT)
+        {
+            break;
+        }
+
+        if (rpl.event_type() != GTID_LIST_EVENT && rpl.event_type() != GTID_EVENT)
         {
             file_pos = rpl.next_event_pos();
+            continue;
+        }
+
+        rpl.read_body(file, &file_pos);
+        if (rpl.is_empty())
+        {
+            break;
+        }
+
+        if (rpl.event_type() == GTID_LIST_EVENT)
+        {
+            auto event = rpl.gtid_list();
+            for (const auto& gtid : event.gtid_list.gtids())
+            {
+                ret.replace(gtid);
+            }
         }
         else
         {
-            // If the binlog file is over 4GiB, we cannot rely on the next event offset anymore.
-            file_pos = prev_pos + rpl.buffer_size();
-            mxb_assert(file_pos >= std::numeric_limits<uint32_t>::max());
-        }
-
-        prev_pos = file_pos;
-    }
-
-    if (in_trx)
-    {
-        MXB_WARNING("Partial transaction '%s' in '%s'. Truncating the file to "
-                    "the last known good event at %ld.",
-                    last_gtid.to_string().c_str(), file_name.c_str(), truncate_to);
-
-        // NOTE: If the binlog file is ever read by multiple independent readers in parallel, file truncation
-        // cannot be done. Instead of truncating the file, a separate temporary file that holds the
-        // partially replicated transactions needs to be used.
-        if (truncate(file_name.c_str(), truncate_to) != 0)
-        {
-            MXB_ERROR("Failed to truncate '%s': %d, %s", file_name.c_str(), errno, mxb_strerror(errno));
+            auto event = rpl.gtid_event();
+            ret.replace(event.gtid);
         }
     }
 
