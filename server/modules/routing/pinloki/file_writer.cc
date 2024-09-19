@@ -142,7 +142,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
                 }
                 else if (etype == GTID_LIST_EVENT)
                 {
-                    write_gtid_list(m_current_pos);
+                    write_gtid_list(rpl_event, m_current_pos);
                 }
                 else if (etype != STOP_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
                 {
@@ -276,11 +276,22 @@ void FileWriter::write_rotate(WritePosition& pos, const std::string& to_file_nam
     }
 }
 
-void FileWriter::write_gtid_list(WritePosition& pos)
+void FileWriter::write_gtid_list(const maxsql::RplEvent& rpl_event, WritePosition& pos)
 {
     constexpr int HEADER_LEN = 19;
-    auto gtid_list = m_writer.current_gtid_list();
-    const auto NUM_GTIDS = gtid_list.gtids().size();
+    auto event_gtid_list = rpl_event.gtid_list().gtid_list;
+    const auto& current_gtid_list = m_writer.current_gtid_list();
+
+    // The master sends empty gtid_lists that can be ignored, but
+    // do write an empty list if the current_gtid_list is empty meaning
+    // there is no data yet (first binlog). Even that seems to be optional
+    // but write it since the servers do.
+    if (event_gtid_list.gtids().empty() && !current_gtid_list.gtids().empty())
+    {
+        return;
+    }
+
+    const auto NUM_GTIDS = current_gtid_list.gtids().size();
     const size_t EVENT_LEN = HEADER_LEN + 4 + NUM_GTIDS * (4 + 4 + 8) + 4;
 
     std::vector<char> data(EVENT_LEN);
@@ -313,7 +324,7 @@ void FileWriter::write_gtid_list(WritePosition& pos)
     mariadb::set_byte4(ptr, NUM_GTIDS);
     ptr += 4;
     // Gtids:
-    for (const auto& gtid : gtid_list.gtids())
+    for (const auto& gtid : current_gtid_list.gtids())
     {
         mariadb::set_byte4(ptr, gtid.domain_id());
         ptr += 4;

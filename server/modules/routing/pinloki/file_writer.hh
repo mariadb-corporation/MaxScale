@@ -54,7 +54,7 @@ private:
     void create_binlog(const std::string& file_name, const maxsql::RplEvent& fmt_event);
     void write_rpl_event(const maxsql::RplEvent& rpl_event);
     void write_rotate(WritePosition& pos, const std::string& to_file_name);
-    void write_gtid_list(WritePosition& pos);
+    void write_gtid_list(const maxsql::RplEvent& rpl_event, WritePosition& pos);
 
     bool             m_newborn = true;
     bool             m_ignore_preamble = false;
