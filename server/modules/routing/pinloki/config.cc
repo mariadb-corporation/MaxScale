@@ -253,10 +253,17 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     bool ok = false;
 
     // This is a workaround to the fact that the datadir is not created if the default value is used.
-    if (mxs_mkdir_all(m_binlog_dir.c_str(), S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP))
+    mode_t mask = S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP;
+    if (mxs_mkdir_all(m_binlog_dir.c_str(), mask))
     {
-        m_binlog_files.reset(new BinlogIndexUpdater(m_binlog_dir, inventory_file_path()));
-        ok = m_cb();
+        m_trx_dir = m_binlog_dir + '/' + TRX_DIR;
+        ok = mxs_mkdir_all(m_trx_dir.c_str(), mask);
+
+        if (ok)
+        {
+            m_binlog_files.reset(new BinlogIndexUpdater(m_binlog_dir, inventory_file_path()));
+            ok = m_cb();
+        }
     }
 
     return ok;

@@ -27,6 +27,7 @@
 
 namespace pinloki
 {
+static const std::string TRX_DIR = "trx";
 
 std::string gen_uuid();
 
@@ -66,6 +67,9 @@ public:
 
     static const mxs::config::Specification* spec();
 
+    // Full path to the trx dir
+    std::string trx_dir() const;
+
     /** Make a full path. This prefixes "name" with m_binlog_dir/,
      *  unless the first character is a forward slash.
      */
@@ -101,6 +105,8 @@ public:
 private:
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
+    /** Where the binlogs transaction are temporarily stored. */
+    std::string m_trx_dir;
     /** Name of gtid file */
     std::string m_gtid_file = "rpl_state";
     /** Master configuration file name */
@@ -175,4 +181,9 @@ private:
 
     std::unique_ptr<BinlogIndexUpdater> m_binlog_files;
 };
+
+inline std::string Config::trx_dir() const
+{
+    return m_trx_dir;
+}
 }
