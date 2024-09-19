@@ -1692,9 +1692,6 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
     {
         // A failure in routeQuery triggers a call to handleError once the execution returns back to the
         // RoutingWorker.
-        // TODO: This should happen right after the execution returns from the event handler and before any
-        // TODO: other events are handled. This way there's less of a chance for things to interleave between
-        // TODO: the two.
         if (!m_head->routeQuery(std::move(buffer)))
         {
             call_handle_error("Failed to route query");

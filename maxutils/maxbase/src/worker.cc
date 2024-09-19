@@ -1093,6 +1093,11 @@ void Worker::deliver_events(Pollable* pPollable, uint32_t events, Pollable::Cont
         PendingPoll pending_poll = {EPOLLIN, pPollable};
         m_incomplete_polls.emplace(pPollable->poll_fd(), pending_poll);
     }
+
+    if (!m_lcalls.empty())
+    {
+        deliver_lcalls();
+    }
 }
 
 /**
@@ -1204,8 +1209,6 @@ void Worker::poll_waitevents()
             deliver_events(pPollable, pending_events, Pollable::REPEATED_CALL);
         }
 
-        deliver_lcalls();
-
         if (mxb::name_lookup_duration(mxb::NameLookupTimer::ALL) > 5s)
         {
             warn_slow_dns_lookup();
@@ -1248,6 +1251,11 @@ void Worker::tick()
         {
             pCall->owner().unregister_dcall(pCall);
             delete pCall;
+        }
+
+        if (!m_lcalls.empty())
+        {
+            deliver_lcalls();
         }
 
         // NOTE: Must be reassigned, ++i will not work in case a delayed
