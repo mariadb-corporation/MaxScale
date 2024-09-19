@@ -14,6 +14,7 @@ add_library(pinloki-core OBJECT
   rpl_event.cc
   writer.cc
   parser.cc
+  transaction.cc
   )
 
 target_link_libraries(pinloki-core maxscale-common uuid)

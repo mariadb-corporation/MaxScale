@@ -18,6 +18,7 @@
 #include "inventory.hh"
 #include "gtid.hh"
 #include "rpl_event.hh"
+#include "transaction.hh"
 
 #include <string>
 #include <fstream>
@@ -40,13 +41,6 @@ public:
     void add_event(maxsql::RplEvent& rpl_event);
     void commit_txn();
 private:
-    struct WritePosition
-    {
-        std::string   name;
-        std::ofstream file;
-        int64_t       write_pos;
-    };
-
 
     bool open_for_appending(const maxsql::RplEvent& fmt_event);
     bool open_binlog(const std::string& file_name);
