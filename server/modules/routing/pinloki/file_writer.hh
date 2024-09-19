@@ -37,7 +37,7 @@ class FileWriter
 public:
     FileWriter(InventoryWriter* inv, const Writer& writer);
 
-    void begin_txn();
+    void begin_txn(const maxsql::Gtid& gtid);
     void add_event(maxsql::RplEvent& rpl_event);
     void commit_txn();
 private:
@@ -56,8 +56,6 @@ private:
     const Writer&    m_writer;
     WritePosition    m_current_pos;
     maxsql::Rotate   m_rotate;
-
-    bool              m_in_transaction = false;
-    std::vector<char> m_tx_buffer;
+    Transaction      m_trx;
 };
 }

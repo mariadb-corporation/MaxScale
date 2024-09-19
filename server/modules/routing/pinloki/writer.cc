@@ -195,8 +195,8 @@ void Writer::run()
                 case GTID_EVENT:
                     {
                         maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
-                        file.begin_txn();
                         current_gtid = gtid_event.gtid;
+                        file.begin_txn(current_gtid);
 
                         if (gtid_event.flags & mxq::F_STANDALONE)
                         {

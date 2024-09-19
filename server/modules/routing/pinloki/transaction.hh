@@ -31,9 +31,13 @@ class Transaction
 {
 public:
     Transaction() = default;
-    Transaction(const maxsql::Gtid& gtid);
 
-    void           add_event(maxsql::RplEvent& rpl_event);
+    void           begin(const maxsql::Gtid& gtid);
+    bool           add_event(maxsql::RplEvent& rpl_event);
+    int64_t        size() const;
     WritePosition& commit(WritePosition& pos);
+private:
+    std::vector<char> m_trx_buffer;
+    bool              m_in_transaction = false;
 };
 }
