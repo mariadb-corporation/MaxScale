@@ -76,7 +76,7 @@ const nonSystemSchemas = computed(() =>
 const schema = computed(() => typy(data.value, 'options.schema').safeString)
 const lookupTables = computed(() => ({ [data.value.id]: data.value }))
 const skipSchemaCreation = computed(() => nonSystemSchemas.value.includes(schema.value))
-const connData = computed(() => ({ id: connId.value, config: activeRequestConfig.value }))
+const connReqData = computed(() => ({ id: connId.value, config: activeRequestConfig.value }))
 
 watch(
   isFetchingData,
@@ -158,7 +158,7 @@ async function onExecute() {
       :initialData="initialData"
       :isCreating="isCreating"
       :skipSchemaCreation="skipSchemaCreation"
-      :connData="connData"
+      :connReqData="connReqData"
       :onExecute="onExecute"
       :lookupTables="lookupTables"
       :hintedRefTargets="hintedRefTargets"

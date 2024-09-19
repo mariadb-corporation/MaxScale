@@ -71,7 +71,7 @@ describe(`EntityEditorCtr`, () => {
       isCreating,
       schemas,
       lookupTables,
-      connData,
+      connReqData,
       showApplyBtn,
     } = wrapper.findComponent({ name: 'TblStructureEditor' }).vm.$props
     expect(modelValue).toStrictEqual(wrapper.vm.stagingData)
@@ -81,14 +81,15 @@ describe(`EntityEditorCtr`, () => {
     expect(isCreating).toBe(true)
     expect(schemas).toStrictEqual(wrapper.vm.$props.schemas)
     expect(lookupTables).toStrictEqual(wrapper.vm.lookupTables)
-    expect(connData).toStrictEqual(wrapper.vm.connData)
+    expect(connReqData).toStrictEqual(wrapper.vm.connReqData)
     expect(showApplyBtn).toBe(false)
   })
 
   it('Should query supplement data when the component is mounted', () => {
     const spy = vi.spyOn(schemaInfoService, 'querySuppData')
     wrapper = mountFactory()
-    expect(spy).toHaveBeenCalled()
+    const connReqData = wrapper.vm.connReqData
+    expect(spy).toHaveBeenNthCalledWith(1, { connId: connReqData.id, config: connReqData.config })
   })
 
   it('Should append close-btn in TblStructureEditor toolbar', () => {

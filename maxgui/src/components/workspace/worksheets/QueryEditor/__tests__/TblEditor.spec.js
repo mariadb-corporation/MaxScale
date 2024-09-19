@@ -87,7 +87,7 @@ describe(`TblEditor`, () => {
       initialData,
       isCreating,
       skipSchemaCreation,
-      connData,
+      connReqData,
       onExecute,
       lookupTables,
       hintedRefTargets,
@@ -99,7 +99,7 @@ describe(`TblEditor`, () => {
     expect(initialData).toStrictEqual(wrapper.vm.initialData)
     expect(isCreating).toBe(wrapper.vm.isCreating)
     expect(skipSchemaCreation).toStrictEqual(wrapper.vm.skipSchemaCreation)
-    expect(connData).toStrictEqual(wrapper.vm.connData)
+    expect(connReqData).toStrictEqual(wrapper.vm.connReqData)
     expect(onExecute).toStrictEqual(wrapper.vm.onExecute)
     expect(lookupTables).toStrictEqual(wrapper.vm.lookupTables)
     expect(hintedRefTargets).toStrictEqual(wrapper.vm.hintedRefTargets)

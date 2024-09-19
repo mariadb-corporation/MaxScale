@@ -40,7 +40,7 @@ const props = defineProps({
    * the same schema as the table being altered/created
    */
   hintedRefTargets: { type: Array, default: () => [] },
-  connData: { type: Object, required: true },
+  connReqData: { type: Object, required: true },
   activeSpec: { type: String, required: true }, //sync
   showApplyBtn: { type: Boolean, default: true },
   skipSchemaCreation: { type: Boolean, default: false },
@@ -270,7 +270,7 @@ defineExpose({ validate })
               :tablesColNameMap="tablesColNameMap"
               :tableId="stagingData.id"
               :dim="tabDim"
-              :connData="connData"
+              :connReqData="connReqData"
               :charsetCollationMap="charset_collation_map"
             />
           </template>

@@ -41,7 +41,7 @@ const { t } = useI18n()
 const editorRef = ref(null)
 
 const lookupTables = computed(() => keyBy(props.tables, 'id'))
-const connData = computed(() => ({
+const connReqData = computed(() => ({
   id: props.connId,
   config: Worksheet.getters('activeRequestConfig'),
 }))
@@ -68,7 +68,12 @@ watch(
 watch(
   () => props.connId,
   async (v) => {
-    if (v) await schemaInfoService.querySuppData(connData.value)
+    if (v)
+      //TODO: Rename connId to id
+      await schemaInfoService.querySuppData({
+        connId: connReqData.value.id,
+        config: connReqData.value.config,
+      })
   },
   { immediate: true }
 )
@@ -105,7 +110,7 @@ async function close() {
     isCreating
     :schemas="schemas"
     :lookupTables="lookupTables"
-    :connData="connData"
+    :connReqData="connReqData"
     :showApplyBtn="false"
   >
     <template #toolbar-append>

@@ -35,7 +35,7 @@ const props = defineProps({
   allTableColMap: { type: Object, required: true },
   refTargets: { type: Array, required: true },
   tablesColNameMap: { type: Object, required: true },
-  connData: { type: Object, required: true },
+  connReqData: { type: Object, required: true },
   charsetCollationMap: { type: Object, required: true },
 })
 const emit = defineEmits(['update:modelValue', 'update:newLookupTables'])
@@ -181,9 +181,9 @@ function getColOptions(tableId) {
 
 async function fetchUnparsedRefTbl(targets) {
   const [e, parsedTables] = await queryAndParseTblDDL({
-    connId: props.connData.id,
+    connId: props.connReqData.id,
     targets,
-    config: props.connData.config,
+    config: props.connReqData.config,
     charsetCollationMap: props.charsetCollationMap,
   })
   if (e)
@@ -315,14 +315,14 @@ async function onChangeInput(item) {
         if (item.value.includes(UNPARSED_TBL_PLACEHOLDER)) {
           const unparsedTblTarget = props.refTargets.find((target) => target.id === item.value)
           const [e, parsedTables] = await queryAndParseTblDDL({
-            connId: props.connData.id,
+            connId: props.connReqData.id,
             targets: [
               {
                 schema: unparsedTblTarget.schema,
                 tbl: unparsedTblTarget.name,
               },
             ],
-            config: props.connData.config,
+            config: props.connReqData.config,
             charsetCollationMap: props.charsetCollationMap,
           })
           if (e) errors = getErrorsArr(e)

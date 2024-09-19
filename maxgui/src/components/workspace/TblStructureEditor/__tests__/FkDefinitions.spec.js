@@ -44,7 +44,7 @@ const mountFactory = (opts) =>
           allTableColMap: {},
           refTargets: [],
           tablesColNameMap: {},
-          connData: {},
+          connReqData: {},
           charsetCollationMap: {},
         },
       },

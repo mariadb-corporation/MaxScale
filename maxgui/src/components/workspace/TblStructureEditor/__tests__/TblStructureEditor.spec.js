@@ -43,7 +43,7 @@ const mountFactory = (opts) =>
           modelValue: editorDataStub,
           dim: { width: 500, height: 800 },
           initialData: lodash.cloneDeep(editorDataStub),
-          connData: {},
+          connReqData: {},
           activeSpec: '',
           lookupTables: { [editorDataStub.id]: editorDataStub },
         },
@@ -128,7 +128,7 @@ describe('TblStructureEditor', () => {
         tablesColNameMap,
         tableId,
         dim,
-        connData,
+        connReqData,
         charsetCollationMap,
       },
     } = wrapper.findComponent({
@@ -144,7 +144,7 @@ describe('TblStructureEditor', () => {
     expect(tablesColNameMap).toStrictEqual(wrapper.vm.tablesColNameMap)
     expect(tableId).toBe(wrapper.vm.stagingData.id)
     expect(dim).toStrictEqual(wrapper.vm.tabDim)
-    expect(connData).toStrictEqual(wrapper.vm.$props.connData)
+    expect(connReqData).toStrictEqual(wrapper.vm.$props.connReqData)
     expect(charsetCollationMap).toStrictEqual(wrapper.vm.charset_collation_map)
   })
 
