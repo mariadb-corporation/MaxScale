@@ -197,7 +197,7 @@ bool SchemaRouterSession::wait_for_shard(GWBUF& packet)
                     m_queue.push_back(packet.shallow_clone());
 
                     auto worker = mxs::RoutingWorker::get_current();
-                    m_dcid = m_pSession->dcall(1000ms, &SchemaRouterSession::delay_routing, this);
+                    m_dcid = m_pSession->dcall(1000ms, &SchemaRouterSession::wait_for_shard_update, this);
 
                     if (id)
                     {
@@ -784,7 +784,29 @@ void SchemaRouterSession::route_queued_query()
     m_pSession->delay_routing(this, std::move(tmp), 0ms);
 }
 
-bool SchemaRouterSession::delay_routing()
+bool SchemaRouterSession::wait_for_shard_update()
+{
+    MXS_SESSION::Scope session_scope(m_pSession);
+    mxb::LogScope log_scope(m_router->m_service->name());
+
+    try
+    {
+        return check_shard_update_progress();
+    }
+    catch (const mxb::Exception& e)
+    {
+        std::string err = e.what();
+        m_pSession->delay_routing(this, GWBUF {}, 0ms, [err](GWBUF&&){
+            throw mxb::Exception(err);
+            return false;
+        });
+
+        m_dcid = 0;
+        return false;
+    }
+}
+
+bool SchemaRouterSession::check_shard_update_progress()
 {
     MXS_SESSION::Scope scope(m_pSession);
     bool rv = false;
@@ -809,6 +831,7 @@ bool SchemaRouterSession::delay_routing()
             // This will gracefully propagate the error upwards to the parent component if one exists.
             // TODO: A convenience function for this would be good.
             m_pSession->delay_routing(this, GWBUF {}, 0ms, [](GWBUF&&){
+                throw mxb::Exception("Failed to query databases for shard update.");
                 return false;
             });
         }

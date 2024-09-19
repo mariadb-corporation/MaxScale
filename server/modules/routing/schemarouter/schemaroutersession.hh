@@ -191,7 +191,8 @@ private:
     int                  inspect_mapping_states(SRBackend* bref, const mxs::Reply& reply);
     enum showdb_response parse_mapping_response(SRBackend* bref, const mxs::Reply& reply);
     void                 route_queued_query();
-    bool                 delay_routing();
+    bool                 wait_for_shard_update();
+    bool                 check_shard_update_progress();
     void                 synchronize_shards();
     void                 handle_mapping_reply(SRBackend* bref, const mxs::Reply& reply);
     std::string          get_cache_key() const;
