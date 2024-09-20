@@ -116,7 +116,7 @@ private:
     bool route_query(GWBUF&& buffer);
     void route_session_write(GWBUF&& querybuf);
     void continue_large_session_write(GWBUF&& querybuf);
-    bool write_session_command(mxs::RWBackend* backend, GWBUF&& buffer, uint8_t cmd);
+    bool write_session_command(mxs::RWBackend* backend, GWBUF&& buffer);
     void route_stmt(GWBUF&& querybuf, const RoutingPlan& plan);
     void route_single_stmt(GWBUF&& buffer, const RoutingPlan& plan);
     void client_reply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply);

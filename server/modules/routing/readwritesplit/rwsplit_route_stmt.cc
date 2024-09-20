@@ -371,9 +371,8 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const GWBUF& buffer, c
     return rval;
 }
 
-bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, uint8_t cmd)
+bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer)
 {
-    bool ok = true;
     mxs::Backend::response_type type = mxs::Backend::NO_RESPONSE;
 
     if (protocol_data().will_respond(buffer))
@@ -381,24 +380,20 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
         type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
     }
 
-    if (backend->write(std::move(buffer), type))
+    bool ok = backend->write(std::move(buffer), type);
+
+    if (ok)
     {
         auto& stats = m_router->local_server_stats()[backend->target()];
         stats.inc_total();
         stats.inc_read();
-        MXB_INFO("Route query to %s: %s", backend == m_current_master ? "primary" : "replica",
-                 backend->name());
+        MXB_INFO("Route query to %s: %s%s", backend == m_current_master ? "primary" : "replica",
+                 backend->name(), backend == m_sescmd_replier ? " (replier)" : "");
     }
     else
     {
         MXB_ERROR("Failed to execute session command in %s", backend->name());
         backend->close();
-
-        // The failure is fatal if it's m_sescmd_replier that failed
-        if (backend == m_sescmd_replier)
-        {
-            ok = false;
-        }
     }
 
     return ok;
@@ -456,59 +451,60 @@ void RWSplitSession::route_session_write(GWBUF&& buffer)
         m_sescmd_replier = m_trx.target();
     }
 
-    if (m_sescmd_replier && need_master_for_sescmd())
+    if (!m_sescmd_replier || (m_sescmd_replier && need_master_for_sescmd()))
     {
-        MXB_INFO("Cannot use '%s' for session command: transaction is open.", m_sescmd_replier->name());
-        m_sescmd_replier = nullptr;
+        throw RWSException(std::move(buffer), "No valid candidates for session command ",
+                           "(", mariadb::cmd_to_string(command), ": ", get_sql(buffer), "): ",
+                           get_verbose_status());
     }
 
-    if (m_sescmd_replier)
+    mxb_assert(m_sescmd_replier->in_use());
+
+    if (!write_session_command(m_sescmd_replier, buffer.shallow_clone()))
     {
-        for (RWBackend* backend : m_raw_backends)
-        {
-            if (backend->in_use() && !write_session_command(backend, buffer.shallow_clone(), command))
-            {
-                throw RWSException("Could not route session command",
-                                   " (", mariadb::cmd_to_string(command), ": ", get_sql(buffer), ").");
-            }
-        }
+        throw RWSException("Could not route session command",
+                           " (", mariadb::cmd_to_string(command), ": ", get_sql(buffer), ").");
+    }
 
-        if (command == MXS_COM_STMT_CLOSE)
+    for (RWBackend* backend : m_raw_backends)
+    {
+        if (backend->in_use() && backend != m_sescmd_replier
+            && !write_session_command(backend, buffer.shallow_clone()))
         {
-            auto stmt_id = route_info().stmt_id();
-            auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
-
-            if (it != m_exec_map.end())
-            {
-                m_exec_map.erase(it);
-            }
+            MXB_INFO("Failed to route session command to '%s'", backend->name());
         }
+    }
 
-        m_current_query.buffer = std::move(buffer);
+    if (command == MXS_COM_STMT_CLOSE)
+    {
+        auto stmt_id = route_info().stmt_id();
+        auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
 
-        if (protocol_data().will_respond(m_current_query.buffer))
+        if (it != m_exec_map.end())
         {
-            m_expected_responses++;
-            mxb_assert(m_expected_responses == 1);
-            MXB_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
+            m_exec_map.erase(it);
         }
+    }
 
-        if (trx_is_open() && !m_trx.target())
-        {
-            m_trx.set_target(m_sescmd_replier);
-        }
-        else
-        {
-            mxb_assert_message(!trx_is_open() || m_trx.target() == m_sescmd_replier,
-                               "Trx target is %s when m_sescmd_replier is %s while trx is open",
-                               m_trx.target() ? m_trx.target()->name() : "nullptr",
-                               m_sescmd_replier->name());
-        }
+    m_current_query.buffer = std::move(buffer);
+
+    if (protocol_data().will_respond(m_current_query.buffer))
+    {
+        m_expected_responses++;
+        mxb_assert(m_expected_responses == 1);
+        MXB_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
+    }
+
+    if (trx_is_open() && !m_trx.target())
+    {
+        m_trx.set_target(m_sescmd_replier);
     }
     else
     {
-        throw RWSException(std::move(buffer), "No valid candidates for session command ",
-                           "(", mariadb::cmd_to_string(command), ": ", get_sql(buffer), ").");
+        mxb_assert_message(!trx_is_open() || m_trx.target() == m_sescmd_replier,
+                           "Trx target is %s when m_sescmd_replier is %s while trx is open",
+                           m_trx.target() ? m_trx.target()->name() : "nullptr",
+                           m_sescmd_replier->name());
     }
 }
 
