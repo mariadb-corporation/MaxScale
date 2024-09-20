@@ -21,16 +21,10 @@ import erdTaskService from '@wsServices/erdTaskService'
 import schemaInfoService from '@wsServices/schemaInfoService'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
-import ddlTemplate from '@/utils/ddlTemplate'
 import erdHelper from '@/utils/erdHelper'
-import TableParser from '@/utils/TableParser'
-import diagramUtils from '@wkeComps/ErdWke/diagramUtils'
+import utils from '@wkeComps/ErdWke/diagramUtils'
 import { DIAGRAM_CTX_TYPE_MAP, SNACKBAR_TYPE_MAP } from '@/constants'
-import {
-  LINK_OPT_TYPE_MAP,
-  TABLE_STRUCTURE_SPEC_MAP,
-  CREATE_TBL_TOKEN_MAP,
-} from '@/constants/workspace'
+import { TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 import html2canvas from 'html2canvas'
 
 const props = defineProps({
@@ -55,22 +49,13 @@ const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
 const {
-  lodash: { merge, keyBy, cloneDeep, update },
+  lodash: { merge, keyBy },
   immutableUpdate,
-  dynamicColors,
   getPanAndZoomValues,
 } = useHelpers()
 const { data: ctxMenuData, openCtxMenu } = useCtxMenu()
 
 const { NODE } = DIAGRAM_CTX_TYPE_MAP
-const {
-  SET_ONE_TO_ONE,
-  SET_ONE_TO_MANY,
-  SET_MANDATORY,
-  SET_FK_COL_OPTIONAL,
-  SET_REF_COL_MANDATORY,
-  SET_REF_COL_OPTIONAL,
-} = LINK_OPT_TYPE_MAP
 const TOOLBAR_HEIGHT = 40
 const SCALE_EXTENT = [0.25, 2]
 const ERD_EXPORT_OPTS = [
@@ -154,127 +139,44 @@ watch(
 
 onBeforeMount(() => (graphConfigData.value = merge(graphConfigData.value, activeGraphConfig.value)))
 
+/**
+ * @public
+ */
+function updateNode(params) {
+  entityDiagramRef.value.updateNode(params)
+}
+
+/**
+ * @public
+ * @returns {Promise<Canvas>}
+ */
+async function getCanvas() {
+  return await html2canvas(entityDiagramRef.value.$el, { logging: false })
+}
+
 function onRendered(diagram) {
   onNodesCoordsUpdate(diagram.nodes)
   if (diagram.nodes.length) fitIntoView()
 }
 
-function handleOpenEditor({ node, spec = TABLE_STRUCTURE_SPEC_MAP.COLUMNS, skipZoom = false }) {
-  if (connId.value) {
-    const data = { active_entity_id: node.id, active_spec: spec }
-    if (props.graphHeightPct === 100) data.graph_height_pct = 40
-    ErdTaskTmp.update({ where: props.erdTask.id, data }).then(() => {
-      if (!skipZoom) zoomIntoNode(node)
-    })
-  } else
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: [t('errors.requiredConn')],
-      type: SNACKBAR_TYPE_MAP.ERROR,
-    })
-}
-
-function rmTbl(node) {
-  const nodeMap = props.nodes.reduce((map, n) => {
-    if (n.id !== node.id) {
-      const fkMap = n.data.defs.key_category_map[CREATE_TBL_TOKEN_MAP.foreignKey]
-      if (!fkMap) map[n.id] = n
-      else {
-        const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
-          if (key.ref_tbl_id !== node.id) res[key.id] = key
-          return res
-        }, {})
-        map[n.id] = immutableUpdate(n, {
-          data: {
-            defs: {
-              key_category_map: Object.keys(updatedFkMap).length
-                ? { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: updatedFkMap } }
-                : { $unset: [CREATE_TBL_TOKEN_MAP.foreignKey] },
-            },
-          },
-        })
-      }
-    }
-    return map
-  }, {})
-  closeEditor()
-  updateAndDrawNodes({ nodeMap })
-}
-
-function updateCardinality({ type, link }) {
-  let nodeMap = props.nodeMap
-  const { src_attr_id, target_attr_id } = link.relationshipData
-  let method,
-    nodeId = link.source.id,
-    node = props.nodeMap[nodeId],
-    colId = src_attr_id,
-    value = false
-  switch (type) {
-    case SET_ONE_TO_MANY:
-    case SET_ONE_TO_ONE: {
-      method = diagramUtils.toggleUnique
-      /**
-       * In an one to many relationship, FK is placed on the "many" side,
-       * and the FK col can't be unique. On the other hand, one to one
-       * relationship, fk col and ref col must be both unique
-       */
-      if (type === SET_ONE_TO_ONE) {
-        value = true
-        // update also ref col of target node
-        nodeMap = immutableUpdate(nodeMap, {
-          [link.target.id]: {
-            $set: method({
-              node: props.nodeMap[link.target.id],
-              colId: target_attr_id,
-              value,
-            }),
-          },
-        })
-      }
-      break
-    }
-    case SET_MANDATORY:
-    case SET_FK_COL_OPTIONAL:
-    case SET_REF_COL_OPTIONAL:
-    case SET_REF_COL_MANDATORY: {
-      method = diagramUtils.toggleNotNull
-      if (type === SET_REF_COL_OPTIONAL || type === SET_REF_COL_MANDATORY) {
-        nodeId = link.target.id
-        node = props.nodeMap[nodeId]
-        colId = target_attr_id
-      }
-      value = type === SET_MANDATORY || type === SET_REF_COL_MANDATORY
-      break
-    }
-  }
-  nodeMap = immutableUpdate(nodeMap, {
-    [nodeId]: { $set: method({ node, colId, value }) },
+/**
+ * Update new nodeMap data and redrawn nodes
+ * @param {object} param
+ * @param {object} param.nodeMap - new node map
+ * @param {boolean} param.skipHistory - conditionally skip nodes history update
+ */
+function redraw({ nodeMap, skipHistory }) {
+  ErdTask.update({ where: props.erdTask.id, data: { nodeMap } }).then(() => {
+    entityDiagramRef.value.update(props.nodes)
+    if (!skipHistory) erdTaskService.updateNodesHistory(nodeMap)
   })
-  updateAndDrawNodes({ nodeMap })
-}
-
-function assignCoord(nodeMap) {
-  return props.nodes.reduce((map, n) => {
-    if (!nodeMap[n.id]) map[n.id] = n
-    else {
-      const { x, y, vx, vy, size } = nodeMap[n.id]
-      map[n.id] = {
-        ...n,
-        x,
-        y,
-        vx,
-        vy,
-        size,
-      }
-    }
-    return map
-  }, {})
 }
 
 /**
  * @param {array} v - diagram staging nodes with new coordinate values
  */
 function onNodesCoordsUpdate(v) {
-  const nodeMap = assignCoord(keyBy(v, 'id'))
+  const nodeMap = utils.assignCoord({ nodes: props.nodes, nodeMap: keyBy(v, 'id') })
   ErdTask.update({
     where: props.erdTask.id,
     data: { nodeMap, is_laid_out: true },
@@ -330,38 +232,51 @@ function setZoom({ isFitIntoView: fitIntoView = false, customExtent, v, paddingP
   }
 }
 
-/**
- * @public
- */
-function updateNode(params) {
-  entityDiagramRef.value.updateNode(params)
+async function navHistory(idx) {
+  await erdTaskService.updateActiveHistoryIdx(idx)
+  redraw({ nodeMap: nodesHistory.value[activeHistoryIdx.value], skipHistory: true })
 }
 
-async function createTbl() {
+function autoArrange() {
+  ErdTask.update({
+    where: props.erdTask.id,
+    data: { is_laid_out: false },
+  }).then(() => entityDiagramRef.value.runSimulation((diagram) => onRendered(diagram)))
+}
+
+function patchGraphConfig({ path, value }) {
+  graphConfigData.value = utils.immutableUpdateConfig(graphConfigData.value, path, value)
+}
+
+function handleOpenEditor({ node, spec = TABLE_STRUCTURE_SPEC_MAP.COLUMNS, skipZoom = false }) {
+  if (connId.value) {
+    const data = { active_entity_id: node.id, active_spec: spec }
+    if (props.graphHeightPct === 100) data.graph_height_pct = 40
+    ErdTaskTmp.update({ where: props.erdTask.id, data }).then(() => {
+      if (!skipZoom) zoomIntoNode(node)
+    })
+  } else
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+      text: [t('errors.requiredConn')],
+      type: SNACKBAR_TYPE_MAP.ERROR,
+    })
+}
+
+/**
+ * Add a new table node to nodeMap
+ */
+async function addTblNode() {
   if (connId.value) {
     await schemaInfoService.querySuppData({
       connId: connId.value,
       config: activeRequestConfig.value,
     })
-    const length = props.nodes.length
-    const { genTblStructureData, genErdNode } = erdHelper
-    const schema = typy(props.schemas, '[0]').safeString || 'test'
-    const tableParser = new TableParser()
-    const nodeData = genTblStructureData({
-      parsedTable: tableParser.parse({
-        ddl: ddlTemplate.createTbl(`table_${length + 1}`),
-        schema,
-        autoGenId: true,
-      }),
+    const node = utils.genTblNode({
+      nodes: props.nodes,
+      schemas: props.schemas,
       charsetCollationMap: charset_collation_map.value,
+      panAndZoom: panAndZoom.value,
     })
-    const { x, y, k } = panAndZoom.value
-    const node = {
-      ...genErdNode({ nodeData, highlightColor: dynamicColors(length) }),
-      // plus extra padding
-      x: (0 - x) / k + 65,
-      y: (0 - y) / k + 42,
-    }
     const nodeMap = immutableUpdate(props.nodeMap, { $merge: { [node.id]: node } })
     ErdTask.update({
       where: props.erdTask.id,
@@ -378,150 +293,38 @@ async function createTbl() {
     })
 }
 
-function closeEditor() {
+function handleRmTblNode(node) {
+  const nodeMap = utils.rmTblNode({ id: node.id, nodes: props.nodes })
+  // Close editor by clearing active_entity_id
   ErdTaskTmp.update({
     where: props.erdTask.id,
     data: { active_entity_id: '', graph_height_pct: 100 },
   })
+  redraw({ nodeMap })
 }
 
-function updateAndDrawNodes({ nodeMap, skipHistory }) {
-  ErdTask.update({ where: props.erdTask.id, data: { nodeMap } }).then(() => {
-    entityDiagramRef.value.update(props.nodes)
-    if (!skipHistory) erdTaskService.updateNodesHistory(nodeMap)
+function handleAddFk(param) {
+  const nodeMap = utils.addFk({
+    nodeMap: props.nodeMap,
+    colKeyCategoryMap: colKeyCategoryMap.value,
+    ...param,
   })
-}
-
-function redrawnDiagram() {
-  const nodeMap = nodesHistory.value[activeHistoryIdx.value]
-  updateAndDrawNodes({ nodeMap, skipHistory: true })
-}
-
-async function navHistory(idx) {
-  await erdTaskService.updateActiveHistoryIdx(idx)
-  redrawnDiagram()
-}
-
-/**
- * Adds a PLAIN index for provided colId to provided node
- * @param {object} param
- * @param {string} param.colId
- * @param {object} param.node
- * @returns {object} updated node
- */
-function addPlainIndex({ colId, node }) {
-  const refTblDef = node.data.defs
-  const plainKeyMap = typy(
-    refTblDef,
-    `key_category_map[${CREATE_TBL_TOKEN_MAP.key}]`
-  ).safeObjectOrEmpty
-  const newKey = erdHelper.genKey({ defs: refTblDef, category: CREATE_TBL_TOKEN_MAP.key, colId })
-  return immutableUpdate(node, {
-    data: {
-      defs: {
-        key_category_map: {
-          $merge: { [CREATE_TBL_TOKEN_MAP.key]: { ...plainKeyMap, [newKey.id]: newKey } },
-        },
-      },
-    },
-  })
-}
-
-function createNewFk({ node, currentFkMap, newKey, refNode }) {
-  let nodeMap = props.nodeMap
-
-  // entity-diagram doesn't generate composite FK,so both cols and ref_cols always have one item
-  const colId = newKey.cols[0].id
-  const refColId = newKey.ref_cols[0].id
-  // Compare column types
-  if (
-    erdHelper.validateFkColTypes({
-      src: node,
-      target: refNode,
-      colId,
-      targetColId: refColId,
-    })
-  ) {
-    // Auto adds a PLAIN index for referenced col if there is none.
-    const nonIndexedColId = colKeyCategoryMap.value[refColId] ? null : refColId
-    if (nonIndexedColId) {
-      nodeMap = immutableUpdate(nodeMap, {
-        [refNode.id]: {
-          $set: addPlainIndex({
-            node: nodeMap[refNode.id],
-            colId: nonIndexedColId,
-          }),
-        },
-      })
-    }
-
-    // Add FK
-    nodeMap = immutableUpdate(nodeMap, {
-      [node.id]: {
-        data: {
-          defs: {
-            key_category_map: {
-              $merge: {
-                [CREATE_TBL_TOKEN_MAP.foreignKey]: { ...currentFkMap, [newKey.id]: newKey },
-              },
-            },
-          },
-        },
-      },
-    })
-    updateAndDrawNodes({ nodeMap })
-  } else {
+  if (nodeMap) redraw({ nodeMap })
+  else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.fkColsRequirements')],
       type: SNACKBAR_TYPE_MAP.ERROR,
     })
-  }
 }
 
-function rmFk(link) {
-  let fkMap = typy(
-    props.nodeMap[link.source.id],
-    `data.defs.key_category_map[${CREATE_TBL_TOKEN_MAP.foreignKey}]`
-  ).safeObjectOrEmpty
-
-  fkMap = immutableUpdate(fkMap, { $unset: [link.id] })
-  const nodeMap = immutableUpdate(props.nodeMap, {
-    [link.source.id]: {
-      data: {
-        defs: {
-          key_category_map: Object.keys(fkMap).length
-            ? { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: fkMap } }
-            : { $unset: [CREATE_TBL_TOKEN_MAP.foreignKey] },
-        },
-      },
-    },
-  })
-  updateAndDrawNodes({ nodeMap })
+function handleRmFk(link) {
+  const nodeMap = utils.rmFk({ nodeMap: props.nodeMap, link })
+  redraw({ nodeMap })
 }
 
-function onClickAutoArrange() {
-  ErdTask.update({
-    where: props.erdTask.id,
-    data: { is_laid_out: false },
-  }).then(() => entityDiagramRef.value.runSimulation((diagram) => onRendered(diagram)))
-}
-
-function immutableUpdateConfig(obj, path, value) {
-  const updatedObj = cloneDeep(obj)
-  update(updatedObj, path, () => value)
-  return updatedObj
-}
-
-function patchGraphConfig({ path, value }) {
-  graphConfigData.value = immutableUpdateConfig(graphConfigData.value, path, value)
-}
-
-/**
- * @public
- * @returns {Promise<Canvas>}
- */
-async function getCanvas() {
-  return await html2canvas(entityDiagramRef.value.$el, { logging: false })
+function handleUpdateCardinality({ type, link }) {
+  const nodeMap = utils.updateCardinality({ nodeMap: props.nodeMap, type, link })
+  redraw({ nodeMap })
 }
 
 defineExpose({ updateNode, getCanvas })
@@ -539,10 +342,10 @@ defineExpose({ updateNode, getCanvas })
       :nodesHistory="nodesHistory"
       :activeHistoryIdx="activeHistoryIdx"
       @set-zoom="setZoom"
-      @on-create-table="createTbl"
+      @on-create-table="addTblNode"
       @on-undo="navHistory(activeHistoryIdx - 1)"
       @on-redo="navHistory(activeHistoryIdx + 1)"
-      @click-auto-arrange="onClickAutoArrange"
+      @click-auto-arrange="autoArrange"
       @change-graph-config-attr-value="patchGraphConfig"
       @on-apply-script="applyScript"
     />
@@ -562,7 +365,7 @@ defineExpose({ updateNode, getCanvas })
       @on-rendered.once="onRendered($event)"
       @on-node-drag-end="onNodeDragEnd($event)"
       @dblclick="disabled ? null : handleOpenEditor({ node: $event })"
-      @on-create-new-fk="createNewFk($event)"
+      @on-create-new-fk="handleAddFk($event)"
       @contextmenu="openCtxMenu($event)"
     >
       <template #entity-setting-btn="{ node, isHovering }">
@@ -588,14 +391,14 @@ defineExpose({ updateNode, getCanvas })
       :graphConfig="graphConfigData"
       :exportOptions="ERD_EXPORT_OPTS"
       :colKeyCategoryMap="colKeyCategoryMap"
-      @create-tbl="createTbl($event)"
+      @create-tbl="addTblNode($event)"
       @fit-into-view="fitIntoView($event)"
-      @auto-arrange-erd="onClickAutoArrange($event)"
+      @auto-arrange-erd="autoArrange($event)"
       @patch-graph-config="patchGraphConfig($event)"
       @open-editor="handleOpenEditor($event)"
-      @rm-tbl="rmTbl($event)"
-      @rm-fk="rmFk($event)"
-      @update-cardinality="updateCardinality($event)"
+      @rm-tbl="handleRmTblNode($event)"
+      @rm-fk="handleRmFk($event)"
+      @update-cardinality="handleUpdateCardinality($event)"
     />
   </div>
 </template>
