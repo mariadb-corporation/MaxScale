@@ -588,6 +588,30 @@ a compressed tarball by omitting the filename:
         });
       }
     )
+    .command(
+        "qc_dump <path>",
+        "Dump contents of Query Classifier cache",
+        function (yargs) {
+            return yargs
+                .epilog(
+                    "The only argument to this command is the path of the file where " +
+                    "the contents of the cache should be saved. A relative path will " +
+                    "be interpreted in relation to the datadir of MaxScale."
+                )
+                .usage("Usage: qc_dump <path>");
+        },
+        function (argv) {
+            maxctrl(argv, async function (host) {
+                var dump = {
+                    path: argv.path,
+                };
+
+                var res = await doRequest(host, "maxscale/query_classifier/dump",
+                                          { method: "POST", data: dump });
+                return res.data.attributes.path;
+            });
+        }
+    )
     .usage("Usage: create <command>")
     .help()
     .wrap(null)

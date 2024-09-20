@@ -1077,6 +1077,21 @@ HttpResponse cb_qc_cache(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, json);
 }
 
+HttpResponse cb_qc_dump(const HttpRequest& request)
+{
+    json_t* in = request.get_json();
+    mxb_assert(in);
+
+    std::unique_ptr<json_t> sOut = mxs::CachingParser::dump(request.host(), in);
+
+    if (sOut)
+    {
+        return HttpResponse(MHD_HTTP_OK, sOut.release());
+    }
+
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+}
+
 HttpResponse cb_thread(const HttpRequest& request)
 {
     int id = atoi(request.last_uri_part().c_str());
@@ -1676,6 +1691,8 @@ public:
         m_post.emplace_back(cb_thread_rebalance, "maxscale", "threads", ":thread", "rebalance");
         m_post.emplace_back(cb_threads_rebalance, "maxscale", "threads", "rebalance");
         m_post.emplace_back(cb_reload_users, "services", ":service", "reload");
+
+        m_post.emplace_back(REQ_BODY, cb_qc_dump, "maxscale", "query_classifier", "dump");
 
         /** Session manipulation */
         m_post.emplace_back(cb_restart_session, "sessions", ":session", "restart");
