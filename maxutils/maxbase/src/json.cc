@@ -594,14 +594,9 @@ bool Json::try_get_string(const string& key, std::string* out) const
     return try_get_string(key.c_str(), out);
 }
 
-bool Json::set_string(const char* key, const char* value)
+bool Json::set_string(const char* key, std::string_view value)
 {
-    return json_object_set_new(m_obj, key, json_string(value)) == 0;
-}
-
-bool Json::set_string(const char* key, const std::string& value)
-{
-    return set_string(key, value.c_str());
+    return json_object_set_new(m_obj, key, json_stringn(value.data(), value.length())) == 0;
 }
 
 bool Json::set_string(std::string_view value)
@@ -731,8 +726,30 @@ bool Json::save(const std::string& filepath, Format format)
         int eno = errno;
         m_errormsg = mxb::string_printf("Json write to file '%s' failed. Error %d, %s.",
                                         filepathc, eno, mxb_strerror(eno));
+        errno = eno;
     }
     return write_ok;
+}
+
+bool Json::save(FILE* file, Format format)
+{
+    bool rv = false;
+
+    int flags = static_cast<int>(format);
+
+    if (json_dumpf(m_obj, file, flags) == 0)
+    {
+        rv = true;
+    }
+    else
+    {
+        int eno = errno;
+        m_errormsg = mxb::string_printf("Json write to file stream failed. Error %d, %s.",
+                                        eno, mxb_strerror(eno));
+        errno = eno;
+    }
+
+    return rv;
 }
 
 Json::Json(Type type)

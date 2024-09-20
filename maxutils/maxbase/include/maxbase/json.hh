@@ -120,8 +120,22 @@ public:
      * @param flags    The format to store the file in
      *
      * @return True on success
+     *
+     * If the function fails, errno will be set.
      */
     bool save(const std::string& filepath, Format format = Format::PRETTY);
+
+    /**
+     * Save data to a file.
+     *
+     * @param file   Pointer to FILE object
+     * @param flags  The format to store the file in
+     *
+     * @return True on success
+     *
+     * If the function fails, errno will be set.
+     */
+    bool save(FILE* file, Format format = Format::PRETTY);
 
     /**
      * Check if object contains a field
@@ -367,8 +381,7 @@ public:
      *
      * @return True if the value was set
      */
-    bool set_string(const char* key, const char* value);
-    bool set_string(const char* key, const std::string& value);
+    bool set_string(const char* key, std::string_view value);
 
     /**
      * Store a JSON string
@@ -600,6 +613,15 @@ public:
     }
 };
 
+class Copy : public Json
+{
+public:
+    explicit Copy(json_t* obj)
+        : Json(obj, RefType::COPY)
+    {
+    }
+};
+
 class Integer : public Json
 {
 public:
@@ -641,6 +663,15 @@ class String : public Json
 public:
     explicit String(std::string_view s = "")
         : Json(json_stringn(s.data(), s.length()), RefType::STEAL)
+    {
+    }
+};
+
+class Steal : public Json
+{
+public:
+    explicit Steal(json_t* obj)
+        : Json(obj, RefType::STEAL)
     {
     }
 };
