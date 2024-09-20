@@ -656,6 +656,7 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds,
         if (action == mxb::Worker::Callable::EXECUTE && ref)
         {
             MXS_SESSION::Scope scope(session);
+            mxb::LogScope logscope(ref->endpoint().target()->name());
             mxb_assert(session->state() == MXS_SESSION::State::STARTED);
 
             if (!fn(buffer))
