@@ -12,26 +12,30 @@
  * Public License.
  */
 import { DIAGRAM_CTX_TYPE_MAP as TYPE } from '@/constants'
-import { ENTITY_OPT_TYPE_MAP, LINK_OPT_TYPE_MAP, CREATE_TBL_TOKEN_MAP } from '@/constants/workspace'
+import {
+  ENTITY_OPT_TYPE_MAP,
+  LINK_OPT_TYPE_MAP,
+  CREATE_TBL_TOKEN_MAP,
+  TABLE_STRUCTURE_SPEC_MAP,
+} from '@/constants/workspace'
 import diagramUtils from '@wkeComps/ErdWke/diagramUtils'
 
 const props = defineProps({
-  type: {
-    type: String,
+  data: {
+    type: Object,
     required: true,
-    validator: (v) => v === '' || [TYPE.BOARD, TYPE.NODE, TYPE.LINK].includes(v),
+    validator: (obj) =>
+      ['isOpened', 'type', 'item', 'target'].every((key) => key in obj) &&
+      (obj.type === '' || [TYPE.BOARD, TYPE.NODE, TYPE.LINK].includes(obj.type)),
   },
   graphConfig: { type: Object, required: true },
   exportOptions: { type: Object, required: true },
   colKeyCategoryMap: { type: Object, required: true },
-  activeCtxItem: { type: Object, required: true },
-  activeCtxItemId: { type: String, required: true },
 })
 
 const emit = defineEmits([
-  'edit-tbl',
+  'open-editor',
   'rm-tbl',
-  'edit-fk',
   'rm-fk',
   'create-tbl',
   'fit-into-view',
@@ -40,38 +44,13 @@ const emit = defineEmits([
   'update-cardinality',
 ])
 
+const typy = useTypy()
 const { t } = useI18n()
 
 const { BOARD, NODE, LINK } = TYPE
 
-const ENTITY_OPTS = Object.values(ENTITY_OPT_TYPE_MAP).map((type) => ({
-  type,
-  title: t(type),
-  action: () => {
-    const { EDIT, REMOVE } = ENTITY_OPT_TYPE_MAP
-    switch (type) {
-      case EDIT:
-        emit('edit-tbl')
-        break
-      case REMOVE:
-        emit('rm-tbl')
-        break
-    }
-  },
-}))
-
-const FK_BASE_OPTS = [
-  {
-    title: t(LINK_OPT_TYPE_MAP.EDIT),
-    type: LINK_OPT_TYPE_MAP.EDIT,
-    action: () => emit('edit-fk'),
-  },
-  {
-    title: t(LINK_OPT_TYPE_MAP.REMOVE),
-    type: LINK_OPT_TYPE_MAP.REMOVE,
-    action: () => emit('rm-fk'),
-  },
-]
+const item = computed(() => props.data.item)
+const activatorId = computed(() => typy(props.data, 'activatorId').safeString)
 
 const boardOpts = computed(() => [
   { title: t('createTable'), action: () => emit('create-tbl') },
@@ -103,9 +82,42 @@ const boardOpts = computed(() => [
   { title: t('export'), children: props.exportOptions },
 ])
 
-const linkCtxOpts = computed(() => {
-  const opts = []
-  const link = props.activeCtxItem
+const entityOpts = computed(() =>
+  Object.values(ENTITY_OPT_TYPE_MAP).map((type) => ({
+    type,
+    title: t(type),
+    action: () => {
+      const { EDIT, REMOVE } = ENTITY_OPT_TYPE_MAP
+      switch (type) {
+        case EDIT:
+          emit('open-editor', { node: item.value })
+          break
+        case REMOVE:
+          emit('rm-tbl', item.value)
+          break
+      }
+    },
+  }))
+)
+
+const linkOpts = computed(() => {
+  const opts = [
+    {
+      title: t(LINK_OPT_TYPE_MAP.EDIT),
+      type: LINK_OPT_TYPE_MAP.EDIT,
+      action: () =>
+        emit('open-editor', {
+          node: typy(item.value, 'source').safeObjectOrEmpty,
+          spec: TABLE_STRUCTURE_SPEC_MAP.FK,
+        }),
+    },
+    {
+      title: t(LINK_OPT_TYPE_MAP.REMOVE),
+      type: LINK_OPT_TYPE_MAP.REMOVE,
+      action: () => emit('rm-fk', item.value),
+    },
+  ]
+  const link = item.value
   if (link) {
     const actionCb = (type) => emit('update-cardinality', { type, link })
     opts.push(diagramUtils.genCardinalityOpt({ link, actionCb }))
@@ -124,14 +136,12 @@ const linkCtxOpts = computed(() => {
   return opts
 })
 
-const linkOpts = computed(() => [...FK_BASE_OPTS, ...linkCtxOpts.value])
-
 const ctxMenuItems = computed(() => {
-  switch (props.type) {
+  switch (props.data.type) {
     case BOARD:
       return boardOpts.value
     case NODE:
-      return ENTITY_OPTS
+      return entityOpts.value
     case LINK:
       return linkOpts.value
     default:
@@ -142,9 +152,9 @@ const ctxMenuItems = computed(() => {
 
 <template>
   <CtxMenu
-    v-if="activeCtxItemId"
-    :key="activeCtxItemId"
-    :activator="`#${activeCtxItemId}`"
+    v-if="activatorId"
+    :target="data.target"
+    :activator="`#${activatorId}`"
     :items="ctxMenuItems"
     transition="slide-y-transition"
     content-class="full-border"

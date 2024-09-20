@@ -277,3 +277,34 @@ export function useValidationRule() {
     validateHexColor: (v) => Boolean(v.match(/^#[0-9A-F]{6}$/i)) || t('errors.hexColor'),
   }
 }
+
+export function useCtxMenu() {
+  const data = ref({
+    isOpened: false,
+    type: '',
+    item: {},
+    activatorId: '',
+    target: [0, 0], // coord
+  })
+  const isOpened = computed(() => data.value.isOpened)
+
+  watch(isOpened, (v) => {
+    // clear data
+    if (!v) {
+      data.value.item = {}
+      data.value.activatorId = ''
+    }
+  })
+
+  function openCtxMenu({ e, type, activatorId = '', item = {} }) {
+    data.value = {
+      isOpened: true,
+      type,
+      item,
+      activatorId: item.id || activatorId,
+      target: [e.clientX, e.clientY],
+    }
+  }
+
+  return { data, openCtxMenu }
+}

@@ -59,7 +59,9 @@ const {
   uuidv1,
   getPanAndZoomValues,
 } = useHelpers()
+const { data: ctxMenuData, openCtxMenu } = useCtxMenu()
 
+const { BOARD, NODE, LINK } = DIAGRAM_CTX_TYPE_MAP
 const {
   SET_ONE_TO_ONE,
   SET_ONE_TO_MANY,
@@ -68,7 +70,6 @@ const {
   SET_REF_COL_MANDATORY,
   SET_REF_COL_OPTIONAL,
 } = LINK_OPT_TYPE_MAP
-
 const TOOLBAR_HEIGHT = 40
 const SCALE_EXTENT = [0.25, 2]
 const ERD_EXPORT_OPTS = [
@@ -97,11 +98,6 @@ const graphConfigData = ref({
 })
 const isFitIntoView = ref(false)
 const panAndZoom = ref({ x: 0, y: 0, k: 1 })
-const ctxMenuType = ref('') // DIAGRAM_CTX_TYPE_MAP
-const activeCtxItem = ref({})
-const showCtxMenu = ref(false)
-const menuX = ref(0)
-const menuY = ref(0)
 
 const charset_collation_map = computed(() => store.state.schemaInfo.charset_collation_map)
 
@@ -118,8 +114,6 @@ const colKeyCategoryMap = computed(() =>
     return map
   }, {})
 )
-
-const activeCtxItemId = computed(() => typy(activeCtxItem.value, 'id').safeString)
 const nodesHistory = computed(() => typy(props.erdTaskTmp, 'nodes_history').safeArray)
 const activeHistoryIdx = computed(() => typy(props.erdTaskTmp, 'active_history_idx').safeNumber)
 
@@ -156,23 +150,12 @@ watch(
     if (!v) fitIntoView()
   }
 )
-watch(showCtxMenu, (v) => {
-  if (!v) activeCtxItem.value = {}
-})
 
 onBeforeMount(() => (graphConfigData.value = merge(graphConfigData.value, activeGraphConfig.value)))
 
 function onRendered(diagram) {
   onNodesCoordsUpdate(diagram.nodes)
   if (diagram.nodes.length) fitIntoView()
-}
-
-function openCtxMenu({ e, type, item }) {
-  menuX.value = e.clientX
-  menuY.value = e.clientY
-  ctxMenuType.value = type
-  activeCtxItem.value = item
-  showCtxMenu.value = true
 }
 
 function handleOpenEditor({ node, spec = TABLE_STRUCTURE_SPEC_MAP.COLUMNS, skipZoom = false }) {
@@ -490,8 +473,7 @@ function createNewFk({ node, currentFkMap, newKey, refNode }) {
   }
 }
 
-function rmFk() {
-  const link = activeCtxItem.value
+function rmFk(link) {
   let fkMap = typy(
     props.nodeMap[link.source.id],
     `data.defs.key_category_map[${CREATE_TBL_TOKEN_MAP.foreignKey}]`
@@ -576,39 +558,30 @@ defineExpose({ updateNode, getCanvas })
       @on-node-drag-end="onNodeDragEnd($event)"
       @dblclick="disabled ? null : handleOpenEditor({ node: $event })"
       @on-create-new-fk="createNewFk($event)"
-      @on-node-contextmenu="
-        openCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.NODE, e: $event.e, item: $event.node })
-      "
-      @on-link-contextmenu="
-        openCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.LINK, e: $event.e, item: $event.link })
-      "
-      @on-board-contextmenu="
-        openCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.BOARD, e: $event, item: { id: DIAGRAM_ID } })
-      "
+      @on-node-contextmenu="openCtxMenu({ type: NODE, e: $event.e, item: $event.node })"
+      @on-link-contextmenu="openCtxMenu({ type: LINK, e: $event.e, item: $event.link })"
+      @on-board-contextmenu="openCtxMenu({ type: BOARD, e: $event, activatorId: DIAGRAM_ID })"
     >
       <template #entity-setting-btn="{ node, isHovering }">
         <VBtn
           :id="node.id"
           size="small"
           class="setting-btn"
-          :class="{ 'setting-btn--visible': isHovering || activeCtxItemId === node.id }"
+          :class="{ 'setting-btn--visible': isHovering || ctxMenuData.activatorId === node.id }"
           icon
           variant="text"
           density="compact"
           color="primary"
           :disabled="disabled"
-          @click.stop="openCtxMenu({ e: $event, type: DIAGRAM_CTX_TYPE_MAP.NODE, item: node })"
+          @click.stop="openCtxMenu({ e: $event, type: NODE, item: node })"
         >
           <VIcon size="14" icon="mxs:settings" />
         </VBtn>
       </template>
     </EntityDiagram>
     <DiagramCtxMenu
-      v-model="showCtxMenu"
-      :target="[menuX, menuY]"
-      :activeCtxItem="activeCtxItem"
-      :activeCtxItemId="activeCtxItemId"
-      :type="ctxMenuType"
+      v-model="ctxMenuData.isOpened"
+      :data="ctxMenuData"
       :graphConfig="graphConfigData"
       :exportOptions="ERD_EXPORT_OPTS"
       :colKeyCategoryMap="colKeyCategoryMap"
@@ -616,10 +589,9 @@ defineExpose({ updateNode, getCanvas })
       @fit-into-view="fitIntoView($event)"
       @auto-arrange-erd="onClickAutoArrange($event)"
       @patch-graph-config="patchGraphConfig($event)"
-      @edit-tbl="handleOpenEditor({ node: activeCtxItem })"
-      @rm-tbl="rmTbl(activeCtxItem)"
-      @edit-fk="handleOpenEditor({ node: activeCtxItem.source, spec: TABLE_STRUCTURE_SPEC_MAP.FK })"
-      @rm-fk="rmFk()"
+      @open-editor="handleOpenEditor($event)"
+      @rm-tbl="rmTbl($event)"
+      @rm-fk="rmFk($event)"
       @update-cardinality="updateCardinality($event)"
     />
   </div>

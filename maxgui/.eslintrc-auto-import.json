@@ -78,6 +78,7 @@
     "useCountUniqueValues": true,
     "useCssModule": true,
     "useCssVars": true,
+    "useCtxMenu": true,
     "useDragAndDrop": true,
     "useElapsedTimer": true,
     "useEventDispatcher": true,

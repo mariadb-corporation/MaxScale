@@ -25,19 +25,14 @@ const { exportToJpeg, getPanAndZoomValues, uuidv1 } = useHelpers()
 const DIAGRAM_ID = `config_diagram_${uuidv1()}`
 
 const store = useStore()
-const typy = useTypy()
 const { t } = useI18n()
+const { data: ctxMenuData, openCtxMenu } = useCtxMenu()
 
 const graphRef = ref(null)
 const ctrDim = ref({})
 const wrapperRef = ref(null)
 const panAndZoom = ref({ x: 0, y: 0, k: 1 })
 const isFitIntoView = ref(false)
-const ctxMenuType = ref(null)
-const activeCtxItem = ref(null)
-const showCtxMenu = ref(false)
-const menuX = ref(0)
-const menuY = ref(0)
 
 const graphData = computed(() => {
   const data = []
@@ -93,10 +88,8 @@ const boardOpts = computed(() => [
   { title: t('exportAsJpeg'), action: async () => await exportAsJpeg() },
 ])
 
-const activeCtxItemId = computed(() => typy(activeCtxItem.value, 'id').safeString)
-
 const ctxMenuItems = computed(() => {
-  if (ctxMenuType.value === DIAGRAM_CTX_TYPE_MAP.BOARD) return boardOpts.value
+  if (ctxMenuData.value.type === DIAGRAM_CTX_TYPE_MAP.BOARD) return boardOpts.value
   return []
 })
 
@@ -107,10 +100,6 @@ watch(
   },
   { deep: true }
 )
-
-watch(showCtxMenu, (v) => {
-  if (!v) activeCtxItem.value = null
-})
 
 function setCtrDim() {
   const { clientWidth, clientHeight } = wrapperRef.value.$el
@@ -182,14 +171,6 @@ async function exportAsJpeg() {
   exportToJpeg({ canvas: await getCanvas(), fileName: 'MaxScale_configuration_graph' })
 }
 
-function handleOpenCtxMenu({ e, type, item }) {
-  menuX.value = e.clientX
-  menuY.value = e.clientY
-  ctxMenuType.value = type
-  activeCtxItem.value = item
-  showCtxMenu.value = true
-}
-
 onMounted(() => nextTick(() => setCtrDim()))
 </script>
 
@@ -229,7 +210,7 @@ onMounted(() => nextTick(() => setCtrDim()))
       :colorizingLinkFn="colorizingLinkFn"
       :handleRevertDiagonal="handleRevertDiagonal"
       @on-board-contextmenu="
-        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.BOARD, e: $event, item: { id: DIAGRAM_ID } })
+        openCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.BOARD, e: $event, activatorId: DIAGRAM_ID })
       "
       @on-rendered.once="onRendered"
     >
@@ -245,14 +226,13 @@ onMounted(() => nextTick(() => setCtrDim()))
       </template>
     </DagGraph>
     <CtxMenu
-      v-if="activeCtxItemId"
-      :key="activeCtxItemId"
-      v-model="showCtxMenu"
+      v-if="ctxMenuData.activatorId"
+      v-model="ctxMenuData.isOpened"
       :items="ctxMenuItems"
-      :target="[menuX, menuY]"
+      :target="ctxMenuData.target"
       transition="slide-y-transition"
       content-class="full-border"
-      :activator="`#${activeCtxItemId}`"
+      :activator="`#${ctxMenuData.activatorId}`"
       @item-click="$event.action()"
     />
   </VCard>
