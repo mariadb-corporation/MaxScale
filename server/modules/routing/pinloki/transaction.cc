@@ -109,6 +109,78 @@ private:
     int64_t          m_size = 0;
 };
 
+// TODO: Missing error checking in all of TrxFile
+TrxFile::TrxFile(InventoryWriter* pInv, Mode mode)
+    : m_inventory(*pInv)
+    , m_trx_binlog_filename(m_inventory.config().trx_dir() + "/trx-binlog")
+    , m_summary_filename(m_inventory.config().trx_dir() + "/summary")
+{
+    if (mode == Recover)
+    {
+        // recover();
+    }
+    else
+    {
+        mxb_assert(!std::ifstream(m_trx_binlog_filename).good());
+        mxb_assert(!std::ifstream(m_summary_filename).good());
+        m_trx_binlog.open(m_trx_binlog_filename);
+    }
+}
+
+void TrxFile::add_log_data(const char* pData, int64_t size)
+{
+    m_trx_binlog.write(pData, size);
+    m_size += size;
+}
+
+int64_t TrxFile::size() const
+{
+    return m_size;
+}
+
+WritePosition& TrxFile::commit(WritePosition& pos)
+{
+    m_trx_binlog.close();
+
+    auto tmp_name = m_summary_filename + ".tmp";
+    std::ofstream tmp_summary(tmp_name);
+    tmp_summary << pos.name << ' ' << pos.write_pos;
+    tmp_summary.flush();
+    rename(tmp_name.c_str(), m_summary_filename.c_str());
+
+    return recover(pos);
+}
+
+WritePosition& TrxFile::recover(WritePosition& pos)
+{
+    std::ifstream summary(m_summary_filename);
+    if (!summary.good())
+    {
+        remove_dir_contents(m_inventory.config().trx_dir().c_str());
+        return pos;
+    }
+
+    std::string target_name;
+    int64_t start_file_pos;
+    summary >> target_name >> start_file_pos;
+
+    std::ifstream trx_file(m_trx_binlog_filename);
+    trx_file.seekg(0, std::ios_base::end);
+
+    append_file(trx_file, pos.file, start_file_pos);
+    pos.write_pos = pos.file.tellp();
+
+    remove_dir_contents(m_inventory.config().trx_dir().c_str());
+
+    return pos;
+}
+
+void perform_transaction_recovery(InventoryWriter* inv)
+{
+    // The constructor does recovery
+    TrxFile trx_file(inv, TrxFile::Recover);
+}
+
 /////
 ///// Transaction implementation
 /////
