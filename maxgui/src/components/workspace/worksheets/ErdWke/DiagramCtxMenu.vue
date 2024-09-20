@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import erdHelper from '@/utils/erdHelper'
 import { DIAGRAM_CTX_TYPE_MAP as TYPE } from '@/constants'
 import {
   ENTITY_OPT_TYPE_MAP,
@@ -18,7 +19,7 @@ import {
   CREATE_TBL_TOKEN_MAP,
   TABLE_STRUCTURE_SPEC_MAP,
 } from '@/constants/workspace'
-import diagramUtils from '@wkeComps/ErdWke/diagramUtils'
+import { MIN_MAX_CARDINALITY } from '@wkeComps/ErdWke/config'
 
 const props = defineProps({
   data: {
@@ -48,6 +49,15 @@ const typy = useTypy()
 const { t } = useI18n()
 
 const { BOARD, NODE, LINK } = TYPE
+const {
+  SET_ONE_TO_ONE,
+  SET_ONE_TO_MANY,
+  SET_MANDATORY,
+  SET_FK_COL_OPTIONAL,
+  SET_REF_COL_MANDATORY,
+  SET_REF_COL_OPTIONAL,
+} = LINK_OPT_TYPE_MAP
+const { ONLY_ONE, ZERO_OR_ONE } = MIN_MAX_CARDINALITY
 
 const item = computed(() => props.data.item)
 const activatorId = computed(() => typy(props.data, 'activatorId').safeString)
@@ -120,7 +130,7 @@ const linkOpts = computed(() => {
   const link = item.value
   if (link) {
     const actionCb = (type) => emit('update-cardinality', { type, link })
-    opts.push(diagramUtils.genCardinalityOpt({ link, actionCb }))
+    opts.push(genCardinalityOpt({ link, actionCb }))
     const {
       relationshipData: { src_attr_id, target_attr_id },
     } = link
@@ -128,10 +138,10 @@ const linkOpts = computed(() => {
     const refColKeyCategories = props.colKeyCategoryMap[target_attr_id]
 
     if (!colKeyCategories.includes(CREATE_TBL_TOKEN_MAP.primaryKey))
-      opts.push(diagramUtils.genOptionalityOpt({ link, actionCb }))
+      opts.push(genOptionalityOpt({ link, actionCb }))
 
     if (!refColKeyCategories.includes(CREATE_TBL_TOKEN_MAP.primaryKey))
-      opts.push(diagramUtils.genOptionalityOpt({ link, actionCb, isForRefTbl: true }))
+      opts.push(genOptionalityOpt({ link, actionCb, isForRefTbl: true }))
   }
   return opts
 })
@@ -148,6 +158,43 @@ const ctxMenuItems = computed(() => {
       return []
   }
 })
+
+/**
+ * @param {object} param.link - erd link
+ * @param {function} param.actionCb - callback action
+ * @returns {object}
+ */
+function genCardinalityOpt({ link, actionCb }) {
+  const [src = ''] = link.relationshipData.type.split(':')
+  const optType = src === ONLY_ONE || src === ZERO_OR_ONE ? SET_ONE_TO_MANY : SET_ONE_TO_ONE
+  return { title: t(optType), type: optType, action: () => actionCb(optType) }
+}
+
+/**
+ * @param {object} param.link - erd link
+ * @param {function} param.actionCb - callback action
+ * @param {boolean} param.isForRefTbl - erd link
+ * @returns {object}
+ */
+function genOptionalityOpt({ link, actionCb, isForRefTbl = false }) {
+  const {
+    source,
+    target,
+    relationshipData: { src_attr_id, target_attr_id },
+  } = link
+  let node = source,
+    colId = src_attr_id,
+    optType = isForRefTbl ? SET_REF_COL_MANDATORY : SET_MANDATORY
+
+  if (isForRefTbl) {
+    node = target
+    colId = target_attr_id
+  }
+  if (erdHelper.isColMandatory({ node, colId }))
+    optType = isForRefTbl ? SET_REF_COL_OPTIONAL : SET_FK_COL_OPTIONAL
+
+  return { title: t(optType), type: optType, action: () => actionCb(optType) }
+}
 </script>
 
 <template>
