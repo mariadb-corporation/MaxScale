@@ -17,6 +17,7 @@
 #include <memory>
 #include <vector>
 #include <maxbase/assert.hh>
+#include <maxbase/json.hh>
 #include <maxscale/hint.hh>
 
 class SERVER;
@@ -80,6 +81,8 @@ public:
         {
             m_cacheable = value;
         }
+
+        virtual mxb::Json to_json() const = 0;
 
     private:
         bool m_cacheable {true};

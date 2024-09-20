@@ -443,6 +443,78 @@ bool Parser::field_context_from_json(json_t* pArray, uint32_t* pContext)
     return rv;
 }
 
+//static
+json_t* Parser::to_json(const FieldInfo& field_info)
+{
+    mxb::json::Object field;
+
+    if (!field_info.database.empty())
+    {
+        field.set_string("database", field_info.database);
+    }
+
+    if (!field_info.table.empty())
+    {
+        field.set_string("table", field_info.table);
+    }
+
+    field.set_string("column", field_info.column);
+
+    mxb::json::Object rv;
+
+    rv.set_object("field", std::move(field));
+    rv.set_object("context", mxb::json::Steal(field_context_to_json(field_info.context)));
+
+    return rv.release();
+}
+
+//static
+json_t* Parser::to_json(const std::vector<FieldInfo>& field_infos)
+{
+    mxb::json::Array rv;
+
+    for (const FieldInfo& field_info : field_infos)
+    {
+        rv.add_array_elem(mxb::json::Steal(to_json(field_info)));
+    }
+
+    return rv.release();
+}
+
+//static
+json_t* Parser::to_json(const FunctionInfo& function_info)
+{
+    mxb::json::Object rv;
+    rv.set_string("name", function_info.name);
+
+    mxb::json::Array fields;
+
+    auto begin = function_info.fields;
+    auto end = begin + function_info.n_fields;
+
+    for (FieldInfo* pField_info = begin; pField_info < end; ++pField_info)
+    {
+        fields.add_array_elem(mxb::json::Steal(to_json(*pField_info)));
+    }
+
+    rv.set_object("fields", std::move(fields));
+
+    return rv.release();
+}
+
+// static
+json_t* Parser::to_json(const std::vector<FunctionInfo>& function_infos)
+{
+    mxb::json::Array rv;
+
+    for (const FunctionInfo& function_info : function_infos)
+    {
+        rv.add_array_elem(mxb::json::Steal(to_json(function_info)));
+    }
+
+    return rv.release();
+}
+
 namespace
 {
 

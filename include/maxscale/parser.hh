@@ -298,6 +298,9 @@ public:
         uint32_t         context { 0 }; /** The context in which the field appears. */
     };
 
+    static json_t* to_json(const FieldInfo& field_info);
+    static json_t* to_json(const std::vector<FieldInfo>& field_infos);
+
     /**
      * FunctionInfo contains information about a function used in a statement.
      */
@@ -307,6 +310,9 @@ public:
         FieldInfo*       fields { nullptr }; /** What fields the function accesses. */
         uint32_t         n_fields { 0 };     /** The number of fields in @c fields. */
     };
+
+    static json_t* to_json(const FunctionInfo& function_info);
+    static json_t* to_json(const std::vector<FunctionInfo>& function_infos);
 
     /**
      * Collect specifies what information should be collected during parsing.

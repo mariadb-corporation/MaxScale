@@ -207,6 +207,12 @@ public:
     parsing_info_t(const Parser::Helper& helper, const GWBUF* querybuf);
     ~parsing_info_t();
 
+    mxb::Json to_json() const override
+    {
+        mxb_assert(!true);
+        return mxb::json::Undefined();
+    }
+
     std::string_view get_string_view(const char* zContext, const char* zNeedle)
     {
         std::string_view rv;

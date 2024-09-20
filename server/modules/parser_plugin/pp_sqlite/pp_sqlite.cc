@@ -237,6 +237,66 @@ class PpSqliteInfo : public GWBUF::ProtocolInfo
 
 public:
 
+    mxb::Json to_json() const override
+    {
+        mxb::json::Object rv;
+
+        rv.set_string("canonical", m_canonical);
+
+        rv.set_string("status", Parser::to_string(m_status));
+        rv.set_string("sql_mode", Parser::to_string(m_sql_mode));
+        rv.set_string("type_mask", Parser::type_mask_to_string(m_type_mask));
+        rv.set_string("operation", mxs::sql::to_string(m_operation));
+
+        if (!m_prepare_name.empty() && m_sPreparable_stmt)
+        {
+            rv.set_string("prepare_name", m_prepare_name);
+
+            auto sProtocol_info = m_sPreparable_stmt->get_protocol_info();
+
+            if (sProtocol_info)
+            {
+                mxb::Json preparable_stmt = sProtocol_info->to_json();
+
+                rv.set_object("preparable_stmt", std::move(preparable_stmt));
+            }
+        }
+
+        if (m_operation == mxs::sql::OP_KILL)
+        {
+            rv.set_object("kill_info", mxb::json::Steal(Parser::to_json(m_kill)));
+        }
+
+        if (!m_database_names.empty())
+        {
+            mxb::json::Array database_names;
+
+            for (auto database_name : m_database_names)
+            {
+                database_names.add_array_elem(mxb::json::String(database_name));
+            }
+
+            rv.set_object("database_names", std::move(database_names));
+        }
+
+        if (!m_table_names.empty())
+        {
+            rv.set_object("table_names", mxb::json::Steal(Parser::to_json(m_table_names)));
+        }
+
+        if (!m_field_infos.empty())
+        {
+            rv.set_object("field_infos", mxb::json::Steal(Parser::to_json(m_field_infos)));
+        }
+
+        if (!m_function_infos.empty())
+        {
+            rv.set_object("function_infos", mxb::json::Steal(Parser::to_json(m_function_infos)));
+        }
+
+        return rv;
+    }
+
     void calculate_size()
     {
         using std::for_each;
