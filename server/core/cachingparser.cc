@@ -12,14 +12,19 @@
  */
 
 #include <maxscale/cachingparser.hh>
+#include <sys/stat.h>
 #include <atomic>
+#include <fstream>
+#include <iomanip>
 #include <map>
 #include <random>
 #include <maxbase/checksum.hh>
 #include <maxbase/lru_cache.hh>
+#include <maxbase/string.hh>
 #include <maxsimd/canonical.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/cn_strings.hh>
+#include <maxscale/config.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/routingworker.hh>
@@ -336,6 +341,106 @@ public:
         m_stats.size = 0;
 
         return size;
+    }
+
+    void dump(FILE* pFile, const std::string& temp, const std::string& path, const std::string& timestamp)
+    {
+        std::stringstream out;
+
+        out << "{\n";
+
+        mxb::json::Object version;
+        version.set_int("major", MAXSCALE_VERSION_MAJOR);
+        version.set_int("minor", MAXSCALE_VERSION_MINOR);
+        version.set_int("patch", MAXSCALE_VERSION_PATCH);
+
+        out << "\"version\": " << version.to_string(mxb::Json::Format::NORMAL) << ",\n";
+        out << "\"timestamp\": \"" << timestamp << "\",\n";
+        out << "\"dump\": [\n";
+
+        std::string header = out.str();
+
+        int error_code = 0;
+        std::string error_msg;
+
+        errno = 0;
+        if (fwrite(header.data(), 1, header.length(), pFile) == header.length())
+        {
+            bool first = true;
+            for (const auto& kv : m_infos)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    const std::string_view delimiter = ",\n";
+
+                    if (fwrite(delimiter.data(), 1, delimiter.length(), pFile) != delimiter.length())
+                    {
+                        error_code = errno;
+                        error_msg = mxb_strerror(error_code);
+                        break;
+                    }
+                }
+
+                mxb::Json info = kv.second.sInfo->to_json();
+
+                if (!info.save(pFile, mxb::Json::Format::NORMAL))
+                {
+                    error_code = errno;
+                    error_msg = info.error_msg().c_str();
+                    break;
+                }
+            }
+        }
+        else
+        {
+            error_code = errno;
+            error_msg = mxb_strerror(error_code);
+        }
+
+        if (error_code == 0)
+        {
+            const std::string_view footer = "\n]\n}\n";
+
+            if (fwrite(footer.data(), 1, footer.length(), pFile) != footer.length())
+            {
+                error_code = errno;
+                error_msg = mxb_strerror(error_code);
+            }
+        }
+
+        fclose(pFile);
+
+        if (error_code == 0)
+        {
+            if (rename(temp.c_str(), path.c_str()) != 0)
+            {
+                MXB_ERROR("Could not rename temporary file '%s' to final file '%s': %s",
+                          temp.c_str(), path.c_str(), mxb_strerror(errno));
+            }
+        }
+        else
+        {
+            errno = 0;
+            remove(temp.c_str());
+
+            if (error_code != ENOSPC || errno == 0)
+            {
+                // We did not run out of space or the removal of the file
+                // succeeded => we can log.
+                MXB_ERROR("Could not save Json data to file: %s", error_msg.c_str());
+            }
+
+            if (error_code != ENOSPC && errno != 0)
+            {
+                // We did not run out of space, so the error related to the removing
+                // of the file can be logged.
+                MXB_ERROR("Could not remove temporary file '%s': %s", temp.c_str(), mxb_strerror(errno));
+            }
+        }
     }
 
 private:
@@ -762,6 +867,170 @@ std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost, in
     }
 
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pData));
+}
+
+// static
+std::unique_ptr<json_t> CachingParser::dump(const char* zHost, json_t* pJson)
+{
+    std::unique_ptr<json_t> sResult;
+
+    json_t* pPath = json_object_get(pJson, "path");
+
+    if (pPath)
+    {
+        const char* zPath = json_string_value(pPath);
+
+        if (zPath)
+        {
+            std::string path;
+            if (zPath[0] == '/')
+            {
+                path = zPath;
+            }
+            else
+            {
+                path = mxs::datadir();
+                path += "/";
+                path += zPath;
+            }
+
+            struct stat s;
+            if (stat(path.c_str(), &s) == 0)
+            {
+                if (S_ISDIR(s.st_mode))
+                {
+                    sResult = dump(zHost, path);
+                }
+                else
+                {
+                    MXB_ERROR("'%s' is not a directory.", path.c_str());
+                }
+            }
+            else
+            {
+                MXB_ERROR("Could not check the status of '%s': %s",
+                          path.c_str(), mxb_strerror(errno));
+            }
+        }
+        else
+        {
+            MXB_ERROR("A 'path' argument was provided, but it is not a string.");
+        }
+    }
+    else
+    {
+        MXB_ERROR("No 'path' argument provided.");
+    }
+
+    return sResult;
+}
+
+//static
+std::unique_ptr<json_t> CachingParser::dump(const char* zHost, const std::string& dir)
+{
+    std::unique_ptr<json_t> sResult;
+
+    time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+    std::string temp(dir);
+    temp += "/qc_dump-XXXXXX";
+
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now), "%Y-%m-%d_%H-%M-%S");
+
+    std::string timestamp = ss.str();
+
+    std::string path(dir);
+    path += "/qc_dump-";
+    path += timestamp;
+    path += ".json";
+
+    int fd = mkstemp(temp.data());
+
+    if (fd != -1)
+    {
+        FILE* pFile = fdopen(fd, "w");
+
+        if (pFile)
+        {
+            if (dump(pFile, temp, path, timestamp))
+            {
+                mxb::json::Object data;
+                data.set_string("id", "qc_dump");
+
+                mxb::json::Object attributes;
+                attributes.set_string("path", path);
+                data.set_object("attributes", std::move(attributes));
+
+                sResult.reset(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE_DUMP, data.release()));
+            }
+        }
+        else
+        {
+            MXB_ERROR("Could not convert file descriptor to FILE object: %s", mxb_strerror(errno));
+            close(fd);
+
+            if (remove(temp.c_str()) != 0)
+            {
+                MXB_ERROR("Could not remove temporary file '%s': %s",
+                          temp.c_str(), mxb_strerror(errno));
+            }
+        }
+    }
+    else
+    {
+        MXB_ERROR("Could not open create temporary file '%s' for writing: %s",
+                  temp.c_str(), mxb_strerror(errno));
+    }
+
+    return sResult;
+}
+
+//static
+bool CachingParser::dump(FILE* pFile,
+                         const std::string& temp,
+                         const std::string& path,
+                         const std::string& timestamp)
+{
+    bool rv = false;
+
+    RoutingWorker* pWorker = RoutingWorker::get_first();
+    mxb_assert(pWorker);
+
+    auto f = [pFile, temp, path, timestamp]() {
+        QCInfoCache* pCache = this_thread.pInfo_cache;
+        mxb_assert(pCache);
+
+        if (pCache)
+        {
+            pCache->dump(pFile, temp, path, timestamp);
+        }
+        else
+        {
+            fclose(pFile);
+            if (remove(temp.c_str()) != 0)
+            {
+                MXB_ERROR("Could not remove temporary file '%s': %s",
+                          temp.c_str(), mxb_strerror(errno));
+            }
+        }
+    };
+
+    rv = pWorker->execute(f, mxb::Worker::EXECUTE_QUEUED);
+
+    if (!rv)
+    {
+        fclose(pFile);
+        if (remove(temp.c_str()) != 0)
+        {
+            MXB_ERROR("Could not remove temporary file '%s': %s",
+                      temp.c_str(), mxb_strerror(errno));
+        }
+
+        MXB_ERROR("Could not send message to first routing worker.");
+    }
+
+    return rv;
 }
 
 // static

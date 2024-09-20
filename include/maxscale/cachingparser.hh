@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <map>
 #include <maxscale/parser.hh>
+#include <fstream>
 
 namespace maxscale
 {
@@ -70,7 +71,7 @@ public:
     static void                    set_thread_cache_enabled(bool enable);
 
     static std::unique_ptr<json_t> content_as_resource(const char* zHost, int top);
-
+    static std::unique_ptr<json_t> dump(const char* zHost, json_t* pJson);
 
     Result           parse(const GWBUF& stmt, uint32_t collect) const override;
 
@@ -105,6 +106,11 @@ protected:
     CachingParser(std::unique_ptr<Parser> sParser);
 
     std::unique_ptr<Parser> m_sParser;
+
+private:
+    static std::unique_ptr<json_t> dump(const char* zHost, const std::string& path);
+    static bool dump(FILE* pFile,
+                     const std::string& temp, const std::string& path, const std::string& timestamp);
 };
 
 }
