@@ -64,6 +64,7 @@ enum class UserEntryType
     DB_ACCESS_DENIED,
     BAD_DB,
     PLUGIN_IS_NOT_LOADED,
+    NEED_SSL,
     USER_ACCOUNT_OK,
 };
 

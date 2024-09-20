@@ -904,6 +904,13 @@ void MariaDBClientConnection::update_user_account_entry(mariadb::AuthenticationD
                                        mses->user_search_settings);
     m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
 
+    if (search_res.type == UserEntryType::USER_ACCOUNT_OK && search_res.entry.ssl
+        && m_dcb->ssl_state() != DCB::SSLState::ESTABLISHED)
+    {
+        // User account requires SSL but client connected normally. Fail client after authentication.
+        search_res.type = UserEntryType::NEED_SSL;
+    }
+
     mariadb::AuthenticatorModule* selected_module = find_auth_module(search_res.entry.plugin);
     if (selected_module)
     {
@@ -2698,6 +2705,14 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
 
                 case UserEntryType::BAD_DB:
                     error = AuthErrorType::BAD_DB;
+                    break;
+
+                case UserEntryType::NEED_SSL:
+                    error = AuthErrorType::ACCESS_DENIED;
+                    MXB_INFO("Client %s tried to log in without SSL when user account '%s'@'%s' "
+                             "requires it.", m_session->user_and_host().c_str(),
+                             auth_data.user_entry.entry.username.c_str(),
+                             auth_data.user_entry.entry.host_pattern.c_str());
                     break;
 
                 default:
