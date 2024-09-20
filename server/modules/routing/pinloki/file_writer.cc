@@ -77,6 +77,7 @@ namespace pinloki
 FileWriter::FileWriter(InventoryWriter* inv, const Writer& writer)
     : m_inventory(*inv)
     , m_writer(writer)
+    , m_trx(inv)
 {
 }
 

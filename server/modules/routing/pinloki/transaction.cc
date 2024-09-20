@@ -58,6 +58,70 @@ void append_file(std::ifstream& ifs, std::ofstream& ofs, int64_t out_offset = -1
 namespace pinloki
 {
 
+/** Class to handle writing a trx to temporary files when a trx didn't fit in
+ *  memory. There are two files "trx-binlog" and "summary" in a "trx" directory.
+ *  trx-binlog contains the raw data, summary is created and written to on commit.
+ *  The summary file contains the starting file position of the transaction in
+ *  the target binlog file (and more for validating that the trx belongs to the target,
+ *  someone might have deleted binlogs manually).
+ *
+ *  Recovery works as follows:
+ *  1. If there is NO valid summary, delete the contents of the trx directory and return
+ *  2. Open the target binlog for appending
+ *  3. tellg() tells the current file position in the target, and how many bytes
+ *     might already have been written
+ *  4. Write the required bytes from trx-binlog to the target binlog
+ *  4. Delete summary
+ *  5. Delete trx-binlog.
+ *
+ *  TODO: Decide how to handle recovery failure. It could be an exception telling
+ *        the user what to do manually, leaving the recovery files in place (leading
+ *        to maxscale oscillating up and down under systemd).
+ *        It is also a possibility that the higher level catches the exception,
+ *        makes certain checks and then decides if the the target binlog and the
+ *        recovery data can be deleted (in that order). This would at least require
+ *        that there is a predecessor file and that that file is not compressed
+ *        (as of 24.02, decompress if it is). Pinloki will then request and recreate
+ *        the entire file. File readers can already handle this situation.
+ */
+class TrxFile
+{
+public:
+    enum Mode {Recover, Write};
+
+    TrxFile(InventoryWriter* pInv, Mode mode);
+
+    // Writes to trx-binlog
+    void add_log_data(const char* pData, int64_t size);
+
+    int64_t size() const;
+
+    // Writes the summary file and calls recover().
+    WritePosition& commit(WritePosition& pos);
+
+private:
+    WritePosition& recover(WritePosition& pos);
+
+    InventoryWriter& m_inventory;
+    std::string      m_trx_binlog_filename;
+    std::string      m_summary_filename;
+    std::ofstream    m_trx_binlog;
+    int64_t          m_size = 0;
+};
+
+/////
+///// Transaction implementation
+/////
+
+Transaction::Transaction(InventoryWriter* pInv)
+    : m_inventory(*pInv)
+{
+}
+
+Transaction::~Transaction()
+{
+}
+
 bool Transaction::add_event(maxsql::RplEvent& rpl_event)
 {
     if (!m_in_transaction)

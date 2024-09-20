@@ -13,6 +13,7 @@
 #pragma once
 
 #include "rpl_event.hh"
+#include "inventory.hh"
 
 #include <string>
 #include <fstream>
@@ -27,17 +28,25 @@ struct WritePosition
     int64_t       write_pos;
 };
 
+class TrxFile;
+
 class Transaction
 {
 public:
-    Transaction() = default;
+    Transaction(InventoryWriter* pInv);
+    ~Transaction();
 
     void           begin(const maxsql::Gtid& gtid);
     bool           add_event(maxsql::RplEvent& rpl_event);
     int64_t        size() const;
     WritePosition& commit(WritePosition& pos);
 private:
+    InventoryWriter&  m_inventory;
     std::vector<char> m_trx_buffer;
     bool              m_in_transaction = false;
+
+    std::unique_ptr<TrxFile> m_trx_file;
 };
+
+void perform_transaction_recovery(InventoryWriter* pInv);
 }
