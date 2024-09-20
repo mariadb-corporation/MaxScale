@@ -19,8 +19,8 @@ import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { getConfig } from '@wkeComps/ErdWke/config'
 import erdHelper from '@/utils/erdHelper'
 import EntityNodes from '@wkeComps/ErdWke/EntityNodes.vue'
+import { DIAGRAM_CTX_TYPE_MAP } from '@/constants'
 
-defineOptions({ inheritAttrs: false })
 const props = defineProps({
   dim: { type: Object, required: true },
   panAndZoom: { type: Object, required: true },
@@ -35,11 +35,10 @@ const props = defineProps({
 })
 const emit = defineEmits([
   'update:panAndZoom',
-  'on-rendered', // ({ nodes:array, links:array })
-  'on-link-contextmenu', // ({e: Event, link:object})
-  'on-node-contextmenu', // ({e: Event, node:object})
+  'on-rendered', // ({ nodes: array, links: array })
+  'contextmenu', // ({e: Event, type: DIAGRAM_CTX_TYPE_MAP, item?: object, activatorId?: string})
   'on-node-drag-end', // (node)
-  'on-create-new-fk', // ({ node:object, currentFkMap: object, newKey: object, refNode: object, })
+  'on-create-new-fk', // ({ node: object, currentFkMap: object, newKey: object, refNode: object, })
   'dblclick',
 ])
 
@@ -329,11 +328,11 @@ function handleMouseOverOut(eventType, { e, link, linkCtr, pathGenerator }) {
   }
 }
 
-function openContextMenu(param) {
+function emitContextMenu(param) {
   const { e, link } = param
   e.preventDefault()
   e.stopPropagation()
-  emit('on-link-contextmenu', { e, link })
+  emit('contextmenu', { e, type: DIAGRAM_CTX_TYPE_MAP.LINK, item: link })
 }
 
 function drawLinks() {
@@ -343,8 +342,8 @@ function drawLinks() {
     events: {
       mouseover: handleMouseOverOut.bind(null, EVENT_TYPES.HOVER),
       mouseout: handleMouseOverOut.bind(null, EVENT_TYPES.NONE),
-      contextmenu: openContextMenu,
-      click: openContextMenu,
+      contextmenu: emitContextMenu,
+      click: emitContextMenu,
     },
   })
 }
@@ -389,8 +388,11 @@ function watchConfig() {
 }
 
 function handleHighlightAllLinks() {
+  // To highlight all links, chosenLinks must be assigned first
+  if (isHighlightAll.value) chosenLinks.value = graphLinks.value
   setEventLinkStyles(isHighlightAll.value ? EVENT_TYPES.HOVER : EVENT_TYPES.NONE)
-  chosenLinks.value = isHighlightAll.value ? graphLinks.value : []
+  // Clear chosenLinks only after removing the highlight styles when isHighlightAll is false
+  if (!isHighlightAll.value) chosenLinks.value = []
 }
 
 /**
@@ -431,7 +433,7 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
       :dim="dim"
       :graphDim="dim"
       @get-graph-ctr="linkContainer = $event"
-      v-bind="$attrs"
+      @contextmenu="emit('contextmenu', $event)"
     >
       <template #append="{ data: { style } }">
         <EntityNodes
@@ -449,7 +451,7 @@ defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
           @highlight-node-links="highLightNodeLinks($event)"
           @node-dragging="onDraggingNode($event)"
           @node-dragend="emit('on-node-drag-end', $event)"
-          @on-node-contextmenu="emit('on-node-contextmenu', $event)"
+          @contextmenu="emit('contextmenu', $event)"
           @dblclick="emit('dblclick', $event)"
           @on-create-new-fk="emit('on-create-new-fk', $event)"
         >

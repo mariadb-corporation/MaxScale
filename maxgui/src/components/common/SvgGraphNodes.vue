@@ -11,6 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { DIAGRAM_CTX_TYPE_MAP } from '@/constants'
+
 const props = defineProps({
   nodes: {
     type: Array,
@@ -43,7 +45,7 @@ const emit = defineEmits([
   'mouseenter',
   'mouseleave',
   'dblclick', // (node)
-  'on-node-contextmenu', // ({e:Event, node:object})
+  'contextmenu', // ({e: Event, type: DIAGRAM_CTX_TYPE_MAP.NODE, item: object})
   'click', // (node)
   'drag-start', // ({ e, node })
   'drag', // ({ e, node, diffX, diffY })
@@ -125,7 +127,7 @@ function handleAddEvents(node) {
     events.contextmenu = (e) => {
       resetClickedNodeId()
       e.preventDefault()
-      emit('on-node-contextmenu', { e, node })
+      emit('contextmenu', { e, type: DIAGRAM_CTX_TYPE_MAP.NODE, item: node })
     }
   if (props.click)
     events.click = (e) => {

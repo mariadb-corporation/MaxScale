@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPE_MAP, DIAGRAM_CTX_TYPE_MAP } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import DagGraph from '@/components/visualizer/DagGraph.vue'
 import html2canvas from 'html2canvas'
 
@@ -20,9 +20,7 @@ const SCALE_EXTENT = [0.01, 2]
 
 const resourceTypes = [SERVICES, SERVERS, LISTENERS, MONITORS]
 
-const { exportToJpeg, getPanAndZoomValues, uuidv1 } = useHelpers()
-
-const DIAGRAM_ID = `config_diagram_${uuidv1()}`
+const { exportToJpeg, getPanAndZoomValues } = useHelpers()
 
 const store = useStore()
 const { t } = useI18n()
@@ -87,11 +85,6 @@ const boardOpts = computed(() => [
   { title: t('fitDiagramInView'), action: () => fitIntoView() },
   { title: t('exportAsJpeg'), action: async () => await exportAsJpeg() },
 ])
-
-const ctxMenuItems = computed(() => {
-  if (ctxMenuData.value.type === DIAGRAM_CTX_TYPE_MAP.BOARD) return boardOpts.value
-  return []
-})
 
 watch(
   panAndZoom,
@@ -175,14 +168,7 @@ onMounted(() => nextTick(() => setCtrDim()))
 </script>
 
 <template>
-  <VCard
-    ref="wrapperRef"
-    flat
-    border
-    class="fill-height graph-card"
-    v-resize-observer="setCtrDim"
-    :id="DIAGRAM_ID"
-  >
+  <VCard ref="wrapperRef" flat border class="fill-height graph-card" v-resize-observer="setCtrDim">
     <portal to="view-header__right--append">
       <ZoomController
         :zoomRatio="zoomRatio"
@@ -209,9 +195,7 @@ onMounted(() => nextTick(() => setCtrDim()))
       draggable
       :colorizingLinkFn="colorizingLinkFn"
       :handleRevertDiagonal="handleRevertDiagonal"
-      @on-board-contextmenu="
-        openCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.BOARD, e: $event, activatorId: DIAGRAM_ID })
-      "
+      @contextmenu="openCtxMenu($event)"
       @on-rendered.once="onRendered"
     >
       <template #graph-node-content="{ data: { node, nodeSize, onNodeResized, isDragging } }">
@@ -228,7 +212,7 @@ onMounted(() => nextTick(() => setCtrDim()))
     <CtxMenu
       v-if="ctxMenuData.activatorId"
       v-model="ctxMenuData.isOpened"
-      :items="ctxMenuItems"
+      :items="boardOpts"
       :target="ctxMenuData.target"
       transition="slide-y-transition"
       content-class="full-border"

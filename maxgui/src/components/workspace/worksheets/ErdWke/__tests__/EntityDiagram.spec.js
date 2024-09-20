@@ -15,6 +15,7 @@ import EntityDiagram from '@wkeComps/ErdWke/EntityDiagram.vue'
 import { lodash } from '@/utils/helpers'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
+import { DIAGRAM_CTX_TYPE_MAP } from '@/constants'
 import erdHelper from '@/utils/erdHelper'
 
 const mockNode = { id: 'node_0', data: { defs: { key_category_map: {} } } }
@@ -204,11 +205,11 @@ describe(`EntityDiagram`, () => {
   )
 
   it.each`
-    event                    | eventData    | emittedEvent
-    ${'node-dragend'}        | ${'testArg'} | ${'on-node-drag-end'}
-    ${'on-node-contextmenu'} | ${'testArg'} | ${'on-node-contextmenu'}
-    ${'dblclick'}            | ${'testArg'} | ${'dblclick'}
-    ${'on-create-new-fk'}    | ${'testArg'} | ${'on-create-new-fk'}
+    event                 | eventData    | emittedEvent
+    ${'node-dragend'}     | ${'testArg'} | ${'on-node-drag-end'}
+    ${'contextmenu'}      | ${'testArg'} | ${'contextmenu'}
+    ${'dblclick'}         | ${'testArg'} | ${'dblclick'}
+    ${'on-create-new-fk'} | ${'testArg'} | ${'on-create-new-fk'}
   `(
     `Should emit $emittedEvent when $event is emitted from EntityNodes`,
     ({ event, eventData, emittedEvent }) => {
@@ -230,11 +231,24 @@ describe(`EntityDiagram`, () => {
     exposedFunctions.forEach((fn) => expect(typeof wrapper.vm.$refs.childRef[fn]).toBe('function'))
   })
 
-  it(`Should emit on-link-contextmenu event when openContextMenu function is called`, () => {
-    const arg = { e: { preventDefault: vi.fn(), stopPropagation: vi.fn() }, link: {} }
-    wrapper.vm.openContextMenu(arg)
+  it(`Should emit contextmenu event when emitContextMenu function is called`, () => {
+    const arg = {
+      e: { preventDefault: vi.fn(), stopPropagation: vi.fn() },
+      link: {},
+    }
+    wrapper.vm.emitContextMenu(arg)
     expect(arg.e.preventDefault).toHaveBeenCalledOnce()
     expect(arg.e.stopPropagation).toHaveBeenCalledOnce()
-    expect(wrapper.emitted()['on-link-contextmenu'][0][0]).toStrictEqual(arg)
+    expect(wrapper.emitted()['contextmenu'][0][0]).toStrictEqual({
+      e: arg.e,
+      item: arg.link,
+      type: DIAGRAM_CTX_TYPE_MAP.LINK,
+    })
+  })
+
+  it(`Should emit contextmenu event when contextmenu event is emitted from SvgGraphBoard`, () => {
+    const arg = 'test-arg'
+    wrapper.findComponent({ name: 'SvgGraphBoard' }).vm.$emit('contextmenu', arg)
+    expect(wrapper.emitted()['contextmenu'][0][0]).toStrictEqual(arg)
   })
 })

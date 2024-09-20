@@ -11,12 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-/**
- * Events
- * get-graph-ctr(SVGElement): graph-ctr <g/> element
- * on-board-contextmenu(Event)
- */
+import { DIAGRAM_CTX_TYPE_MAP } from '@/constants'
 import { select as d3Select } from 'd3-selection'
 import 'd3-transition'
 import { zoom, zoomIdentity } from 'd3-zoom'
@@ -27,11 +22,21 @@ const props = defineProps({
   graphDim: { type: Object, default: () => ({ width: 0, height: 0 }) },
   scaleExtent: { type: Array, default: () => [0.25, 2] },
 })
-const emit = defineEmits(['update:modelValue', 'get-graph-ctr', 'on-board-contextmenu'])
+
+const emit = defineEmits([
+  'update:modelValue',
+  'get-graph-ctr', // (SVGElement): graph-ctr <g/> element
+  'contextmenu', // ({ e: Event, type: DIAGRAM_CTX_TYPE_MAP, activatorId: string})
+])
 
 const {
   lodash: { isEqual },
+  uuidv1,
 } = useHelpers()
+
+const { BOARD } = DIAGRAM_CTX_TYPE_MAP
+
+const DIAGRAM_ID = `erd_${uuidv1()}`
 
 const svgRef = ref(null)
 let d3Svg = null
@@ -85,7 +90,7 @@ function applyZoom(v) {
 </script>
 
 <template>
-  <div class="svg-graph-board-ctr fill-height w-100 pos--relative overflow-hidden">
+  <div :id="DIAGRAM_ID" class="svg-graph-board-ctr fill-height w-100 pos--relative overflow-hidden">
     <VIcon
       class="svg-grid-bg pointer-events--none pos--absolute fill-height w-100"
       color="card-border-color"
@@ -96,7 +101,9 @@ function applyZoom(v) {
       class="svg-graph-board pos--relative"
       :width="dim.width"
       height="100%"
-      @contextmenu.prevent="$emit('on-board-contextmenu', $event)"
+      @contextmenu.prevent="
+        $emit('contextmenu', { e: $event, type: BOARD, activatorId: DIAGRAM_ID })
+      "
     >
       <g id="graph-ctr" :style="style" />
     </svg>

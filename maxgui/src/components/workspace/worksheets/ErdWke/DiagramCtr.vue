@@ -56,12 +56,11 @@ const {
   lodash: { merge, keyBy, cloneDeep, update },
   immutableUpdate,
   dynamicColors,
-  uuidv1,
   getPanAndZoomValues,
 } = useHelpers()
 const { data: ctxMenuData, openCtxMenu } = useCtxMenu()
 
-const { BOARD, NODE, LINK } = DIAGRAM_CTX_TYPE_MAP
+const { NODE } = DIAGRAM_CTX_TYPE_MAP
 const {
   SET_ONE_TO_ONE,
   SET_ONE_TO_MANY,
@@ -77,7 +76,6 @@ const ERD_EXPORT_OPTS = [
   { title: t('exportScript'), action: () => emit('on-export-script') },
   { title: t('exportAsJpeg'), action: () => emit('on-export-as-jpeg') },
 ]
-const DIAGRAM_ID = `erd_${uuidv1()}`
 
 const entityDiagramRef = ref(null)
 const graphConfigData = ref({
@@ -523,7 +521,7 @@ defineExpose({ updateNode, getCanvas })
 </script>
 
 <template>
-  <div :id="DIAGRAM_ID" class="fill-height d-flex flex-column">
+  <div class="fill-height d-flex flex-column">
     <ErToolbar
       :graphConfig="graphConfigData"
       :height="TOOLBAR_HEIGHT"
@@ -558,9 +556,7 @@ defineExpose({ updateNode, getCanvas })
       @on-node-drag-end="onNodeDragEnd($event)"
       @dblclick="disabled ? null : handleOpenEditor({ node: $event })"
       @on-create-new-fk="createNewFk($event)"
-      @on-node-contextmenu="openCtxMenu({ type: NODE, e: $event.e, item: $event.node })"
-      @on-link-contextmenu="openCtxMenu({ type: LINK, e: $event.e, item: $event.link })"
-      @on-board-contextmenu="openCtxMenu({ type: BOARD, e: $event, activatorId: DIAGRAM_ID })"
+      @contextmenu="openCtxMenu($event)"
     >
       <template #entity-setting-btn="{ node, isHovering }">
         <VBtn
