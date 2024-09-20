@@ -3657,6 +3657,12 @@ listeners and servers, it must have both the clientAuth and serverAuth usages.
 This enables SSL connections when set to true. The legacy values `required` and
 `disabled` were removed in MaxScale 6.0.
 
+Starting with MaxScale 21.06.18, 22.08.15, 23.02.12, 23.08.8, 24.02.4 and
+24.08.1, if ssl is disabled for a listener, MariaDB user accounts that require
+ssl cannot log in through that listener.  Any user account with a non-empty
+*ssl_type*-field in *mysql.user*-table is blocked. This includes users created
+with `REQUIRE SSL` or `REQUIRE X509`.
+
 ### `ssl_key`
 
 A string giving a file path that identifies an existing readable file. The file

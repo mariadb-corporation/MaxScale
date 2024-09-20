@@ -65,6 +65,10 @@ add_test_executable_ex(NAME lower_case_table_names SOURCE lower_case_table_names
 add_test_executable_ex(NAME custom_authentication SOURCE custom_authentication.cc
         CONFIG custom_authentication.cnf VMS repl_backend)
 
+# MXS-5239 Users with REQUIRE SSL should only work with SSL-enabled listeners.
+add_test_executable_ex(NAME require_ssl SOURCE require_ssl.cc
+        CONFIG require_ssl.cnf VMS repl_backend backend_ssl)
+
 # MXS-4950, MXS-4951 Ephemeral certificate support. Requires a recent MariaDB Server (>= 11.4) to run fully.
 add_test_executable_ex(NAME ephemeral_cert SOURCE ephemeral_cert.cc
         CONFIG ephemeral_cert.cnf VMS repl_backend)
