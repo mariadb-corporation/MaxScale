@@ -15,19 +15,19 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import ErToolbar from '@wkeComps/ErdWke/ErToolbar.vue'
 import EntityDiagram from '@wkeComps/ErdWke/EntityDiagram.vue'
+import DiagramCtxMenu from '@wkeComps/ErdWke/DiagramCtxMenu.vue'
 import erdTaskService from '@wsServices/erdTaskService'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
-import { MIN_MAX_CARDINALITY } from '@wkeComps/ErdWke/config'
 import ddlTemplate from '@/utils/ddlTemplate'
 import erdHelper from '@/utils/erdHelper'
 import TableParser from '@/utils/TableParser'
+import diagramUtils from '@wkeComps/ErdWke/diagramUtils'
 import { DIAGRAM_CTX_TYPE_MAP, SNACKBAR_TYPE_MAP } from '@/constants'
 import {
+  LINK_OPT_TYPE_MAP,
   TABLE_STRUCTURE_SPEC_MAP,
   CREATE_TBL_TOKEN_MAP,
-  ENTITY_OPT_TYPE_MAP,
-  LINK_OPT_TYPE_MAP,
 } from '@/constants/workspace'
 import html2canvas from 'html2canvas'
 
@@ -53,12 +53,21 @@ const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
 const {
-  lodash: { merge, isEqual, keyBy, cloneDeep, update },
+  lodash: { merge, keyBy, cloneDeep, update },
   immutableUpdate,
   dynamicColors,
   uuidv1,
   getPanAndZoomValues,
 } = useHelpers()
+
+const {
+  SET_ONE_TO_ONE,
+  SET_ONE_TO_MANY,
+  SET_MANDATORY,
+  SET_FK_COL_OPTIONAL,
+  SET_REF_COL_MANDATORY,
+  SET_REF_COL_OPTIONAL,
+} = LINK_OPT_TYPE_MAP
 
 const TOOLBAR_HEIGHT = 40
 const SCALE_EXTENT = [0.25, 2]
@@ -88,8 +97,8 @@ const graphConfigData = ref({
 })
 const isFitIntoView = ref(false)
 const panAndZoom = ref({ x: 0, y: 0, k: 1 })
-const ctxMenuType = ref(null) // DIAGRAM_CTX_TYPE_MAP
-const activeCtxItem = ref(null)
+const ctxMenuType = ref('') // DIAGRAM_CTX_TYPE_MAP
+const activeCtxItem = ref({})
 const showCtxMenu = ref(false)
 const menuX = ref(0)
 const menuY = ref(0)
@@ -109,74 +118,7 @@ const colKeyCategoryMap = computed(() =>
     return map
   }, {})
 )
-const boardOpts = computed(() => [
-  { title: t('createTable'), action: () => handleCreateTable() },
-  { title: t('fitDiagramInView'), action: () => fitIntoView() },
-  { title: t('autoArrangeErd'), action: () => onClickAutoArrange() },
-  {
-    title: t(
-      graphConfigData.value.link.isAttrToAttr ? 'disableDrawingFksToCols' : 'enableDrawingFksToCols'
-    ),
-    action: () =>
-      changeGraphConfigAttrValue({
-        path: 'link.isAttrToAttr',
-        value: !graphConfigData.value.link.isAttrToAttr,
-      }),
-  },
-  {
-    title: t(
-      graphConfigData.value.link.isHighlightAll
-        ? 'turnOffRelationshipHighlight'
-        : 'turnOnRelationshipHighlight'
-    ),
-    action: () =>
-      changeGraphConfigAttrValue({
-        path: 'link.isHighlightAll',
-        value: !graphConfigData.value.link.isHighlightAll,
-      }),
-  },
-  { title: t('export'), children: ERD_EXPORT_OPTS },
-])
-const entityOpts = computed(() =>
-  Object.values(ENTITY_OPT_TYPE_MAP).map((type) => ({
-    type,
-    title: t(type),
-    action: () => handleChooseNodeOpt({ type, node: activeCtxItem.value }),
-  }))
-)
-const linkOpts = computed(() => {
-  const { EDIT, REMOVE } = LINK_OPT_TYPE_MAP
-  const link = activeCtxItem.value
-  const opts = [
-    { title: t(EDIT), type: EDIT },
-    { title: t(REMOVE), type: REMOVE },
-  ]
-  if (link) {
-    opts.push(genCardinalityOpt(link))
-    const {
-      relationshipData: { src_attr_id, target_attr_id },
-    } = link
-    const colKeyCategories = colKeyCategoryMap.value[src_attr_id]
-    const refColKeyCategories = colKeyCategoryMap.value[target_attr_id]
-    if (!colKeyCategories.includes(CREATE_TBL_TOKEN_MAP.primaryKey))
-      opts.push(genOptionalityOpt({ link }))
-    if (!refColKeyCategories.includes(CREATE_TBL_TOKEN_MAP.primaryKey))
-      opts.push(genOptionalityOpt({ link, isForRefTbl: true }))
-  }
-  return opts.map((opt) => ({ ...opt, action: () => handleChooseLinkOpt(opt.type) }))
-})
-const ctxMenuItems = computed(() => {
-  switch (ctxMenuType.value) {
-    case DIAGRAM_CTX_TYPE_MAP.BOARD:
-      return boardOpts.value
-    case DIAGRAM_CTX_TYPE_MAP.NODE:
-      return entityOpts.value
-    case DIAGRAM_CTX_TYPE_MAP.LINK:
-      return linkOpts.value
-    default:
-      return []
-  }
-})
+
 const activeCtxItemId = computed(() => typy(activeCtxItem.value, 'id').safeString)
 const nodesHistory = computed(() => typy(props.erdTaskTmp, 'nodes_history').safeArray)
 const activeHistoryIdx = computed(() => typy(props.erdTaskTmp, 'active_history_idx').safeNumber)
@@ -215,7 +157,7 @@ watch(
   }
 )
 watch(showCtxMenu, (v) => {
-  if (!v) activeCtxItem.value = null
+  if (!v) activeCtxItem.value = {}
 })
 
 onBeforeMount(() => (graphConfigData.value = merge(graphConfigData.value, activeGraphConfig.value)))
@@ -225,41 +167,7 @@ function onRendered(diagram) {
   if (diagram.nodes.length) fitIntoView()
 }
 
-function handleDblClickNode(node) {
-  handleChooseNodeOpt({ type: ENTITY_OPT_TYPE_MAP.EDIT, node })
-}
-
-function genCardinalityOpt(link) {
-  const { SET_ONE_TO_ONE, SET_ONE_TO_MANY } = LINK_OPT_TYPE_MAP
-  const { ONLY_ONE, ZERO_OR_ONE } = MIN_MAX_CARDINALITY
-  const [src = ''] = link.relationshipData.type.split(':')
-  const optType = src === ONLY_ONE || src === ZERO_OR_ONE ? SET_ONE_TO_MANY : SET_ONE_TO_ONE
-  return { title: t(optType), type: optType }
-}
-
-function genOptionalityOpt({ link, isForRefTbl = false }) {
-  const { SET_MANDATORY, SET_FK_COL_OPTIONAL, SET_REF_COL_MANDATORY, SET_REF_COL_OPTIONAL } =
-    LINK_OPT_TYPE_MAP
-  const {
-    source,
-    target,
-    relationshipData: { src_attr_id, target_attr_id },
-  } = link
-  let node = source,
-    colId = src_attr_id,
-    optType = isForRefTbl ? SET_REF_COL_MANDATORY : SET_MANDATORY
-
-  if (isForRefTbl) {
-    node = target
-    colId = target_attr_id
-  }
-  if (erdHelper.isColMandatory({ node, colId }))
-    optType = isForRefTbl ? SET_REF_COL_OPTIONAL : SET_FK_COL_OPTIONAL
-
-  return { title: t(optType), type: optType }
-}
-
-function handleOpenCtxMenu({ e, type, item }) {
+function openCtxMenu({ e, type, item }) {
   menuX.value = e.clientX
   menuY.value = e.clientY
   ctxMenuType.value = type
@@ -267,105 +175,48 @@ function handleOpenCtxMenu({ e, type, item }) {
   showCtxMenu.value = true
 }
 
-function handleChooseNodeOpt({ type, node, skipZoom = false }) {
-  const { EDIT, REMOVE } = ENTITY_OPT_TYPE_MAP
-  switch (type) {
-    case EDIT: {
-      handleOpenEditor({ node, spec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS })
-      if (connId.value && !skipZoom)
-        // call in the next tick to ensure diagramDim height is up to date
-        nextTick(() => zoomIntoNode(node))
-
-      break
-    }
-    case REMOVE: {
-      const nodeMap = props.nodes.reduce((map, n) => {
-        if (n.id !== node.id) {
-          const fkMap = n.data.defs.key_category_map[CREATE_TBL_TOKEN_MAP.foreignKey]
-          if (!fkMap) map[n.id] = n
-          else {
-            const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
-              if (key.ref_tbl_id !== node.id) res[key.id] = key
-              return res
-            }, {})
-            map[n.id] = immutableUpdate(n, {
-              data: {
-                defs: {
-                  key_category_map: Object.keys(updatedFkMap).length
-                    ? { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: updatedFkMap } }
-                    : { $unset: [CREATE_TBL_TOKEN_MAP.foreignKey] },
-                },
-              },
-            })
-          }
-        }
-
-        return map
-      }, {})
-      closeEditor()
-      updateAndDrawNodes({ nodeMap })
-      break
-    }
-  }
+function handleOpenEditor({ node, spec = TABLE_STRUCTURE_SPEC_MAP.COLUMNS, skipZoom = false }) {
+  if (connId.value) {
+    const data = { active_entity_id: node.id, active_spec: spec }
+    if (props.graphHeightPct === 100) data.graph_height_pct = 40
+    ErdTaskTmp.update({ where: props.erdTask.id, data }).then(() => {
+      if (!skipZoom) zoomIntoNode(node)
+    })
+  } else
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+      text: [t('errors.requiredConn')],
+      type: SNACKBAR_TYPE_MAP.ERROR,
+    })
 }
 
-function handleChooseLinkOpt(type) {
-  const link = activeCtxItem.value
-  const {
-    EDIT,
-    REMOVE,
-    SET_ONE_TO_ONE,
-    SET_ONE_TO_MANY,
-    SET_MANDATORY,
-    SET_FK_COL_OPTIONAL,
-    SET_REF_COL_MANDATORY,
-    SET_REF_COL_OPTIONAL,
-  } = LINK_OPT_TYPE_MAP
-  switch (type) {
-    case EDIT:
-      handleOpenEditor({ node: link.source, spec: TABLE_STRUCTURE_SPEC_MAP.FK })
-      if (connId.value) nextTick(() => zoomIntoNode(link.source))
-      break
-    case REMOVE: {
-      let fkMap = typy(
-        props.nodeMap[link.source.id],
-        `data.defs.key_category_map[${CREATE_TBL_TOKEN_MAP.foreignKey}]`
-      ).safeObjectOrEmpty
-      fkMap = immutableUpdate(fkMap, { $unset: [link.id] })
-      const nodeMap = immutableUpdate(props.nodeMap, {
-        [link.source.id]: {
+function rmTbl(node) {
+  const nodeMap = props.nodes.reduce((map, n) => {
+    if (n.id !== node.id) {
+      const fkMap = n.data.defs.key_category_map[CREATE_TBL_TOKEN_MAP.foreignKey]
+      if (!fkMap) map[n.id] = n
+      else {
+        const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
+          if (key.ref_tbl_id !== node.id) res[key.id] = key
+          return res
+        }, {})
+        map[n.id] = immutableUpdate(n, {
           data: {
             defs: {
-              key_category_map: Object.keys(fkMap).length
-                ? { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: fkMap } }
+              key_category_map: Object.keys(updatedFkMap).length
+                ? { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: updatedFkMap } }
                 : { $unset: [CREATE_TBL_TOKEN_MAP.foreignKey] },
             },
           },
-        },
-      })
-      updateAndDrawNodes({ nodeMap })
-      break
+        })
+      }
     }
-    case SET_ONE_TO_MANY:
-    case SET_ONE_TO_ONE:
-    case SET_FK_COL_OPTIONAL:
-    case SET_MANDATORY:
-    case SET_REF_COL_OPTIONAL:
-    case SET_REF_COL_MANDATORY:
-      updateCardinality({ type, link })
-      break
-  }
+    return map
+  }, {})
+  closeEditor()
+  updateAndDrawNodes({ nodeMap })
 }
 
 function updateCardinality({ type, link }) {
-  const {
-    SET_ONE_TO_ONE,
-    SET_ONE_TO_MANY,
-    SET_MANDATORY,
-    SET_FK_COL_OPTIONAL,
-    SET_REF_COL_MANDATORY,
-    SET_REF_COL_OPTIONAL,
-  } = LINK_OPT_TYPE_MAP
   let nodeMap = props.nodeMap
   const { src_attr_id, target_attr_id } = link.relationshipData
   let method,
@@ -376,7 +227,7 @@ function updateCardinality({ type, link }) {
   switch (type) {
     case SET_ONE_TO_MANY:
     case SET_ONE_TO_ONE: {
-      method = toggleUnique
+      method = diagramUtils.toggleUnique
       /**
        * In an one to many relationship, FK is placed on the "many" side,
        * and the FK col can't be unique. On the other hand, one to one
@@ -401,14 +252,13 @@ function updateCardinality({ type, link }) {
     case SET_FK_COL_OPTIONAL:
     case SET_REF_COL_OPTIONAL:
     case SET_REF_COL_MANDATORY: {
-      method = toggleNotNull
+      method = diagramUtils.toggleNotNull
       if (type === SET_REF_COL_OPTIONAL || type === SET_REF_COL_MANDATORY) {
         nodeId = link.target.id
         node = props.nodeMap[nodeId]
         colId = target_attr_id
       }
       value = type === SET_MANDATORY || type === SET_REF_COL_MANDATORY
-
       break
     }
   }
@@ -416,67 +266,6 @@ function updateCardinality({ type, link }) {
     [nodeId]: { $set: method({ node, colId, value }) },
   })
   updateAndDrawNodes({ nodeMap })
-}
-
-/**
- * @param {object} param
- * @param {object} param.node - entity-diagram node
- * @param {string} param.colId - column id
- * @param {boolean} param.value - if it's true, add UQ key if not exists, otherwise remove UQ
- * @return {object} updated node
- */
-function toggleUnique({ node, colId, value }) {
-  const category = CREATE_TBL_TOKEN_MAP.uniqueKey
-  // check if column is already unique
-  const isUnique = erdHelper.areUniqueCols({ node, colIds: [colId] })
-  if (value && isUnique) return node
-  let keyMap = node.data.defs.key_category_map[category] || {}
-  // add UQ key
-  if (value) {
-    const newKey = erdHelper.genKey({
-      defs: node.data.defs,
-      category,
-      colId,
-    })
-    keyMap = immutableUpdate(keyMap, { $merge: { [newKey.id]: newKey } })
-  }
-  // remove UQ key
-  else
-    keyMap = immutableUpdate(keyMap, {
-      $unset: Object.values(keyMap).reduce((ids, k) => {
-        if (
-          isEqual(
-            k.cols.map((c) => c.id),
-            [colId]
-          )
-        )
-          ids.push(k.id)
-        return ids
-      }, []),
-    })
-
-  return immutableUpdate(node, {
-    data: {
-      defs: {
-        key_category_map: Object.keys(keyMap).length
-          ? { $merge: { [category]: keyMap } }
-          : { $unset: [category] },
-      },
-    },
-  })
-}
-
-/**
- * @param {object} param
- * @param {object} param.node - entity-diagram node
- * @param {string} param.colId - column id
- * @param {boolean} param.value - if it's true, turns on NOT NULL.
- * @return {object} updated node
- */
-function toggleNotNull({ node, colId, value }) {
-  return immutableUpdate(node, {
-    data: { defs: { col_map: { [colId]: { nn: { $set: value } } } } },
-  })
 }
 
 function assignCoord(nodeMap) {
@@ -557,11 +346,14 @@ function setZoom({ isFitIntoView: fitIntoView = false, customExtent, v, paddingP
   }
 }
 
+/**
+ * @public
+ */
 function updateNode(params) {
   entityDiagramRef.value.updateNode(params)
 }
 
-function handleCreateTable() {
+function createTbl() {
   if (connId.value) {
     const length = props.nodes.length
     const { genTblStructureData, genErdNode } = erdHelper
@@ -575,7 +367,6 @@ function handleCreateTable() {
       }),
       charsetCollationMap: charset_collation_map.value,
     })
-
     const { x, y, k } = panAndZoom.value
     const node = {
       ...genErdNode({ nodeData, highlightColor: dynamicColors(length) }),
@@ -590,24 +381,8 @@ function handleCreateTable() {
     }).then(() => {
       erdTaskService.updateNodesHistory(nodeMap)
       entityDiagramRef.value.addNode(node)
-      handleChooseNodeOpt({
-        type: ENTITY_OPT_TYPE_MAP.EDIT,
-        node,
-        skipZoom: true,
-      })
+      handleOpenEditor({ node, skipZoom: true })
     })
-  } else
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: [t('errors.requiredConn')],
-      type: SNACKBAR_TYPE_MAP.ERROR,
-    })
-}
-
-function handleOpenEditor({ node, spec }) {
-  if (connId.value) {
-    const data = { active_entity_id: node.id, active_spec: spec }
-    if (props.graphHeightPct === 100) data.graph_height_pct = 40
-    ErdTaskTmp.update({ where: props.erdTask.id, data })
   } else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.requiredConn')],
@@ -664,7 +439,7 @@ function addPlainIndex({ colId, node }) {
   })
 }
 
-function onCreateNewFk({ node, currentFkMap, newKey, refNode }) {
+function createNewFk({ node, currentFkMap, newKey, refNode }) {
   let nodeMap = props.nodeMap
 
   // entity-diagram doesn't generate composite FK,so both cols and ref_cols always have one item
@@ -715,6 +490,28 @@ function onCreateNewFk({ node, currentFkMap, newKey, refNode }) {
   }
 }
 
+function rmFk() {
+  const link = activeCtxItem.value
+  let fkMap = typy(
+    props.nodeMap[link.source.id],
+    `data.defs.key_category_map[${CREATE_TBL_TOKEN_MAP.foreignKey}]`
+  ).safeObjectOrEmpty
+
+  fkMap = immutableUpdate(fkMap, { $unset: [link.id] })
+  const nodeMap = immutableUpdate(props.nodeMap, {
+    [link.source.id]: {
+      data: {
+        defs: {
+          key_category_map: Object.keys(fkMap).length
+            ? { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: fkMap } }
+            : { $unset: [CREATE_TBL_TOKEN_MAP.foreignKey] },
+        },
+      },
+    },
+  })
+  updateAndDrawNodes({ nodeMap })
+}
+
 function onClickAutoArrange() {
   ErdTask.update({
     where: props.erdTask.id,
@@ -728,7 +525,7 @@ function immutableUpdateConfig(obj, path, value) {
   return updatedObj
 }
 
-function changeGraphConfigAttrValue({ path, value }) {
+function patchGraphConfig({ path, value }) {
   graphConfigData.value = immutableUpdateConfig(graphConfigData.value, path, value)
 }
 
@@ -755,11 +552,11 @@ defineExpose({ updateNode, getCanvas })
       :nodesHistory="nodesHistory"
       :activeHistoryIdx="activeHistoryIdx"
       @set-zoom="setZoom"
-      @on-create-table="handleCreateTable"
+      @on-create-table="createTbl"
       @on-undo="navHistory(activeHistoryIdx - 1)"
       @on-redo="navHistory(activeHistoryIdx + 1)"
       @click-auto-arrange="onClickAutoArrange"
-      @change-graph-config-attr-value="changeGraphConfigAttrValue"
+      @change-graph-config-attr-value="patchGraphConfig"
       @on-apply-script="applyScript"
     />
     <EntityDiagram
@@ -775,18 +572,18 @@ defineExpose({ updateNode, getCanvas })
       :tablesColNameMap="tablesColNameMap"
       :colKeyCategoryMap="colKeyCategoryMap"
       class="entity-diagram"
-      @on-rendered.once="onRendered"
-      @on-node-drag-end="onNodeDragEnd"
-      @dblclick="disabled ? null : handleDblClickNode($event)"
-      @on-create-new-fk="onCreateNewFk"
+      @on-rendered.once="onRendered($event)"
+      @on-node-drag-end="onNodeDragEnd($event)"
+      @dblclick="disabled ? null : handleOpenEditor({ node: $event })"
+      @on-create-new-fk="createNewFk($event)"
       @on-node-contextmenu="
-        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.NODE, e: $event.e, item: $event.node })
+        openCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.NODE, e: $event.e, item: $event.node })
       "
       @on-link-contextmenu="
-        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.LINK, e: $event.e, item: $event.link })
+        openCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.LINK, e: $event.e, item: $event.link })
       "
       @on-board-contextmenu="
-        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.BOARD, e: $event, item: { id: DIAGRAM_ID } })
+        openCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.BOARD, e: $event, item: { id: DIAGRAM_ID } })
       "
     >
       <template #entity-setting-btn="{ node, isHovering }">
@@ -800,24 +597,30 @@ defineExpose({ updateNode, getCanvas })
           density="compact"
           color="primary"
           :disabled="disabled"
-          @click.stop="
-            handleOpenCtxMenu({ e: $event, type: DIAGRAM_CTX_TYPE_MAP.NODE, item: node })
-          "
+          @click.stop="openCtxMenu({ e: $event, type: DIAGRAM_CTX_TYPE_MAP.NODE, item: node })"
         >
           <VIcon size="14" icon="mxs:settings" />
         </VBtn>
       </template>
     </EntityDiagram>
-    <CtxMenu
-      v-if="activeCtxItemId"
-      :key="activeCtxItemId"
+    <DiagramCtxMenu
       v-model="showCtxMenu"
-      :items="ctxMenuItems"
       :target="[menuX, menuY]"
-      transition="slide-y-transition"
-      content-class="full-border"
-      :activator="`#${activeCtxItemId}`"
-      @item-click="$event.action()"
+      :activeCtxItem="activeCtxItem"
+      :activeCtxItemId="activeCtxItemId"
+      :type="ctxMenuType"
+      :graphConfig="graphConfigData"
+      :exportOptions="ERD_EXPORT_OPTS"
+      :colKeyCategoryMap="colKeyCategoryMap"
+      @create-tbl="createTbl($event)"
+      @fit-into-view="fitIntoView($event)"
+      @auto-arrange-erd="onClickAutoArrange($event)"
+      @patch-graph-config="patchGraphConfig($event)"
+      @edit-tbl="handleOpenEditor({ node: activeCtxItem })"
+      @rm-tbl="rmTbl(activeCtxItem)"
+      @edit-fk="handleOpenEditor({ node: activeCtxItem.source, spec: TABLE_STRUCTURE_SPEC_MAP.FK })"
+      @rm-fk="rmFk()"
+      @update-cardinality="updateCardinality($event)"
     />
   </div>
 </template>
