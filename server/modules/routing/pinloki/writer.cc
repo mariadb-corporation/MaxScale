@@ -18,6 +18,7 @@
 #include "inventory.hh"
 #include "pinloki.hh"
 #include "find_gtid.hh"
+#include "transaction.hh"
 #include <maxbase/hexdump.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/threadpool.hh>
@@ -45,6 +46,8 @@ Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWrite
     , m_details(details)
 {
     m_inventory.set_is_writer_connected(false);
+
+    perform_transaction_recovery(inv);
 
     m_current_gtid_list = find_last_gtid_list(m_inventory);
     m_inventory.config().save_rpl_state(m_current_gtid_list);

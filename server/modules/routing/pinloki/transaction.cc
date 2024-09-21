@@ -53,6 +53,11 @@ void append_file(std::ifstream& ifs, std::ofstream& ofs, int64_t out_offset = -1
     ofs << ifs.rdbuf();
     ofs.flush();
 }
+
+bool comp_paths(const std::string& p1, const std::string& p2)
+{
+    return clean_up_pathname(p1) == clean_up_pathname(p2);
+}
 }
 
 namespace pinloki
@@ -117,7 +122,8 @@ TrxFile::TrxFile(InventoryWriter* pInv, Mode mode)
 {
     if (mode == Recover)
     {
-        // recover();
+        WritePosition pos;
+        recover(pos);
     }
     else
     {
@@ -163,6 +169,23 @@ WritePosition& TrxFile::recover(WritePosition& pos)
     std::string target_name;
     int64_t start_file_pos;
     summary >> target_name >> start_file_pos;
+
+    if (!pos.file.is_open())
+    {
+        auto last_file_name = last_string(m_inventory.file_names());
+        if (!comp_paths(target_name, last_file_name))
+        {
+            MXB_SERROR("Binlog transaction recovery. The last binlog file '"
+                       << last_file_name << "' is not the expected '" << target_name
+                       << "'. Removing temporary transaction files");
+            remove_dir_contents(m_inventory.config().trx_dir().c_str());
+            return pos;
+        }
+
+        pos.name = target_name;
+        pos.write_pos = start_file_pos;
+        pos.file.open(pos.name, std::ios_base::in | std::ios_base::out);
+    }
 
     std::ifstream trx_file(m_trx_binlog_filename);
     trx_file.seekg(0, std::ios_base::end);
