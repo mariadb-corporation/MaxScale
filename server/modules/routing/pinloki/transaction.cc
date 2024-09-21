@@ -204,18 +204,29 @@ bool Transaction::add_event(maxsql::RplEvent& rpl_event)
     const char* ptr = rpl_event.pBuffer();
     m_trx_buffer.insert(m_trx_buffer.end(), ptr, ptr + rpl_event.buffer_size());
 
+    if (m_trx_buffer.size() >= size_t(m_inventory.config().trx_buffer_size()))
+    {
+        if (!m_trx_file)
+        {
+            m_trx_file = std::make_unique<TrxFile>(&m_inventory, TrxFile::Write);
+        }
+
+        m_trx_file->add_log_data(m_trx_buffer.data(), m_trx_buffer.size());
+        m_trx_buffer.clear();
+        // TODO handle dynamic decrease in config().trx_buffer_size()
+    }
+
     return true;
 }
 
 int64_t Transaction::size() const
 {
-    return m_trx_buffer.size();
+    return m_trx_buffer.size() + (m_trx_file ? m_trx_file->size() : 0);
 }
 
 void Transaction::begin(const maxsql::Gtid& gtid)
 {
     mxb_assert(m_in_transaction == false);
-
     m_in_transaction = true;
 }
 
@@ -223,14 +234,27 @@ WritePosition& Transaction::commit(WritePosition& pos)
 {
     mxb_assert(m_in_transaction == true);
 
-    pos.file.seekp(pos.write_pos);
-    pos.file.write(m_trx_buffer.data(), m_trx_buffer.size());
+    if (m_trx_file)
+    {
+        if (!m_trx_buffer.empty())
+        {
+            m_trx_file->add_log_data(m_trx_buffer.data(), m_trx_buffer.size());
+        }
 
-    pos.write_pos = pos.file.tellp();
-    pos.file.flush();
+        m_trx_file->commit(pos);
+        m_trx_file.reset();
+    }
+    else
+    {
+        pos.file.seekp(pos.write_pos);
+        pos.file.write(m_trx_buffer.data(), m_trx_buffer.size());
 
-    m_in_transaction = false;
+        pos.write_pos = pos.file.tellp();
+        pos.file.flush();
+    }
+
     m_trx_buffer.clear();
+    m_in_transaction = false;
 
     return pos;
 }
