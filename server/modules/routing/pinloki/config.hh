@@ -70,6 +70,9 @@ public:
     // Full path to the trx dir
     std::string trx_dir() const;
 
+    // Max in-memory transaction buffer size.
+    int64_t trx_buffer_size() const;
+
     /** Make a full path. This prefixes "name" with m_binlog_dir/,
      *  unless the first character is a forward slash.
      */
@@ -119,6 +122,8 @@ private:
     std::string m_master_ini_path;
     /** Server id reported to the Master */
     int64_t m_server_id;
+    /** In-memory transaction buffer size */
+    int64_t m_trx_buffer_size;
     /** uuid reported to the server */
     std::string m_uuid = gen_uuid();
     /** uuid reported to the slaves */
@@ -185,5 +190,10 @@ private:
 inline std::string Config::trx_dir() const
 {
     return m_trx_dir;
+}
+
+inline int64_t Config::trx_buffer_size() const
+{
+    return m_trx_buffer_size;
 }
 }

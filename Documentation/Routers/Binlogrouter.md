@@ -266,6 +266,20 @@ Directory where binary log files are stored.
 The server ID that MaxScale uses when connecting to the master and when serving
 binary logs to the slaves.
 
+### `transaction_buffer_size`
+
+- **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 200 MiB
+
+The in-memory transaction buffer size. If a transaction is larger than this
+size, the file system is temporarily used to save and process the transaction.
+
+There is one transaction buffer per binlog instance, i.e., usually one.
+If you expect large transactions to be the norm a larger buffer size will
+be more performant.
+
 ### `net_timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)

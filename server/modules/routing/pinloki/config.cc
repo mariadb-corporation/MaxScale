@@ -42,6 +42,10 @@ cfg::ParamPath s_datadir(
 cfg::ParamCount s_server_id(
     &s_spec, "server_id", "Server ID sent to both slaves and the master", 1234);
 
+cfg::ParamSize s_trx_buffer_size(
+    &s_spec, "transaction_buffer_size", "In-memory transaction buffer size",
+    200l * 1024 * 1024, cfg::Param::AT_RUNTIME);
+
 cfg::ParamSeconds s_net_timeout(
     &s_spec, "net_timeout", "Network timeout", cfg::INTERPRET_AS_SECONDS, 10s);
 
@@ -275,6 +279,7 @@ Config::Config(const std::string& name, std::function<bool()> callback)
 {
     add_native(&Config::m_binlog_dir, &s_datadir);
     add_native(&Config::m_server_id, &s_server_id);
+    add_native(&Config::m_trx_buffer_size, &s_trx_buffer_size);
     add_native(&Config::m_net_timeout, &s_net_timeout);
     add_native(&Config::m_select_master, &s_select_master);
     add_native(&Config::m_expire_log_duration, &s_expire_log_duration);
