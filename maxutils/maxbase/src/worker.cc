@@ -920,8 +920,6 @@ void Worker::tick()
 {
     int64_t now = WorkerLoad::get_time_ms(mxb::Clock::now());
 
-    vector<DCall*> repeating_calls;
-
     auto i = m_sorted_calls.begin();
 
     // i->first is the time when the first call should be invoked.
@@ -937,7 +935,7 @@ void Worker::tick()
 
         if (pCall->call(Worker::Call::EXECUTE))
         {
-            repeating_calls.push_back(pCall);
+            m_repeating_calls.push_back(pCall);
         }
         else
         {
@@ -949,13 +947,15 @@ void Worker::tick()
         i = m_sorted_calls.begin();
     }
 
-    for (auto i = repeating_calls.begin(); i != repeating_calls.end(); ++i)
+    for (auto i = m_repeating_calls.begin(); i != m_repeating_calls.end(); ++i)
     {
         DCall* pCall = *i;
 
         m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
         m_calls.insert(std::make_pair(pCall->id(), pCall));
     }
+
+    m_repeating_calls.clear();
 
     adjust_timer();
 }
@@ -1049,6 +1049,12 @@ bool Worker::cancel_dcall(DCId id)
 
         mxb_assert(found);
     }
+    else if (DCall* pCall = get_repeating_dcall(id))
+    {
+        pCall->call(Worker::Call::CANCEL);
+        delete pCall;
+        found = true;
+    }
     else
     {
         mxb_assert_message(!true,
@@ -1061,11 +1067,26 @@ bool Worker::cancel_dcall(DCId id)
     return found;
 }
 
+Worker::DCall* Worker::get_repeating_dcall(DCId id)
+{
+    DCall* pCall = nullptr;
+    auto it = std::find_if(m_repeating_calls.begin(), m_repeating_calls.end(), [&](const auto& pCall){
+        return pCall->id() == id;
+    });
+
+    if (it != m_repeating_calls.end())
+    {
+        pCall = *it;
+        m_repeating_calls.erase(it);
+    }
+
+    return pCall;
+}
+
 void Worker::lcall(std::function<void ()>&& f)
 {
     m_lcalls.emplace_back(std::move(f));
 }
-
 }
 
 

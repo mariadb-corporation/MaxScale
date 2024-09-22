@@ -126,12 +126,31 @@ int run()
     TimerTest t5(&w, &rv, 600);
 
     w.execute([&]() {
-                  w.dcall(t1.delay(), &TimerTest::tick, &t1);
-                  w.dcall(t2.delay(), &TimerTest::tick, &t2);
-                  w.dcall(t3.delay(), &TimerTest::tick, &t3);
-                  w.dcall(t4.delay(), &TimerTest::tick, &t4);
-                  w.dcall(t5.delay(), &TimerTest::tick, &t5);
-              }, mxb::Worker::EXECUTE_QUEUED);
+        w.dcall(t1.delay(), &TimerTest::tick, &t1);
+        w.dcall(t2.delay(), &TimerTest::tick, &t2);
+        w.dcall(t3.delay(), &TimerTest::tick, &t3);
+        w.dcall(t4.delay(), &TimerTest::tick, &t4);
+        w.dcall(t5.delay(), &TimerTest::tick, &t5);
+
+        // MXS-5248: Check that dcalls being processed get removed by cancel_dcall.
+        std::vector<Worker::DCId> ids;
+
+        for (int i = 0; i < 100; i++)
+        {
+            ids.push_back(w.dcall(1ms, [](){
+                return true;
+            }));
+        }
+
+        ids.push_back(w.dcall(1ms, [&w, ids](){
+            for (auto id : ids)
+            {
+                w.cancel_dcall(id);
+            }
+
+            return false;
+        }));
+    }, mxb::Worker::EXECUTE_QUEUED);
 
     w.run();
 
