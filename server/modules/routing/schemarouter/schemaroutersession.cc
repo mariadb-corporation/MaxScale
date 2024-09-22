@@ -237,7 +237,10 @@ bool SchemaRouterSession::wait_for_init(GWBUF& packet)
              * This state is possible if a client connects with a default database
              * and the shard map was found from the router cache
              */
-            handle_default_db();
+            lcall([this](){
+                handle_default_db();
+                return true;
+            });
         }
     }
 
@@ -375,7 +378,10 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, const mxs::Reply
 
             if (m_state & INIT_USE_DB)
             {
-                handle_default_db();
+                lcall([this](){
+                    handle_default_db();
+                    return true;
+                });
             }
             else if (m_queue.size())
             {
@@ -770,7 +776,7 @@ void SchemaRouterSession::handle_default_db()
             sprintf(errmsg + strlen(errmsg), " ([%" PRIu64 "]: DB not found on connect)", m_pSession->id());
         }
 
-        m_pSession->kill(errmsg);
+        throw mxb::Exception(errmsg);
     }
 }
 
