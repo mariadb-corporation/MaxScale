@@ -15,7 +15,7 @@ requirements are as follows:
 * pcre2
 * jansson
 * libmicrohttpd
-* Node.js 14 or newer (required by MaxCtrl and the GUI)
+* Node.js 14 or newer for building MaxCtrl and the GUI (webpack), Node.js 10 or newer for running MaxCtrl
 
 This is the minimum set of requirements that must be met to build the MaxScale
 core package. Some modules in MaxScale require optional extra dependencies.
