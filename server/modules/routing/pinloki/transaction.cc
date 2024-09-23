@@ -102,7 +102,7 @@ public:
     int64_t size() const;
 
     // Writes the summary file and calls recover().
-    WritePosition& commit(WritePosition& pos);
+    WritePosition& commit(WritePosition& pos, const maxsql::Gtid& gtid);
 
 private:
     WritePosition& recover(WritePosition& pos);
@@ -144,13 +144,13 @@ int64_t TrxFile::size() const
     return m_size;
 }
 
-WritePosition& TrxFile::commit(WritePosition& pos)
+WritePosition& TrxFile::commit(WritePosition& pos, const maxsql::Gtid& gtid)
 {
     m_trx_binlog.close();
 
     auto tmp_name = m_summary_filename + ".tmp";
     std::ofstream tmp_summary(tmp_name);
-    tmp_summary << pos.name << ' ' << pos.write_pos;
+    tmp_summary << pos.name << ' ' << pos.write_pos << ' ' << gtid;
     tmp_summary.flush();
     rename(tmp_name.c_str(), m_summary_filename.c_str());
 
@@ -168,7 +168,10 @@ WritePosition& TrxFile::recover(WritePosition& pos)
 
     std::string target_name;
     int64_t start_file_pos;
-    summary >> target_name >> start_file_pos;
+    std::string gtid_str;
+    maxsql::Gtid gtid;
+    summary >> target_name >> start_file_pos >> gtid_str;
+    gtid.from_string(gtid_str);
 
     if (!pos.file.is_open())
     {
@@ -250,6 +253,7 @@ int64_t Transaction::size() const
 void Transaction::begin(const maxsql::Gtid& gtid)
 {
     mxb_assert(m_in_transaction == false);
+    m_gtid = gtid;
     m_in_transaction = true;
 }
 
@@ -264,7 +268,7 @@ WritePosition& Transaction::commit(WritePosition& pos)
             m_trx_file->add_log_data(m_trx_buffer.data(), m_trx_buffer.size());
         }
 
-        m_trx_file->commit(pos);
+        m_trx_file->commit(pos, m_gtid);
         m_trx_file.reset();
     }
     else

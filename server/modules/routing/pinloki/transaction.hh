@@ -44,6 +44,7 @@ private:
     InventoryWriter&  m_inventory;
     std::vector<char> m_trx_buffer;
     bool              m_in_transaction = false;
+    maxsql::Gtid      m_gtid;
 
     std::unique_ptr<TrxFile> m_trx_file;
 };
