@@ -63,6 +63,8 @@ uint32_t get_parser_trx_type_mask(GWBUF* pBuf)
 namespace
 {
 
+const uint32_t MASK_AUTOCOMMIT_ON = QUERY_TYPE_COMMIT | QUERY_TYPE_ENABLE_AUTOCOMMIT;
+
 struct test_case
 {
     const char* zStmt;
@@ -130,6 +132,38 @@ struct test_case
      | QUERY_TYPE_DISABLE_AUTOCOMMIT},
     {"SET @@GLOBAL . AUTOCOMMIT=0",
      0},
+
+    {
+        "set tx_isolation='REPEATABLE-READ',autocommit=1;", MASK_AUTOCOMMIT_ON
+    },
+    {
+        "set tx_isolation = 'REPEATABLE-READ' , autocommit = 1;", MASK_AUTOCOMMIT_ON
+    },
+    {
+        "set tx_isolation = 'REPEATABLE-READ', autocommit = 1;", MASK_AUTOCOMMIT_ON
+    },
+    {
+        "set tx_isolation = 'REPEATABLE-READ' ,autocommit = 1;", MASK_AUTOCOMMIT_ON
+    },
+    {
+        "set autocommit=1,tx_isolation='REPEATABLE-READ';", MASK_AUTOCOMMIT_ON
+    },
+    // MXS-5295: qc_sqlite classifies this wrong (probably due to SET NAMES) and doesn't see the autocommit.
+    // Once the parsing in qc_sqlite is fixed, uncomment these test cases.
+    // {
+    //     "SET  names UTF8MB4,autocommit=1,tx_isolation='REPEATABLE-READ',session_track_schema=1,"
+    //     "session_track_system_variables=IF(@@session_track_system_variables = '*', '*', "
+    //     "IF(@@session_track_system_variables = '', 'autocommit,tx_isolation',"
+    //     "CONCAT(@@session_track_system_variables,',autocommit,tx_isolation')));",
+    //     MASK_AUTOCOMMIT_ON
+    // },
+    // {
+    //     "SET  names UTF8MB4,tx_isolation='REPEATABLE-READ',session_track_schema=1,"
+    //     "session_track_system_variables=IF(@@session_track_system_variables = '*', '*',"
+    //     " IF(@@session_track_system_variables = '', 'autocommit,tx_isolation',"
+    //     "CONCAT(@@session_track_system_variables,',autocommit,tx_isolation'))),autocommit=1;",
+    //     MASK_AUTOCOMMIT_ON
+    // },
 };
 
 const size_t N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
