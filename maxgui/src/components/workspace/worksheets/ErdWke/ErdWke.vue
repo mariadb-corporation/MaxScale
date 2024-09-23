@@ -27,9 +27,9 @@ const props = defineProps({
 })
 
 const diagramCtrRef = ref(null)
+const entityEditorCtrRef = ref(null)
 const scriptName = ref('')
 const scriptGeneratedTime = ref(null)
-const formValidity = ref(true)
 
 const store = useStore()
 const typy = useTypy()
@@ -85,7 +85,6 @@ const connId = computed(() => typy(conn.value, 'id').safeString)
 const activeNodeData = computed(
   () => typy(nodeMap.value, `[${activeEntityId.value}].data`).safeObjectOrEmpty
 )
-const isDiagramDisabled = computed(() => Boolean(!formValidity.value))
 const actionName = computed(
   () => `Apply script ${scriptName.value} at ${scriptGeneratedTime.value}`
 )
@@ -156,9 +155,14 @@ function updateNodeData(data) {
   erdTaskService.updateNodesHistory(nodeMap.value)
   updateDiagramNode({ id, data })
 }
-
-function setFormValidity(v) {
-  formValidity.value = v
+/**
+ * Used to prevent the active entity editor from being closed or
+ * having its data changed to another entity if the form is invalid.
+ */
+async function validateEntityEditor() {
+  return activeEntityId.value
+    ? await typy(entityEditorCtrRef.value, 'validate').safeFunction()
+    : true
 }
 </script>
 
@@ -176,7 +180,6 @@ function setFormValidity(v) {
       <DiagramCtr
         ref="diagramCtrRef"
         :key="erdTaskKey"
-        :disabled="isDiagramDisabled"
         :dim="erdDim"
         :graphHeightPct="graphHeightPct"
         :erdTask="erdTask"
@@ -190,6 +193,7 @@ function setFormValidity(v) {
         :refTargetMap="refTargetMap"
         :tablesColNameMap="tablesColNameMap"
         :applyScript="applyScript"
+        :validateEntityEditor="validateEntityEditor"
         @on-export-script="exportScript()"
         @on-export-as-jpeg="exportAsJpeg()"
         @on-copy-script-to-clipboard="copyScriptToClipboard()"
@@ -198,6 +202,7 @@ function setFormValidity(v) {
     <template #pane-right>
       <EntityEditorCtr
         v-if="activeEntityId"
+        ref="entityEditorCtrRef"
         :dim="editorDim"
         :data="activeNodeData"
         :taskId="taskId"
@@ -206,7 +211,6 @@ function setFormValidity(v) {
         :schemas="schemas"
         :erdTaskTmp="erdTaskTmp"
         @change="updateNodeData($event)"
-        @is-form-valid="setFormValidity($event)"
       />
     </template>
   </ResizablePanels>

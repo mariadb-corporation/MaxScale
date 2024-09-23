@@ -98,7 +98,6 @@ describe(`ErdWke`, () => {
   it('Should pass expected data to DiagramCtr', () => {
     wrapper = mountFactory()
     const {
-      disabled,
       dim,
       graphHeightPct,
       erdTask,
@@ -112,8 +111,8 @@ describe(`ErdWke`, () => {
       refTargetMap,
       tablesColNameMap,
       applyScript,
+      validateEntityEditor,
     } = wrapper.findComponent({ name: 'DiagramCtr' }).vm.$props
-    expect(disabled).toBe(wrapper.vm.isDiagramDisabled)
     expect(dim).toStrictEqual(wrapper.vm.erdDim)
     expect(graphHeightPct).toBe(wrapper.vm.graphHeightPct)
     expect(erdTask).toStrictEqual(wrapper.vm.erdTask)
@@ -127,6 +126,7 @@ describe(`ErdWke`, () => {
     expect(refTargetMap).toStrictEqual(wrapper.vm.refTargetMap)
     expect(tablesColNameMap).toStrictEqual(wrapper.vm.tablesColNameMap)
     expect(applyScript).toStrictEqual(wrapper.vm.applyScript)
+    expect(validateEntityEditor).toStrictEqual(wrapper.vm.validateEntityEditor)
   })
 
   it('Should pass expected data to EntityEditorCtr', () => {
@@ -165,19 +165,12 @@ describe(`ErdWke`, () => {
     expect(spy).toHaveBeenCalledOnce()
   })
 
-  it.each`
-    event              | eventData | handler
-    ${'change'}        | ${{}}     | ${'updateNodeData'}
-    ${'is-form-valid'} | ${true}   | ${'setFormValidity'}
-  `(
-    `Should call $handler when $event is emitted from EntityEditorCtr`,
-    async ({ handler, event, eventData }) => {
-      wrapper = mountFactory()
-      const spy = vi.spyOn(wrapper.vm, handler)
-      wrapper.findComponent({ name: 'EntityEditorCtr' }).vm.$emit(event, eventData)
-      expect(spy).toHaveBeenNthCalledWith(1, eventData)
-    }
-  )
+  it(`Should call updateNodeData when change is emitted from EntityEditorCtr`, () => {
+    wrapper = mountFactory()
+    const spy = vi.spyOn(wrapper.vm, 'updateNodeData')
+    wrapper.findComponent({ name: 'EntityEditorCtr' }).vm.$emit('change', {})
+    expect(spy).toHaveBeenNthCalledWith(1, {})
+  })
 
   it('Should call exeDdlScript service when onExecuteScript function is called', async () => {
     wrapper = mountFactory()

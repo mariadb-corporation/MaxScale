@@ -29,8 +29,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['change'])
 
-const stagingData = ref(null)
-
 const {
   lodash: { keyBy, isEqual, cloneDeep },
 } = useHelpers()
@@ -39,6 +37,7 @@ const store = useStore()
 const { t } = useI18n()
 
 const editorRef = ref(null)
+const stagingData = ref(null)
 
 const lookupTables = computed(() => keyBy(props.tables, 'id'))
 const connReqData = computed(() => ({
@@ -84,18 +83,24 @@ function watch_stagingData() {
   unwatch_stagingData = watch(stagingData, (data) => emit('change', data), { deep: true })
 }
 
-async function close() {
-  if (await editorRef.value.validate())
-    ErdTaskTmp.update({
-      where: props.taskId,
-      data: { graph_height_pct: 100, active_entity_id: '' },
-    })
+async function validate() {
+  if (await editorRef.value.validate()) return true
   else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.requiredFields')],
       type: SNACKBAR_TYPE_MAP.ERROR,
     })
 }
+
+async function close() {
+  if (await validate())
+    ErdTaskTmp.update({
+      where: props.taskId,
+      data: { graph_height_pct: 100, active_entity_id: '' },
+    })
+}
+
+defineExpose({ validate })
 </script>
 
 <template>

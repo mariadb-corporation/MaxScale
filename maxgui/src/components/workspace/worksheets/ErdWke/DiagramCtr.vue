@@ -28,7 +28,6 @@ import { TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 import html2canvas from 'html2canvas'
 
 const props = defineProps({
-  disabled: { type: Boolean, required: true },
   dim: { type: Object, required: true },
   graphHeightPct: { type: Number, required: true },
   erdTask: { type: Object, required: true },
@@ -42,6 +41,7 @@ const props = defineProps({
   refTargetMap: { type: Object, required: true },
   tablesColNameMap: { type: Object, required: true },
   applyScript: { type: Function, required: true },
+  validateEntityEditor: { type: Function, required: true },
 })
 const emit = defineEmits(['on-copy-script-to-clipboard', 'on-export-script', 'on-export-as-jpeg'])
 
@@ -236,49 +236,57 @@ function patchGraphConfig({ path, value }) {
   graphConfigData.value = utils.immutableUpdateConfig(graphConfigData.value, path, value)
 }
 
-function handleOpenEditor({ node, spec = TABLE_STRUCTURE_SPEC_MAP.COLUMNS, skipZoom = false }) {
-  if (connId.value) {
-    const data = { active_entity_id: node.id, active_spec: spec }
-    if (props.graphHeightPct === 100) data.graph_height_pct = 40
-    ErdTaskTmp.update({ where: props.erdTask.id, data }).then(() => {
-      if (!skipZoom) zoomIntoNode(node)
-    })
-  } else
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: [t('errors.requiredConn')],
-      type: SNACKBAR_TYPE_MAP.ERROR,
-    })
+async function handleOpenEditor({
+  node,
+  spec = TABLE_STRUCTURE_SPEC_MAP.COLUMNS,
+  skipZoom = false,
+}) {
+  const isValid = await props.validateEntityEditor()
+  if (isValid)
+    if (connId.value) {
+      const data = { active_entity_id: node.id, active_spec: spec }
+      if (props.graphHeightPct === 100) data.graph_height_pct = 40
+      ErdTaskTmp.update({ where: props.erdTask.id, data }).then(() => {
+        if (!skipZoom) zoomIntoNode(node)
+      })
+    } else
+      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+        text: [t('errors.requiredConn')],
+        type: SNACKBAR_TYPE_MAP.ERROR,
+      })
 }
 
 /**
  * Add a new table node to nodeMap
  */
 async function addTblNode() {
-  if (connId.value) {
-    await schemaInfoService.querySuppData({
-      connId: connId.value,
-      config: activeRequestConfig.value,
-    })
-    const node = utils.genTblNode({
-      nodes: props.nodes,
-      schemas: props.schemas,
-      charsetCollationMap: charset_collation_map.value,
-      panAndZoom: panAndZoom.value,
-    })
-    const nodeMap = immutableUpdate(props.nodeMap, { $merge: { [node.id]: node } })
-    ErdTask.update({
-      where: props.erdTask.id,
-      data: { nodeMap },
-    }).then(() => {
-      erdTaskService.updateNodesHistory(nodeMap)
-      entityDiagramRef.value.addNode(node)
-      handleOpenEditor({ node, skipZoom: true })
-    })
-  } else
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: [t('errors.requiredConn')],
-      type: SNACKBAR_TYPE_MAP.ERROR,
-    })
+  const isValid = await props.validateEntityEditor()
+  if (isValid)
+    if (connId.value) {
+      await schemaInfoService.querySuppData({
+        connId: connId.value,
+        config: activeRequestConfig.value,
+      })
+      const node = utils.genTblNode({
+        nodes: props.nodes,
+        schemas: props.schemas,
+        charsetCollationMap: charset_collation_map.value,
+        panAndZoom: panAndZoom.value,
+      })
+      const nodeMap = immutableUpdate(props.nodeMap, { $merge: { [node.id]: node } })
+      ErdTask.update({
+        where: props.erdTask.id,
+        data: { nodeMap },
+      }).then(async () => {
+        erdTaskService.updateNodesHistory(nodeMap)
+        entityDiagramRef.value.addNode(node)
+        await handleOpenEditor({ node, skipZoom: true })
+      })
+    } else
+      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+        text: [t('errors.requiredConn')],
+        type: SNACKBAR_TYPE_MAP.ERROR,
+      })
 }
 
 function handleRmTblNode(node) {
@@ -352,7 +360,7 @@ defineExpose({ updateNode, getCanvas })
       class="entity-diagram"
       @on-rendered.once="onRendered($event)"
       @on-node-drag-end="onNodeDragEnd($event)"
-      @dblclick="disabled ? null : handleOpenEditor({ node: $event })"
+      @dblclick="handleOpenEditor({ node: $event })"
       @on-create-new-fk="handleAddFk($event)"
       @contextmenu="openCtxMenu($event)"
     >
@@ -366,7 +374,6 @@ defineExpose({ updateNode, getCanvas })
           variant="text"
           density="compact"
           color="primary"
-          :disabled="disabled"
           @click.stop="openCtxMenu({ e: $event, type: NODE, item: node })"
         >
           <VIcon size="14" icon="mxs:settings" />

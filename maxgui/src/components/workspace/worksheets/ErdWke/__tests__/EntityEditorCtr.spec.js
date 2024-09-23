@@ -140,4 +140,18 @@ describe(`EntityEditorCtr`, () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.emitted('change')[0][0]).toStrictEqual(wrapper.vm.stagingData)
   })
+
+  it('Should expose validate function', () => {
+    // Mock a parent component
+    const ParentComponent = {
+      template: `<ChildComponent ref="childRef" v-bind="propsStub" />`,
+      components: { ChildComponent: EntityEditorCtr },
+      data: () => ({ propsStub }),
+    }
+
+    wrapper = mount(ParentComponent, { shallow: false })
+    const exposedFunctions = wrapper.vm.$refs.childRef
+
+    expect(typeof exposedFunctions.validate).toBe('function')
+  })
 })
