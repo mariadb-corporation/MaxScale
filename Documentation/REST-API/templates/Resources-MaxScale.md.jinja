@@ -433,3 +433,47 @@ GET /v1/maxscale/query_classifier/classify?sql=SELECT+1
 ```javascript
 {{get("/v1/maxscale/query_classifier/classify?sql=SELECT+1")}}
 ```
+
+## Dump query classifier cache
+
+```
+POST /v1/maxscale/query_classifier/dump
+```
+
+Initiates the dumping of the query classifier cache. The request body
+must be a JSON object consisting of the following fields:
+
+* `path`
+    * The path of the directory where the dump should be saved. This is a mandatory field.
+
+* `format`
+  * Specifies the format of the dump. Allowed values are `json`, `pretty_json` and `json_lines`. This is an optional field and the default is 'json'.
+
+Here is an example request body:
+```
+{
+    "path": "/tmp",
+    "format": "pretty_json"
+}
+```
+#### Response
+
+The dumping is successfully initiated:
+
+`Status: 200 OK`
+```
+{
+  data: {
+    attributes: { path: '/tmp/qc_dump-2024-09-23_11-50-02.jsonl' },
+    id: 'qc_dump'
+  },
+  links: {
+    self: 'http://127.0.0.1:8989/v1/maxscale/query_classifier/cache/dump/'
+  }
+}
+```
+The dump is written to a temporary file in the specified directory.
+At the end the file is renamed to the name returned in the response.
+Thus, if the file is immediately checked for, it may not yet be
+present.
+
