@@ -28,6 +28,16 @@ By default, MaxScale no longer generates a core file when it crashes.
 Please see [core_file](../Getting-Started/Configuration-Guide.md#core_file)
 for more information.
 
+### [MXS-4899](https://jira.mariadb.org/browse/MXS-4899) Make it possible to dump the query classifier cache to a file
+
+Using maxctrl it is now possible to dump the content of the query classifier
+cache to a file. The cache can be dumped as json, as pretty formatted json
+and as json lines, i.e. as json objects separated by a newline.
+```
+$ maxctrl create qc_dump --format=json /tmp
+/tmp/qc_dump-2024-09-23_13-00-30.json
+```
+
 ### [MXS-4699](https://jira.mariadb.org/browse/MXS-4699) Add global setting require_secure_transport
 
 The global setting

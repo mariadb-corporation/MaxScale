@@ -2,6 +2,9 @@
 
 ## MariaDB MaxScale 25.02
 
+* It is now possible to dump the content of the query classifier cache
+  using maxctrl.
+
 * Listeners and servers support zero-configuration SSL, as described
   [here](https://mariadb.org/mission-impossible-zero-configuration-ssl/).
   See [configuration guide](Getting-Started/Configuration-Guide.md#TLS/SSL-encryption)
