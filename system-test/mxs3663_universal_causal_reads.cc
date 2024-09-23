@@ -127,27 +127,29 @@ void test_queries(TestConnections& test, const char* func,
 
 void test_no_trx(TestConnections& test)
 {
-    test_queries(test, __func__, [&](Connection& conn, const std::string& table, const std::string& value){
-        maybe_ok_query(test, __func__, conn,
+    const char* func_name = __func__;
+    test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
+        maybe_ok_query(test, func_name, conn,
                        "INSERT INTO " + table + " VALUES ('" + value + "')",
                        {ER_DUP_ENTRY});
-        check_row(test, __func__, conn, table, value);
-        check_row_new_conn(test, __func__, conn.thread_id(), table, value);
+        check_row(test, func_name, conn, table, value);
+        check_row_new_conn(test, func_name, conn.thread_id(), table, value);
     });
 }
 
 void test_rw_trx(TestConnections& test)
 {
-    test_queries(test, __func__, [&](Connection& conn, const std::string& table, const std::string& value){
-        ok_query(test, __func__, conn, "START TRANSACTION");
-        maybe_ok_query(test, __func__, conn,
+    const char* func_name = __func__;
+    test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
+        ok_query(test, func_name, conn, "START TRANSACTION");
+        maybe_ok_query(test, func_name, conn,
                        "INSERT INTO " + table + " VALUES ('" + value + "')",
                        {ER_DUP_ENTRY});
 
         if (conn.query("COMMIT"))
         {
-            check_row(test, __func__, conn, table, value);
-            check_row_new_conn(test, __func__, conn.thread_id(), table, value);
+            check_row(test, func_name, conn, table, value);
+            check_row_new_conn(test, func_name, conn.thread_id(), table, value);
         }
         else
         {
@@ -160,28 +162,30 @@ void test_rw_trx(TestConnections& test)
 
 void test_autocommit_on(TestConnections& test)
 {
-    test_queries(test, __func__, [&](Connection& conn, const std::string& table, const std::string& value){
-        ok_query(test, __func__, conn, "SET autocommit=1");
-        maybe_ok_query(test, __func__, conn,
+    const char* func_name = __func__;
+    test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
+        ok_query(test, func_name, conn, "SET autocommit=1");
+        maybe_ok_query(test, func_name, conn,
                        "INSERT INTO " + table + " VALUES ('" + value + "')",
                        {ER_DUP_ENTRY});
-        check_row(test, __func__, conn, table, value);
-        check_row_new_conn(test, __func__, conn.thread_id(), table, value);
+        check_row(test, func_name, conn, table, value);
+        check_row_new_conn(test, func_name, conn.thread_id(), table, value);
     });
 }
 
 void test_autocommit_off(TestConnections& test)
 {
-    test_queries(test, __func__, [&](Connection& conn, const std::string& table, const std::string& value){
-        ok_query(test, __func__, conn, "SET autocommit=0");
-        maybe_ok_query(test, __func__, conn,
+    const char* func_name = __func__;
+    test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
+        ok_query(test, func_name, conn, "SET autocommit=0");
+        maybe_ok_query(test, func_name, conn,
                        "INSERT INTO " + table + " VALUES ('" + value + "')",
                        {ER_DUP_ENTRY});
 
         if (conn.query("COMMIT"))
         {
-            check_row(test, __func__, conn, table, value);
-            check_row_new_conn(test, __func__, conn.thread_id(), table, value);
+            check_row(test, func_name, conn, table, value);
+            check_row_new_conn(test, func_name, conn.thread_id(), table, value);
         }
         else
         {
@@ -194,26 +198,28 @@ void test_autocommit_off(TestConnections& test)
 
 void test_ro_trx(TestConnections& test)
 {
-    test_queries(test, __func__, [&](Connection& conn, const std::string& table, const std::string& value){
-        ok_query(test, __func__, conn, "START TRANSACTION READ ONLY");
-        maybe_ok_query(test, __func__, conn,
+    const char* func_name = __func__;
+    test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
+        ok_query(test, func_name, conn, "START TRANSACTION READ ONLY");
+        maybe_ok_query(test, func_name, conn,
                        "INSERT INTO " + table + " VALUES ('" + value + "')",
                        {ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION});
         // This should not fail even if the transaction gets replayed
-        ok_query(test, __func__, conn, "COMMIT");
+        ok_query(test, func_name, conn, "COMMIT");
     });
 }
 
 void test_ro_trx_set_trx(TestConnections& test)
 {
-    test_queries(test, __func__, [&](Connection& conn, const std::string& table, const std::string& value){
-        ok_query(test, __func__, conn, "SET TRANSACTION READ ONLY");
-        ok_query(test, __func__, conn, "START TRANSACTION");
-        maybe_ok_query(test, __func__, conn,
+    const char* func_name = __func__;
+    test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
+        ok_query(test, func_name, conn, "SET TRANSACTION READ ONLY");
+        ok_query(test, func_name, conn, "START TRANSACTION");
+        maybe_ok_query(test, func_name, conn,
                        "INSERT INTO " + table + " VALUES ('" + value + "')",
                        {ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION});
         // This should not fail even if the transaction gets replayed
-        ok_query(test, __func__, conn, "COMMIT");
+        ok_query(test, func_name, conn, "COMMIT");
     });
 }
 
