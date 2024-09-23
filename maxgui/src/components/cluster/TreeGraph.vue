@@ -61,9 +61,10 @@ const vSortable = {
 
 let nodeGroup = null
 
+const { panAndZoom } = useZoomAndPanController()
+
 const nodesData = ref([])
 const treeData = ref({})
-const panAndZoom = ref({ x: 0, y: 0, k: 1 })
 
 const treeLayout = computed(() => tree().size([props.dim.height, props.dim.width]))
 

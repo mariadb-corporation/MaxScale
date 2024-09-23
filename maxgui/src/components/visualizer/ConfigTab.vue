@@ -20,17 +20,22 @@ const SCALE_EXTENT = [0.01, 2]
 
 const resourceTypes = [SERVICES, SERVERS, LISTENERS, MONITORS]
 
-const { exportToJpeg, getPanAndZoomValues } = useHelpers()
+const { exportToJpeg } = useHelpers()
 
 const store = useStore()
 const { t } = useI18n()
 const { data: ctxMenuData, openCtxMenu } = useCtxMenu()
+const zoomAndPanController = useZoomAndPanController()
+const { panAndZoom, isFitIntoView } = zoomAndPanController
+
+const BOARD_OPTS = [
+  { title: t('fitDiagramInView'), action: () => fitIntoView() },
+  { title: t('exportAsJpeg'), action: async () => await exportAsJpeg() },
+]
 
 const graphRef = ref(null)
 const ctrDim = ref({})
 const wrapperRef = ref(null)
-const panAndZoom = ref({ x: 0, y: 0, k: 1 })
-const isFitIntoView = ref(false)
 
 const graphData = computed(() => {
   const data = []
@@ -81,19 +86,6 @@ const zoomRatio = computed({
   set: (v) => (panAndZoom.value.k = v),
 })
 
-const boardOpts = computed(() => [
-  { title: t('fitDiagramInView'), action: () => fitIntoView() },
-  { title: t('exportAsJpeg'), action: async () => await exportAsJpeg() },
-])
-
-watch(
-  panAndZoom,
-  (v) => {
-    if (v.eventType && v.eventType == 'wheel') isFitIntoView.value = false
-  },
-  { deep: true }
-)
-
 function setCtrDim() {
   const { clientWidth, clientHeight } = wrapperRef.value.$el
   ctrDim.value = { width: clientWidth, height: clientHeight }
@@ -116,6 +108,7 @@ function colorizingLinkFn({ source, target }) {
       else if (targetType === SERVICES) return '#7dd012'
   }
 }
+
 function handleRevertDiagonal({ source, target }) {
   const sourceType = source.data.type
   const targetType = target.data.type
@@ -132,23 +125,19 @@ function handleRevertDiagonal({ source, target }) {
   return false
 }
 
-function setZoom({ isFitIntoView: fitIntoView = false, transition = true, v } = {}) {
-  isFitIntoView.value = fitIntoView
-  const extent = graphRef.value.getExtent()
-  panAndZoom.value = {
-    ...getPanAndZoomValues({
-      isFitIntoView: fitIntoView,
-      extent,
-      dim: ctrDim.value,
-      scaleExtent: SCALE_EXTENT,
-      paddingPct: 2,
-      customZoom: v,
-    }),
-    transition,
-  }
-}
 function fitIntoView({ transition = true } = {}) {
-  setZoom({ isFitIntoView: true, transition })
+  zoomTo({ isFitIntoView: true, transition })
+}
+
+function zoomTo({ v, isFitIntoView = false, transition = true }) {
+  zoomAndPanController.zoomTo({
+    v,
+    isFitIntoView,
+    extent: graphRef.value.getExtent(),
+    scaleExtent: SCALE_EXTENT,
+    dim: ctrDim.value,
+    transition,
+  })
 }
 
 function onRendered() {
@@ -160,7 +149,7 @@ async function getCanvas() {
 }
 
 async function exportAsJpeg() {
-  fitIntoView({ transition: false })
+  zoomTo({ isFitIntoView: true, transition: false })
   exportToJpeg({ canvas: await getCanvas(), fileName: 'MaxScale_configuration_graph' })
 }
 
@@ -175,7 +164,7 @@ onMounted(() => nextTick(() => setCtrDim()))
         :isFitIntoView="isFitIntoView"
         :max-width="76"
         class="borderless-input mx-2"
-        @update:zoomRatio="setZoom({ v: $event })"
+        @update:zoomRatio="zoomTo({ v: $event })"
         @update:isFitIntoView="fitIntoView({ transition: true })"
       />
       <TooltipBtn square variant="text" color="primary" density="compact" @click="exportAsJpeg">
@@ -212,7 +201,7 @@ onMounted(() => nextTick(() => setCtrDim()))
     <CtxMenu
       v-if="ctxMenuData.activatorId"
       v-model="ctxMenuData.isOpened"
-      :items="boardOpts"
+      :items="BOARD_OPTS"
       :target="ctxMenuData.target"
       transition="slide-y-transition"
       content-class="full-border"

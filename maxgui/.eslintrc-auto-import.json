@@ -105,6 +105,7 @@
     "useStore": true,
     "useTypy": true,
     "useValidationRule": true,
+    "useZoomAndPanController": true,
     "vi": true,
     "vitest": true,
     "VNode": true,

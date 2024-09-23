@@ -308,3 +308,66 @@ export function useCtxMenu() {
 
   return { data, openCtxMenu }
 }
+
+export function useZoomAndPanController() {
+  const panAndZoom = ref({ x: 0, y: 0, k: 1, transition: false, eventType: '' })
+  const isFitIntoView = ref(false)
+
+  watch(
+    panAndZoom,
+    (v) => {
+      if (v.eventType && v.eventType == 'wheel') isFitIntoView.value = false
+    },
+    { deep: true }
+  )
+
+  /**
+   * @param {object} param.extent - graph extent
+   * @param {object} param.dim - graph dimension
+   * @param {array} param.scaleExtent - e.g. [0.25, 2]
+   * @param {number} [param.paddingPct]
+   * @returns {number} zoom ratio
+   */
+  function calcFitZoom({ extent: { minX, maxX, minY, maxY }, dim, scaleExtent, paddingPct = 2 }) {
+    const graphWidth = maxX - minX
+    const graphHeight = maxY - minY
+    const xScale = (dim.width / graphWidth) * (1 - paddingPct / 100)
+    const yScale = (dim.height / graphHeight) * (1 - paddingPct / 100)
+    // Choose the minimum scale among xScale, yScale, and the maximum allowed scale
+    let k = Math.min(xScale, yScale, scaleExtent[1])
+    // Clamp the scale value within the scaleExtent range
+    k = Math.min(Math.max(k, scaleExtent[0]), scaleExtent[1])
+    return k
+  }
+
+  /**
+   * Auto adjust (zoom in or out) the contents of a graph
+   * @param {object} param
+   * @param {number} [param.v] - zoom value
+   * @param {boolean} [param.isFitIntoView] - if it's true, v param will be ignored
+   * @param {object} param.extent
+   * @param {array} param.scaleExtent
+   * @param {object} param.dim
+   * @param {boolean} [param.transition] - true by default
+   */
+  function zoomTo({
+    v,
+    isFitIntoView: isFitIntoViewValue = false,
+    extent,
+    scaleExtent,
+    dim,
+    paddingPct = 2,
+    transition = true,
+  }) {
+    isFitIntoView.value = isFitIntoViewValue
+
+    const { minX, minY, maxX, maxY } = extent
+    const k = isFitIntoViewValue ? calcFitZoom({ extent, dim, scaleExtent, paddingPct }) : v
+    const x = dim.width / 2 - ((minX + maxX) / 2) * k
+    const y = dim.height / 2 - ((minY + maxY) / 2) * k
+
+    panAndZoom.value = { x, y, k, transition, eventType: '' }
+  }
+
+  return { panAndZoom, isFitIntoView, zoomTo }
+}

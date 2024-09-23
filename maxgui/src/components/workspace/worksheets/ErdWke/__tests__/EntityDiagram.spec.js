@@ -21,7 +21,7 @@ import erdHelper from '@/utils/erdHelper'
 const mockNode = { id: 'node_0', data: { defs: { key_category_map: {} } } }
 const mockProps = {
   dim: { width: 800, height: 600 },
-  panAndZoom: { x: 0, y: 0, k: 1 },
+  panAndZoom: { x: 0, y: 0, k: 1, transition: false, eventType: '' },
   scaleExtent: [0.5, 2],
   nodes: [mockNode],
   graphConfigData: {

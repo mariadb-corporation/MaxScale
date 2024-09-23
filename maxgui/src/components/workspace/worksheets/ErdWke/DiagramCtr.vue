@@ -51,9 +51,10 @@ const { t } = useI18n()
 const {
   lodash: { merge, keyBy },
   immutableUpdate,
-  getPanAndZoomValues,
 } = useHelpers()
 const { data: ctxMenuData, openCtxMenu } = useCtxMenu()
+const zoomAndPanController = useZoomAndPanController()
+const { panAndZoom, isFitIntoView } = zoomAndPanController
 
 const { NODE } = DIAGRAM_CTX_TYPE_MAP
 const TOOLBAR_HEIGHT = 40
@@ -81,8 +82,6 @@ const graphConfigData = ref({
     entitySizeConfig: { rowHeight: 32, rowOffset: 4, headerHeight: 32 },
   },
 })
-const isFitIntoView = ref(false)
-const panAndZoom = ref({ x: 0, y: 0, k: 1 })
 
 const charset_collation_map = computed(() => store.state.schemaInfo.charset_collation_map)
 const activeRequestConfig = computed(() => Worksheet.getters('activeRequestConfig'))
@@ -120,13 +119,6 @@ watch(
         }),
       },
     })
-  },
-  { deep: true }
-)
-watch(
-  panAndZoom,
-  (v) => {
-    if (v.eventType && v.eventType == 'wheel') isFitIntoView.value = false
   },
   { deep: true }
 )
@@ -191,8 +183,22 @@ function onNodeDragEnd(node) {
   onNodesCoordsUpdate([node])
 }
 
-function fitIntoView() {
-  setZoom({ isFitIntoView: true })
+/**
+ * Auto adjust (zoom in or out) the contents of a graph
+ * @param {number} [param.v] - zoom value
+ * @param {boolean} [param.isFitIntoView] - if it's true, v param will be ignored
+ * @param {object} [param.extent]
+ * @param {number} [param.paddingPct]
+ */
+function zoomTo({ v, isFitIntoView = false, extent, paddingPct }) {
+  zoomAndPanController.zoomTo({
+    v,
+    isFitIntoView,
+    extent: extent ? extent : entityDiagramRef.value.getExtent(),
+    scaleExtent: SCALE_EXTENT,
+    dim: diagramDim.value,
+    paddingPct,
+  })
 }
 
 function zoomIntoNode(node) {
@@ -200,9 +206,9 @@ function zoomIntoNode(node) {
   const minY = node.y - node.size.height / 2
   const maxX = minX + node.size.width
   const maxY = minY + node.size.height
-  setZoom({
+  zoomTo({
     isFitIntoView: true,
-    customExtent: { minX, maxX, minY, maxY },
+    extent: { minX, maxX, minY, maxY },
     /* add a padding of 20%, so there'd be some reserved space if the users
      * alter the table by adding new column
      */
@@ -210,26 +216,8 @@ function zoomIntoNode(node) {
   })
 }
 
-/**
- * Auto adjust (zoom in or out) the contents of a graph
- * @param {Boolean} [param.isFitIntoView] - if it's true, v param will be ignored
- * @param {Object} [param.customExtent] - custom extent
- * @param {Number} [param.v] - zoom value
- */
-function setZoom({ isFitIntoView: fitIntoView = false, customExtent, v, paddingPct = 2 }) {
-  isFitIntoView.value = fitIntoView
-  const extent = customExtent ? customExtent : entityDiagramRef.value.getExtent()
-  panAndZoom.value = {
-    ...getPanAndZoomValues({
-      isFitIntoView: fitIntoView,
-      extent,
-      dim: diagramDim.value,
-      scaleExtent: SCALE_EXTENT,
-      paddingPct,
-      customZoom: v,
-    }),
-    transition: true,
-  }
+function fitIntoView() {
+  zoomTo({ isFitIntoView: true })
 }
 
 async function navHistory(idx) {
@@ -341,7 +329,7 @@ defineExpose({ updateNode, getCanvas })
       :conn="conn"
       :nodesHistory="nodesHistory"
       :activeHistoryIdx="activeHistoryIdx"
-      @set-zoom="setZoom"
+      @set-zoom="zoomTo"
       @on-create-table="addTblNode"
       @on-undo="navHistory(activeHistoryIdx - 1)"
       @on-redo="navHistory(activeHistoryIdx + 1)"
@@ -392,7 +380,7 @@ defineExpose({ updateNode, getCanvas })
       :exportOptions="ERD_EXPORT_OPTS"
       :colKeyCategoryMap="colKeyCategoryMap"
       @create-tbl="addTblNode($event)"
-      @fit-into-view="fitIntoView($event)"
+      @fit-into-view="fitIntoView()"
       @auto-arrange-erd="autoArrange($event)"
       @patch-graph-config="patchGraphConfig($event)"
       @open-editor="handleOpenEditor($event)"

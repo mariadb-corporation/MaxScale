@@ -17,7 +17,16 @@ import 'd3-transition'
 import { zoom, zoomIdentity } from 'd3-zoom'
 
 const props = defineProps({
-  modelValue: { type: Object, required: true },
+  modelValue: {
+    type: Object,
+    validator: (obj) =>
+      typeof obj.x === 'number' &&
+      typeof obj.y === 'number' &&
+      typeof obj.k === 'number' &&
+      typeof obj.transition === 'boolean' &&
+      typeof obj.eventType === 'string',
+    required: true,
+  },
   dim: { type: Object, required: true },
   graphDim: { type: Object, default: () => ({ width: 0, height: 0 }) },
   scaleExtent: { type: Array, default: () => [0.25, 2] },
@@ -70,7 +79,7 @@ function initSvg() {
         .scaleExtent(props.scaleExtent)
         .on('zoom', (e) => {
           const { x, y, k } = e.transform
-          panAndZoom.value = { x, y, k, eventType: e.sourceEvent.type }
+          panAndZoom.value = { x, y, k, transition: false, eventType: e.sourceEvent.type }
         })
     )
     .on('dblclick.zoom', null)
