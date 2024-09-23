@@ -13,12 +13,16 @@
 import * as utils from '@/components/common/ParametersTable/utils'
 
 describe('ParametersTable utils', () => {
-  it('parseValueWithUnit should return object with unit and index keys', () => {
-    const value = '1000ms'
-    const result = utils.parseValueWithUnit(value)
-    assert.containsAllKeys(result, ['unit', 'value'])
-    expect(result.unit).toBe('ms')
-    expect(result.value).toBe('1000')
+  describe('parseValueWithUnit', () => {
+    it.each`
+      value       | expected
+      ${'1000ms'} | ${{ value: 1000, unit: 'ms' }}
+      ${'128ki'}  | ${{ value: 128, unit: 'ki' }}
+      ${65536}    | ${{ value: 65536, unit: undefined }}
+    `(`Should parse a duration correctly`, ({ value, expected }) => {
+      const result = utils.parseValueWithUnit(value)
+      expect(result).toStrictEqual(expected)
+    })
   })
 
   describe('IEC convertSize assertions', () => {

@@ -20,8 +20,8 @@ export function isServerOrListenerType(type) {
  * @return {object} parsed info { value, unit}
  */
 export function parseValueWithUnit(value) {
-  const match = String(value).match(/^(-?\d+)(\w+)$/)
-  if (match) return { value: match[1], unit: match[2] }
+  const match = String(value).match(/^(-?\d+)(\w+)?$/)
+  if (match) return { value: Number(match[1]), unit: match[2] }
   return { value, unit: '' }
 }
 
