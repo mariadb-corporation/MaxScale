@@ -894,23 +894,7 @@ std::unique_ptr<json_t> CachingParser::dump(const char* zHost, json_t* pJson)
                 path += zPath;
             }
 
-            struct stat s;
-            if (stat(path.c_str(), &s) == 0)
-            {
-                if (S_ISDIR(s.st_mode))
-                {
-                    sResult = dump(zHost, path);
-                }
-                else
-                {
-                    MXB_ERROR("'%s' is not a directory.", path.c_str());
-                }
-            }
-            else
-            {
-                MXB_ERROR("Could not check the status of '%s': %s",
-                          path.c_str(), mxb_strerror(errno));
-            }
+            sResult = dump(zHost, path);
         }
         else
         {
@@ -926,24 +910,28 @@ std::unique_ptr<json_t> CachingParser::dump(const char* zHost, json_t* pJson)
 }
 
 //static
-std::unique_ptr<json_t> CachingParser::dump(const char* zHost, const std::string& dir)
+std::string CachingParser::dump(const std::string& dir)
 {
-    std::unique_ptr<json_t> sResult;
+    std::string path;
+
+    struct stat s;
+    if (stat(dir.c_str(), &s) != 0)
+    {
+        MXB_ERROR("Could not check the status of '%s': %s",
+                  dir.c_str(), mxb_strerror(errno));
+        return path;
+    }
+
+    if (!S_ISDIR(s.st_mode))
+    {
+        MXB_ERROR("'%s' is not a directory.", dir.c_str());
+        return path;
+    }
 
     time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
     std::string temp(dir);
     temp += "/qc_dump-XXXXXX";
-
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&now), "%Y-%m-%d_%H-%M-%S");
-
-    std::string timestamp = ss.str();
-
-    std::string path(dir);
-    path += "/qc_dump-";
-    path += timestamp;
-    path += ".json";
 
     int fd = mkstemp(temp.data());
 
@@ -953,16 +941,19 @@ std::unique_ptr<json_t> CachingParser::dump(const char* zHost, const std::string
 
         if (pFile)
         {
-            if (dump(pFile, temp, path, timestamp))
+            std::stringstream ss;
+            ss << std::put_time(std::localtime(&now), "%Y-%m-%d_%H-%M-%S");
+
+            std::string timestamp = ss.str();
+
+            path = dir;
+            path += "/qc_dump-";
+            path += timestamp;
+            path += ".json";
+
+            if (!dump(pFile, temp, path, timestamp))
             {
-                mxb::json::Object data;
-                data.set_string("id", "qc_dump");
-
-                mxb::json::Object attributes;
-                attributes.set_string("path", path);
-                data.set_object("attributes", std::move(attributes));
-
-                sResult.reset(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE_DUMP, data.release()));
+                path.clear();
             }
         }
         else
@@ -981,6 +972,28 @@ std::unique_ptr<json_t> CachingParser::dump(const char* zHost, const std::string
     {
         MXB_ERROR("Could not open create temporary file '%s' for writing: %s",
                   temp.c_str(), mxb_strerror(errno));
+    }
+
+    return path;
+}
+
+//static
+std::unique_ptr<json_t> CachingParser::dump(const char* zHost, const std::string& dir)
+{
+    std::unique_ptr<json_t> sResult;
+
+    std::string path = dump(dir);
+
+    if (!path.empty())
+    {
+        mxb::json::Object data;
+        data.set_string("id", "qc_dump");
+
+        mxb::json::Object attributes;
+        attributes.set_string("path", path);
+        data.set_object("attributes", std::move(attributes));
+
+        sResult.reset(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE_DUMP, data.release()));
     }
 
     return sResult;

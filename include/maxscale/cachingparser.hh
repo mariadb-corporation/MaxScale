@@ -72,6 +72,7 @@ public:
 
     static std::unique_ptr<json_t> content_as_resource(const char* zHost, int top);
     static std::unique_ptr<json_t> dump(const char* zHost, json_t* pJson);
+    static std::string             dump(const std::string& dir);
 
     Result           parse(const GWBUF& stmt, uint32_t collect) const override;
 
