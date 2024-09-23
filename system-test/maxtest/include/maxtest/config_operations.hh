@@ -30,8 +30,8 @@ public:
     enum Service
     {
         SERVICE_RWSPLIT      = 0,
-        SERVICE_RCONN_SLAVE  = 1,
-        SERVICE_RCONN_MASTER = 2
+        SERVICE_RCONN_MASTER = 1,
+        SERVICE_RCONN_SLAVE  = 2,
     };
 
     /**

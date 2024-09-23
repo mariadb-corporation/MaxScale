@@ -46,7 +46,7 @@ Config::~Config()
 
 void Config::add_server(int num)
 {
-    test_->tprintf("Adding the servers");
+    test_->tprintf("Adding server%i to services and monitors.", num);
     test_->maxscale->ssh_node_f(true, "maxctrl link service %s server%d", SERVICE_NAME1, num);
     test_->maxscale->ssh_node_f(true, "maxctrl link service %s server%d", SERVICE_NAME2, num);
     test_->maxscale->ssh_node_f(true, "maxctrl link service %s server%d", SERVICE_NAME3, num);
@@ -59,6 +59,7 @@ void Config::add_server(int num)
 
 void Config::remove_server(int num)
 {
+    test_->tprintf("Removing server%i from services and monitors.", num);
     test_->maxscale->ssh_node_f(true, "maxctrl unlink service %s server%d", SERVICE_NAME1, num);
     test_->maxscale->ssh_node_f(true, "maxctrl unlink service %s server%d", SERVICE_NAME2, num);
     test_->maxscale->ssh_node_f(true, "maxctrl unlink service %s server%d", SERVICE_NAME3, num);

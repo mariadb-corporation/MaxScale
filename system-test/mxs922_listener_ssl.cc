@@ -33,13 +33,12 @@ int main(int argc, char* argv[])
     test->try_query(test->maxscale->conn_rwsplit, "select @@server_id");
     config.create_ssl_listener(Config::SERVICE_RCONN_SLAVE);
 
-    MYSQL* conn = open_conn(test->maxscale->readconn_master_port,
-                            test->maxscale->ip4(),
-                            test->maxscale->user_name(),
-                            test->maxscale->password(),
-                            true);
-    test->add_result(execute_query(conn, "select @@server_id"), "SSL query to readconnroute failed");
-    mysql_close(conn);
+    auto& mxs = *test->maxscale;
+    auto conn = mxs.try_open_connection(mxt::MaxScale::SslMode::ON, mxs.readconn_slave_port,
+                                        mxs.user_name(), mxs.password(), "test");
+    test->expect(conn->is_open(), "Connection failed.");
+    auto res = conn->simple_query("select @@server_id");
+    test->expect(!res.empty(), "Query failed.");
 
     test->maxscale->expect_running_status(true);
     int rval = test->global_result;
