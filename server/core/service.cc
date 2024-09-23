@@ -1648,11 +1648,11 @@ void ServiceEndpoint::close()
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    // If the use_count() is more than two, it means that there's an extra shared_ptr<Routable> somewhere
-    // that's not expected. Currently there may be up to two references to the same shared_ptr<Routable>: one
-    // in the ServiceEndpoint and one temporary one that's created during delyed operations that lock a
-    // weak_ptr into a shared_ptr.
-    mxb_assert(m_router_session.use_count() <= 2);
+    mxb_assert(!m_in_clientReply);
+    mxb_assert(!m_in_routeQuery);
+    // If unique() returns false, it means that there's an extra shared_ptr<Routable> somewhere
+    // that's not expected. Currently there must be only one reference alive when close() gets called.
+    mxb_assert(m_router_session.unique());
 
     m_router_session.reset();
     m_filters.clear();
@@ -1671,6 +1671,8 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
     mxb_assert(buffer);
+    mxb_assert(!m_in_clientReply);
+    mxb_assert(!m_in_routeQuery);
     MXB_MAYBE_RETURN_FALSE();
 
 #ifdef SS_DEBUG
@@ -1692,16 +1694,20 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
     {
         // A failure in routeQuery triggers a call to handleError once the execution returns back to the
         // RoutingWorker.
+        MXB_AT_DEBUG(m_in_routeQuery = true);
         if (!m_head->routeQuery(std::move(buffer)))
         {
+            MXB_AT_DEBUG(m_in_routeQuery = false);
             call_handle_error("Failed to route query");
         }
     }
     catch (mxb::Exception& e)
     {
+        MXB_AT_DEBUG(m_in_routeQuery = false);
         call_handle_error(e.what());
     }
 
+    MXB_AT_DEBUG(m_in_routeQuery = false);
     return true;
 }
 
@@ -1710,15 +1716,27 @@ bool ServiceEndpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, c
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
     mxb_assert(buffer);
+    mxb_assert(!m_in_clientReply);
+    mxb_assert(!m_in_routeQuery);
+
     try
     {
-        return m_router_session->clientReply(std::move(buffer), down, reply);
+        MXB_AT_DEBUG(m_in_clientReply = true);
+        if (!m_router_session->clientReply(std::move(buffer), down, reply))
+        {
+            MXB_AT_DEBUG(m_in_clientReply = false);
+            call_handle_error("Failed to route reply");
+        }
     }
-    catch (const mxb::Exception& e)
+    catch (mxb::Exception& e)
     {
-        MXB_ERROR("%s", e.what());
-        return false;
+        MXB_AT_DEBUG(m_in_clientReply = false);
+        call_handle_error(e.what());
     }
+
+    MXB_AT_DEBUG(m_in_clientReply = false);
+
+    return true;
 }
 
 bool ServiceEndpoint::handleError(mxs::ErrorType type, const std::string& error,
@@ -1752,6 +1770,8 @@ void ServiceEndpoint::call_handle_error(std::string_view errmsg)
         if (auto ref = weak_ref.lock())
         {
             MXS_SESSION::Scope session_scope(m_session);
+            mxb_assert_message(ref.use_count() == 2, "This must not be the last reference");
+            ref.reset();
 
             // The call to handleError will go into another ServiceEndpoint or the MXS_SESSION which means it
             // will not throw. Only the call to m_router_session->handleError() may throw as only modules are

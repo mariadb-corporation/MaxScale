@@ -44,6 +44,28 @@ class Parser;
  * Note that even though this class is intended to be derived from, no functions
  * are virtual. That is by design, as the class will be used in a context where
  * the concrete class is known. That is, there is no need for the virtual mechanism.
+ *
+ * The API functions cannot be called from each other. The only exception to
+ * this is that routeQuery() is allowed to call Endpoint::close() on an Endpoint
+ * that it owns. In all other cases the API function is only allowed to
+ * propagate the call forwards by calling a similarly named function or by
+ * generating an error by returning false, where appropriate, or by throwing an
+ * exception.
+ *
+ * 1. To return results from routeQuery(), don't call clientReply()
+ *    directly. Instead, use set_response() member function.
+ *
+ * 2. If routeQuery() would need to be called inside clientReply(), don't call
+ *    it directly. Instead, wrap the call using the lcall() member function
+ *    which schedules it to be executed once the clientReply() function returns.
+ *
+ * 3. To abort the processing of any of the API functions, don't call
+ *    MXS_SESSION::kill() directly. Instead, throw a mxb::Exception() or return
+ *    false from the function. Use exceptions in new code as they allow an error
+ *    message to be included.
+ *
+ * 4. If an Endpoint must be closed in clientReply(), don't close it directly:
+ *    use lcall() to schedule it to be closed once the function returns.
  */
 class RouterSession : public mxs::Routable
 {
@@ -63,10 +85,12 @@ public:
      * @param down    The route the reply took
      * @param reply   The reply object
      *
-     * @return True for success, false for error. If the function returns false, the session will be closed.
+     * @return True for success, false for error. If the function returns false,
+     *         a call to the parent component's handleError method is made.
      *
-     * @throws May throw mxb::Exception. If the exception is thrown, the exception message is logged and the
-     *         session will be closed.
+     * @throws May throw mxb::Exception to abort the routing. If an exception is
+     *         thrown, a call to the parent component's handleError method is
+     *         made.
      */
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
@@ -79,14 +103,15 @@ public:
      *
      * @param type      The type of the error, either temporary or permanent.
      * @param message   The error message.
-     * @param pProblem  The DCB on which the error occurred.
+     * @param pProblem  The Endpoint on which the error occurred.
      * @param reply     The reply object for this endpoint.
      *
-     * @return True if the session can continue, false if the session should be closed. If the function
-     *         returns false, the session will be closed.
+     * @return True for success, false for error. If the function returns false,
+     *         a call to the parent component's handleError method is made.
      *
-     * @throws May throw mxb::Exception. If the exception is thrown, a call to the parent
-     *         component's handleError method is made to proparage the error upwards.
+     * @throws May throw mxb::Exception to abort the routing. If an exception is
+     *         thrown, a call to the parent component's handleError method is
+     *         made.
      */
     virtual bool
     handleError(mxs::ErrorType type, const std::string& message, mxs::Endpoint* pProblem,

@@ -462,6 +462,11 @@ private:
     void    set_endpoints(std::vector<std::shared_ptr<mxs::Endpoint>> down);
     void    call_handle_error(std::string_view errmsg);
 
+#ifdef SS_DEBUG
+    bool m_in_clientReply {false};
+    bool m_in_routeQuery {false};
+#endif
+
     bool                                m_open {false};
     mxs::Component*                     m_up;       // The upstream where replies are routed to
     MXS_SESSION*                        m_session;  // The owning session

@@ -652,6 +652,12 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
             // delivered in all cases where the Routable in question is still alive.
             mxb_assert(state() == MXS_SESSION::State::STARTED || state() == MXS_SESSION::State::STOPPING);
 
+            // As the weak pointer was locked a moment ago, this should never be the last reference. If it
+            // was, it would indicate that something concurrently freed the original reference.
+            mxb_assert_message(ref.use_count() == 2, "This must not be the last reference");
+            auto* pRoutable = ref.get();
+            ref.reset();
+
             try
             {
                 if (!fn(std::move(*sbuf)))
@@ -659,9 +665,10 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
                     // Routing the query failed. Let parent component deal with it in handleError. This must
                     // currently be treated as a permanent error, otherwise it could result in an infinite
                     // retrying loop.
-                    ref->endpoint().parent()->handleError(mxs::ErrorType::PERMANENT, "Failed to route query",
-                                                          const_cast<mxs::Endpoint*>(&ref->endpoint()),
-                                                          mxs::Reply {});
+                    pRoutable->endpoint().parent()->handleError(
+                        mxs::ErrorType::PERMANENT, "Failed to route query",
+                        const_cast<mxs::Endpoint*>(&pRoutable->endpoint()),
+                        mxs::Reply {});
                 }
             }
             catch (const mxb::Exception& e)
@@ -669,9 +676,10 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
                 // The call to routeQuery threw an exception, propagate the error to the parent component.
                 // Since the parent component is always a mxs::Component, this call to handleError will not
                 // throw.
-                ref->endpoint().parent()->handleError(mxs::ErrorType::PERMANENT, e.what(),
-                                                      const_cast<mxs::Endpoint*>(&ref->endpoint()),
-                                                      mxs::Reply {});
+                pRoutable->endpoint().parent()->handleError(
+                    mxs::ErrorType::PERMANENT, e.what(),
+                    const_cast<mxs::Endpoint*>(&pRoutable->endpoint()),
+                    mxs::Reply {});
             }
         }
 

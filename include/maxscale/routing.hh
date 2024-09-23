@@ -23,8 +23,13 @@
 namespace maxscale
 {
 /**
- * mxs::Routable is the base type representing the session related data of a particular routing module
- * instance. Implemented by filter and router sessions.
+ * mxs::Routable is the base type representing the session related data
+ * of a particular routing module instance. Implemented by filter and
+ * router sessions.
+ *
+ * The API functions cannot be called from each other: a call to
+ * routeQuery() must not cause a call to clientReply() to be generated
+ * and vice versa.
  */
 class Routable : public std::enable_shared_from_this<Routable>
 {
@@ -36,11 +41,13 @@ public:
      *
      * @param pPacket Packet to route
      *
-     * @return True for success, false for error. If the function return false, a call to the parent
-     *         component's handleError method is made.
+     * @return True for success, false for error. If the function
+     *         returns false, a call to the parent component's
+     *         handleError method is made.
      *
-     * @throws May throw mxb::Exception to abort the routing. If the exception is thrown, a call to the parent
-     *         component's handleError method is made.
+     * @throws May throw mxb::Exception to abort the routing. If an
+     *         exception is thrown, a call to the parent component's
+     *         handleError method is made.
      */
     virtual bool routeQuery(GWBUF&& packet) = 0;
 
@@ -51,10 +58,13 @@ public:
      * @param down Response source
      * @param reply Reply information
      *
-     * @return True for success, false for error. If the function returns false, the session will be closed.
+     * @return True for success, false for error. If the function
+     *         returns false, a call to the parent component's
+     *         handleError method is made.
      *
-     * @throws May throw mxb::Exception. If the exception is thrown, the exception message is logged and the
-     *         session will be closed.
+     * @throws May throw mxb::Exception to abort the routing. If an
+     *         exception is thrown, a call to the parent component's
+     *         handleError method is made.
      */
     virtual bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
 
