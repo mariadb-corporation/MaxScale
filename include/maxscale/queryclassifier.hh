@@ -665,11 +665,21 @@ void TrxTracker::track_transaction_state(const GWBUF& packetbuf, const mxs::Pars
     {
         type_mask = parser.get_trx_type_mask_using(packetbuf, ParseType);
 
-        mxb_assert_message(ParseType == mxs::Parser::ParseTrxUsing::CUSTOM
-                           || parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::DEFAULT)
-                           == parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::CUSTOM),
-                           "Parser and query classifier should parse transactions identically: %s",
-                           std::string(parser.get_sql(packetbuf)).c_str());
+#ifdef SS_DEBUG
+        if (ParseType == mxs::Parser::ParseTrxUsing::DEFAULT)
+        {
+            auto mask_qc = parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::DEFAULT);
+            auto mask_parser = parser.get_trx_type_mask_using(packetbuf, mxs::Parser::ParseTrxUsing::CUSTOM);
+            auto txt_qc = parser.type_mask_to_string(mask_qc);
+            auto txt_parser = parser.type_mask_to_string(mask_parser);
+            mxb_assert_message(mask_qc == mask_parser,
+                               "Parser and query classifier should parse transactions identically: %s\n"
+                               "Trx type mask from QC:     %s\n"
+                               "Trx type mask from parser: %s\n",
+                               std::string(parser.get_sql(packetbuf)).c_str(),
+                               txt_qc.c_str(), txt_parser.c_str());
+        }
+#endif
 
         if (type_mask & (mxs::sql::TYPE_READWRITE | mxs::sql::TYPE_READONLY))
         {
