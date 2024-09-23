@@ -696,9 +696,15 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
     {
         /**
          * Close stale connections to servers in maintenance. Done here to avoid closing the connections
-         * before all responses have been received. Must not be done inside a transaction.
+         * before all responses have been received. Must not be done inside a transaction. This must be done
+         * using a lcall as closing a Backend will close the underlying router and filter sessions and if done
+         * while inside a clientReply call, the object gets deleted in the middle of a function call.
          */
-        close_stale_connections();
+        lcall([this](){
+            close_stale_connections();
+            return true;
+        });
+
         m_check_stale = false;
     }
 }
