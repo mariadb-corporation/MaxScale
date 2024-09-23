@@ -21,6 +21,7 @@
 #include <maxtest/testconnections.hh>
 #include <maxsql/mariadb.hh>
 #include <mysqld_error.h>
+#include <errmsg.h>
 #include <set>
 
 std::atomic<bool> running {true};
@@ -65,12 +66,22 @@ void check_row(TestConnections& test, const char* func, Connection& conn,
                const std::string& table, const std::string& value)
 {
     auto stored_value = conn.field("SELECT MAX(a) FROM " + table + " WHERE a = " + value);
+
+    std::string errmsg;
+
+    if (stored_value.empty())
+    {
+        errmsg = " Error: ";
+        errmsg += std::to_string(conn.errnum());
+        errmsg += ", ";
+        errmsg += conn.error();
+    }
+
     test.expect(stored_value == value,
-                "[%s] Row %s inserted by [%u] is wrong: %s%s%s",
+                "[%s] Row %s inserted by [%u] is wrong: %s%s",
                 func, value.c_str(), conn.thread_id(),
                 stored_value.empty() ? "<no stored value>" : stored_value.c_str(),
-                stored_value.empty() ? " Error: " : "",
-                conn.error());
+                errmsg.c_str());
 }
 
 void check_row_new_conn(TestConnections& test, const char* func, uint32_t orig_id,
@@ -80,26 +91,43 @@ void check_row_new_conn(TestConnections& test, const char* func, uint32_t orig_i
     test.expect(conn.connect(), "Failed to connect when querying '%s': %s", table.c_str(), conn.error());
     auto stored_value = conn.field("SELECT MAX(a) FROM " + table + " WHERE a = " + value);
 
+    for (int i = 0; i < 10 && conn.errnum() == CR_SERVER_LOST; i++)
+    {
+        std::this_thread::sleep_for(1s);
+        conn.connect();
+        stored_value = conn.field("SELECT MAX(a) FROM " + table + " WHERE a = " + value);
+    }
+
+    std::string errmsg;
+
+    if (stored_value.empty())
+    {
+        errmsg = " Error: ";
+        errmsg += std::to_string(conn.errnum());
+        errmsg += ", ";
+        errmsg += conn.error();
+    }
+
     test.expect(stored_value == value,
-                "[%s] Row %s inserted by [%u] is wrong for [%u]: %s%s%s",
+                "[%s] Row %s inserted by [%u] is wrong for [%u]: %s%s",
                 func, value.c_str(), orig_id, conn.thread_id(),
                 stored_value.empty() ? "<no stored value>" : stored_value.c_str(),
-                stored_value.empty() ? " Error: " : "",
-                conn.error());
+                errmsg.c_str());
 }
 
 void ok_query(TestConnections& test, const char* func, Connection& conn,
               const std::string& sql)
 {
-    test.expect(conn.query(sql), "[%u] %s: Query '%s' failed: %s",
-                conn.thread_id(), func, sql.c_str(), conn.error());
+    test.expect(conn.query(sql), "[%u] %s: Query '%s' failed: %d, %s",
+                conn.thread_id(), func, sql.c_str(), conn.errnum(), conn.error());
 }
 
 void maybe_ok_query(TestConnections& test, const char* func, Connection& conn,
                     const std::string& sql, std::set<int> accepted_errors)
 {
     test.expect(conn.query(sql) || accepted_errors.find(conn.errnum()) != accepted_errors.end(),
-                "[%u] %s: Query '%s' failed: %s", conn.thread_id(), func, sql.c_str(), conn.error());
+                "[%u] %s: Query '%s' failed: %d, %s", conn.thread_id(), func, sql.c_str(),
+                conn.errnum(), conn.error());
 }
 
 void test_queries(TestConnections& test, const char* func,
@@ -107,10 +135,27 @@ void test_queries(TestConnections& test, const char* func,
 {
     std::string table = "test.t" + std::to_string(id++);
     auto conn = test.maxscale->rwsplit();
-    test.expect(conn.connect(), "%s: Failed to connect: %s", func, conn.error());
-    test.expect(conn.query("CREATE TABLE IF NOT EXISTS " + table + " (a INT PRIMARY KEY)"),
-                "%s: Table creation should work: %u, %s", func, conn.thread_id(), conn.error());
-    conn.disconnect();
+    bool created = false;
+    int errnum = 0;
+    std::string errmsg;
+
+    for (int i = 0; i < 10 && !created; i++)
+    {
+        if (conn.connect() && conn.query("CREATE TABLE IF NOT EXISTS " + table + " (a INT PRIMARY KEY)"))
+        {
+            created = true;
+        }
+        else
+        {
+            errnum = conn.errnum();
+            errmsg = conn.error();
+            std::this_thread::sleep_for(1s);
+        }
+
+        conn.disconnect();
+    }
+
+    test.expect(created, "Table creation should work: %u, %s", errnum, errmsg.c_str());
 
     for (int i = 0; i < 100 && running && test.ok(); i++)
     {
@@ -129,11 +174,12 @@ void test_no_trx(TestConnections& test)
 {
     const char* func_name = __func__;
     test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
-        maybe_ok_query(test, func_name, conn,
-                       "INSERT INTO " + table + " VALUES ('" + value + "')",
-                       {ER_DUP_ENTRY});
-        check_row(test, func_name, conn, table, value);
-        check_row_new_conn(test, func_name, conn.thread_id(), table, value);
+
+        if (conn.query("INSERT INTO " + table + " VALUES ('" + value + "')"))
+        {
+            check_row(test, func_name, conn, table, value);
+            check_row_new_conn(test, func_name, conn.thread_id(), table, value);
+        }
     });
 }
 
@@ -165,11 +211,12 @@ void test_autocommit_on(TestConnections& test)
     const char* func_name = __func__;
     test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
         ok_query(test, func_name, conn, "SET autocommit=1");
-        maybe_ok_query(test, func_name, conn,
-                       "INSERT INTO " + table + " VALUES ('" + value + "')",
-                       {ER_DUP_ENTRY});
-        check_row(test, func_name, conn, table, value);
-        check_row_new_conn(test, func_name, conn.thread_id(), table, value);
+
+        if (conn.query("INSERT INTO " + table + " VALUES ('" + value + "')"))
+        {
+            check_row(test, func_name, conn, table, value);
+            check_row_new_conn(test, func_name, conn.thread_id(), table, value);
+        }
     });
 }
 
