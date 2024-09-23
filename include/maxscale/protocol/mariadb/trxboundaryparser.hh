@@ -590,11 +590,11 @@ private:
 
         case TOK_NAMES:
             // Ignore the <name> and <coll> in SET NAMES <name> COLLATE <coll>
-            next_token();
+            skip_word();
 
             if (expect_token(MXS_CP_EXPECT_TOKEN("COLLATE"), TOK_COLLATE) == TOK_COLLATE)
             {
-                next_token();
+                skip_word();
             }
             break;
 
@@ -603,6 +603,31 @@ private:
             break;
 
         default:
+            // The SET statement can have values we aren't interested in before it has values that we are
+            // interested in. To correctly detect those, all values must be parsed, including ones that use
+            // subselects or other expressions like CONCAT().
+            skip_word();
+
+            bypass_whitespace();
+
+            if (m_pI != m_pEnd)
+            {
+                if (*m_pI == ':')
+                {
+                    // User variable assignment
+                    ++m_pI;
+                }
+
+                if (m_pI != m_pEnd)
+                {
+                    if (*m_pI == '=')
+                    {
+                        ++m_pI;
+                        skip_value();
+                    }
+                }
+            }
+
             type_mask = 0;
             log_unexpected();
         }
@@ -774,8 +799,8 @@ private:
 
         if (zWord == pEnd)
         {
-            if ((pI == m_pEnd) || (!isalpha(*pI)))      // Handwritten isalpha not faster than library
-                                                        // version.
+            // Handwritten isalpha not faster than library version.
+            if ((pI == m_pEnd) || (!isalpha(*pI) && *pI != '_'))
             {
                 m_pI = pI;
             }
@@ -790,6 +815,153 @@ private:
         }
 
         return token;
+    }
+
+    // Skips a simple "word", equivalent regex character class: [a-zA-Z0-9_@.]
+    void skip_word()
+    {
+        bypass_whitespace();
+
+        while (m_pI != m_pEnd && (isalnum(*m_pI) || *m_pI == '_' || *m_pI == '@' || *m_pI == '.'))
+        {
+            ++m_pI;
+        }
+    }
+
+    // Skips more complex values that are on the right side of an assignment
+    void skip_value()
+    {
+        skip_word();
+        bypass_whitespace();
+
+        if (m_pI != m_pEnd)
+        {
+            char ch = *m_pI;
+            switch (ch)
+            {
+            case '\'':
+            case '"':
+                ++m_pI;
+                skip_string(ch);
+                break;
+
+            case '`':
+                // TODO: This should take the SQL mode into account and treat double quote as an identifier
+                // escape as well.
+                ++m_pI;
+                skip_identifier(ch);
+                break;
+
+            case '(':
+                ++m_pI;
+                skip_parens();
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+
+    void skip_identifier(char ch)
+    {
+        bool escaped = false;
+        bool done = false;
+
+        while (m_pI != m_pEnd && !done)
+        {
+            if (escaped)
+            {
+                escaped = false;
+            }
+            else if (*m_pI == ch)
+            {
+                done = true;
+            }
+            else if (*m_pI == '\\')
+            {
+                escaped = true;
+            }
+
+            ++m_pI;
+        }
+    }
+
+    void skip_string(char ch)
+    {
+        bool escaped = false;
+        bool matched = false;
+
+        while (m_pI != m_pEnd)
+        {
+            if (escaped)
+            {
+                escaped = false;
+            }
+            else if (*m_pI == ch)
+            {
+                if (matched)
+                {
+                    // Doubled quote is the SQL standard way of escaping the quote character. Backslash
+                    // escapes are an extension.
+                    matched = false;
+                }
+                else
+                {
+                    matched = true;
+                }
+            }
+            else if (matched)
+            {
+                // End of the string, return before incrementing the pointer as it now points to the next
+                // token's start.
+                return;
+            }
+            else if (*m_pI == '\\')
+            {
+                escaped = true;
+            }
+
+            ++m_pI;
+        }
+    }
+
+    void skip_parens()
+    {
+        int depth = 1;
+
+        while (m_pI != m_pEnd && depth > 0)
+        {
+            char ch = *m_pI;
+
+            switch (ch)
+            {
+            case '(':
+                ++depth;
+                ++m_pI;
+                break;
+
+            case ')':
+                --depth;
+                ++m_pI;
+                break;
+
+            case '\'':
+            case '"':
+                ++m_pI;
+                skip_string(ch);
+                break;
+
+            case '`':
+                ++m_pI;
+                skip_identifier(ch);
+                break;
+
+            default:
+                ++m_pI;
+                break;
+            }
+        }
     }
 
     token_t next_token(token_required_t required = TOKEN_NOT_REQUIRED)
