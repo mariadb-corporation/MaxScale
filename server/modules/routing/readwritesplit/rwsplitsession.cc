@@ -934,7 +934,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             {
                 m_current_query = reset_gtid_probe();
 
-                if (can_retry_query())
+                if (!trx_is_open() && can_recover_master())
                 {
                     // Not inside a transaction, we can retry the original query
                     retry_query(m_current_query.release(), 0);
