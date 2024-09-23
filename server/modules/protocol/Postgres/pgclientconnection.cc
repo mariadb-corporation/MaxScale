@@ -526,7 +526,8 @@ void PgClientConnection::error(DCB* dcb, const char* errmsg)
 
 bool PgClientConnection::write(GWBUF&& buffer)
 {
-    return m_dcb->writeq_append(std::move(buffer));
+    m_dcb->writeq_append(std::move(buffer));
+    return true;
 }
 
 bool PgClientConnection::init_connection()
@@ -887,7 +888,9 @@ void PgClientConnection::handle_response(HistoryRequest&& req, const mxs::Reply&
     // Check the history responses once we've returned from clientReply
     m_session.worker()->lcall([this, id = req->id(), ok = !reply.error()](){
         if (m_session.is_alive())
-        m_protocol_data->history().check_early_responses(id, ok);
+        {
+            m_protocol_data->history().check_early_responses(id, ok);
+        }
     });
 
     m_protocol_data->history().add(std::move(*req), !reply.error());

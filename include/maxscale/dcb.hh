@@ -281,9 +281,8 @@ public:
      * Append data to the write queue.
      *
      * @param data   The data to be appended to the write queue.
-     * @return True if the data could be appended, false otherwise.
      */
-    bool writeq_append(GWBUF&& data);
+    void writeq_append(GWBUF&& data);
 
     /**
      * Drain the write queue of the DCB.

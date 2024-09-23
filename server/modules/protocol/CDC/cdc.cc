@@ -366,7 +366,8 @@ bool CDCClientConnection::write(std::string_view msg)
 
 bool CDCClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return m_dcb->writeq_append(std::move(buffer));
+    m_dcb->writeq_append(std::move(buffer));
+    return true;
 }
 
 bool CDCClientConnection::safe_to_restart() const

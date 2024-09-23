@@ -210,25 +210,23 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
         /**
          * This is a connection that was just taken out of the persistent connection pool.
          * Send a COM_CHANGE_USER query to the backend to reset the session state. */
-        if (m_dcb->writeq_append(std::move(buffer)))
+        m_dcb->writeq_append(std::move(buffer));
+        MXB_INFO("Reusing connection, sending %s",
+                 reset_conn ? "COM_RESET_CONNECTION" : "COM_CHANGE_USER");
+        m_state = State::RESET_CONNECTION;
+        rv = true;
+
+        // Clear out any old prepared statements, those are reset by the COM_CHANGE_USER
+        m_ps_map.clear();
+
+        if (reset_conn && m_session->listener_data()->m_conn_init_sql.buffer_contents.empty())
         {
-            MXB_INFO("Reusing connection, sending %s",
-                     reset_conn ? "COM_RESET_CONNECTION" : "COM_CHANGE_USER");
-            m_state = State::RESET_CONNECTION;
-            rv = true;
-
-            // Clear out any old prepared statements, those are reset by the COM_CHANGE_USER
-            m_ps_map.clear();
-
-            if (reset_conn && m_session->listener_data()->m_conn_init_sql.buffer_contents.empty())
-            {
-                // We don't have any initialization queries. This means we can send the history without having
-                // to wait for the server's response as we know that the COM_RESET_CONNECTION will send only
-                // one packet. This can't be done with a COM_CHANGE_USER as the server might respond with an
-                // AuthSwitchRequest packet.
-                m_state = State::RESET_CONNECTION_FAST;
-                send_history();
-            }
+            // We don't have any initialization queries. This means we can send the history without having
+            // to wait for the server's response as we know that the COM_RESET_CONNECTION will send only
+            // one packet. This can't be done with a COM_CHANGE_USER as the server might respond with an
+            // AuthSwitchRequest packet.
+            m_state = State::RESET_CONNECTION_FAST;
+            send_history();
         }
     }
 
@@ -1032,7 +1030,6 @@ bool MariaDBBackendConnection::read_com_ping_response()
 bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
 {
     MXS_SESSION::Scope scope(m_session);
-    int rc = 0;
     switch (m_state)
     {
     case State::FAILED:
@@ -1041,8 +1038,8 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
             MXB_ERROR("Unable to write to backend '%s' because connection has failed. Server in state %s.",
                       m_server.name(), m_server.status_string().c_str());
         }
-
-        rc = 0;
+        mxb_assert(!true);
+        return false;
         break;
 
     case State::ROUTING:
@@ -1058,7 +1055,8 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
             if (was_large || m_reply.state() == ReplyState::LOAD_DATA)
             {
                 // Not the start of a packet, don't analyze it.
-                return m_dcb->writeq_append(std::move(queue));
+                m_dcb->writeq_append(std::move(queue));
+                return true;
             }
 
             uint8_t cmd = mariadb::get_command(queue);
@@ -1075,7 +1073,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                 {
                     send_change_user_to_backend();
                 }
-                return 1;
+                return true;
             }
 
             prepare_for_write(queue);
@@ -1119,7 +1117,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                         // Since the history responses are erased the moment the COM_STMT_CLOSE is received
                         // it is not possible to deduce from the available information whether this is a
                         // "known" ID or not.
-                        return 1;
+                        return true;
                     }
                     else
                     {
@@ -1144,14 +1142,13 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                     // and close the session. The only known exception to this is the test for MXS-3392 which
                     // causes a COM_STMT_CLOSE with a zero ID to be sent.
                     mxb_assert(!true || (cmd == MXS_COM_STMT_CLOSE && ps_id == 0));
-                    return 1;
+                    return true;
                 }
             }
 
             if (cmd == MXS_COM_QUIT && m_server.persistent_conns_enabled())
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
-                rc = 1;
             }
             else
             {
@@ -1166,7 +1163,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                 }
 
                 /** Write to backend */
-                rc = m_dcb->writeq_append(std::move(queue));
+                m_dcb->writeq_append(std::move(queue));
             }
         }
         break;
@@ -1178,7 +1175,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                 // A continuation of a large COM_STMT_PREPARE
                 auto hdr = mariadb::get_header(queue.data());
                 m_large_query = hdr.pl_length == MYSQL_PACKET_LENGTH_MAX;
-                rc = m_dcb->writeq_append(std::move(queue));
+                m_dcb->writeq_append(std::move(queue));
             }
             else
             {
@@ -1187,7 +1184,6 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                          to_string(m_state).c_str(),
                          string(mariadb::get_sql(queue)).c_str());
                 m_delayed_packets.emplace_back(std::move(queue));
-                rc = 1;
             }
         }
         break;
@@ -1199,11 +1195,10 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                      to_string(m_state).c_str(),
                      string(mariadb::get_sql(queue)).c_str());
             m_delayed_packets.emplace_back(std::move(queue));
-            rc = 1;
         }
         break;
     }
-    return rc;
+    return true;
 }
 
 /**
@@ -1311,10 +1306,8 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
         auto len = proxyhdr_res.len;
         MXB_INFO("Sending proxy-protocol header '%.*s' to server '%s'.",
                  (int)len - 2, proxyhdr_res.header, m_server.name());
-        if (m_dcb->writeq_append(GWBUF(ptr, len)))
-        {
-            success = true;
-        }
+        m_dcb->writeq_append(GWBUF(ptr, len));
+        success = true;
     }
     else
     {
@@ -1340,10 +1333,8 @@ void MariaDBBackendConnection::ping()
         0x01, 0x00, 0x00, 0x00, 0x0e
     };
 
-    if (m_dcb->writeq_append(GWBUF(com_ping_packet, sizeof(com_ping_packet))))
-    {
-        m_state = State::PINGING;
-    }
+    m_dcb->writeq_append(GWBUF(com_ping_packet, sizeof(com_ping_packet)));
+    m_state = State::PINGING;
 }
 
 bool MariaDBBackendConnection::can_close() const
@@ -2573,14 +2564,8 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
             {
                 bool with_ssl = m_dcb->using_ssl();
                 GWBUF hs_resp = create_hs_response_packet(with_ssl);
-                if (m_dcb->writeq_append(std::move(hs_resp)))
-                {
-                    m_hs_state = HandShakeState::COMPLETE;
-                }
-                else
-                {
-                    m_hs_state = HandShakeState::FAIL;
-                }
+                m_dcb->writeq_append(std::move(hs_resp));
+                m_hs_state = HandShakeState::COMPLETE;
             }
             break;
 

@@ -726,7 +726,7 @@ void DCB::log_ssl_errors(int ssl_io_error)
     }
 }
 
-bool DCB::writeq_append(GWBUF&& data)
+void DCB::writeq_append(GWBUF&& data)
 {
     // polling_worker() can not be used here, the last backend write takes place
     // when the DCB has already been removed from the epoll-set.
@@ -757,7 +757,6 @@ bool DCB::writeq_append(GWBUF&& data)
         call_callback(Reason::HIGH_WATER);
         m_high_water_reached = true;
     }
-    return true;    // Propagate this change to callers once it's clear the asserts are not hit.
 }
 
 void DCB::writeq_drain()

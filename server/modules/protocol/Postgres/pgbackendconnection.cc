@@ -143,7 +143,8 @@ bool PgBackendConnection::routeQuery(GWBUF&& buffer)
         return true;
     }
 
-    return m_dcb->writeq_append(std::move(buffer));
+    m_dcb->writeq_append(std::move(buffer));
+    return true;
 }
 
 void PgBackendConnection::finish_connection()
@@ -184,7 +185,8 @@ bool PgBackendConnection::reuse(MXS_SESSION* session, mxs::Component* component,
 
     // The DISCARD ALL resets the session state
     // https://www.postgresql.org/docs/current/sql-discard.html
-    return m_dcb->writeq_append(pg::create_query_packet("DISCARD ALL"));
+    m_dcb->writeq_append(pg::create_query_packet("DISCARD ALL"));
+    return true;
 }
 
 bool PgBackendConnection::established()
@@ -294,27 +296,15 @@ bool PgBackendConnection::check_size(const GWBUF& buffer, size_t bytes)
 
 void PgBackendConnection::send_ssl_request()
 {
-    if (m_dcb->writeq_append(create_ssl_request()))
-    {
-        m_state = State::SSL_REQUEST;
-    }
-    else
-    {
-        handle_error("Failed to write SSL request");
-    }
+    m_dcb->writeq_append(create_ssl_request());
+    m_state = State::SSL_REQUEST;
 }
 
 void PgBackendConnection::send_startup_message()
 {
     // The parameters are a list of null-terminated strings that end with an empty string
-    if (m_dcb->writeq_append(create_startup_message(m_protocol_data->connect_params())))
-    {
-        m_state = State::AUTH;
-    }
-    else
-    {
-        handle_error("Failed to write startup message");
-    }
+    m_dcb->writeq_append(create_startup_message(m_protocol_data->connect_params()));
+    m_state = State::AUTH;
 }
 
 bool PgBackendConnection::handle_ssl_request()

@@ -1296,7 +1296,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
     mxb_assert(buffer);
     MXB_MAYBE_RETURN_FALSE();
     MXB_MAYBE_EXCEPTION();
-    int32_t rval = 0;
+    bool rval = false;
     auto packet_type = mxs::Target::READ;
 
     if (m_server->status() & SERVER_MASTER)
@@ -1335,7 +1335,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
             {
                 // Waiting for another one.
                 m_delayed_packets.emplace_back(std::move(buffer));
-                rval = 1;
+                rval = true;
             }
         }
         catch (const mxb::Exception& e)
@@ -1348,7 +1348,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
         // Already waiting for a connection. Save incoming buffer so it can be sent once a connection
         // is available.
         m_delayed_packets.emplace_back(std::move(buffer));
-        rval = 1;
+        rval = true;
         break;
     }
     m_query_time.start(opr);    // always measure

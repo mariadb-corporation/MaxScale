@@ -1738,7 +1738,8 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
 bool MariaDBClientConnection::write(GWBUF&& buffer)
 {
-    return m_dcb->writeq_append(move(buffer));
+    m_dcb->writeq_append(move(buffer));
+    return true;
 }
 
 void MariaDBClientConnection::error(DCB* event_dcb, const char* error)
