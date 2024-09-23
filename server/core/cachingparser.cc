@@ -343,8 +343,84 @@ public:
         return size;
     }
 
-    void dump(FILE* pFile, const std::string& temp, const std::string& path, const std::string& timestamp)
+    void dump(FILE* pFile,
+              const std::string& temp,
+              const std::string& path,
+              const std::string& timestamp,
+              CachingParser::DumpFormat dump_format)
     {
+        mxb::Json::Format json_format;
+
+        switch (dump_format)
+        {
+        case CachingParser::DumpFormat::JSON:
+            json_format = mxb::Json::Format::NORMAL;
+            break;
+
+        case CachingParser::DumpFormat::PRETTY_JSON:
+            json_format = mxb::Json::Format::PRETTY;
+            break;
+
+        case CachingParser::DumpFormat::JSON_LINES:
+            json_format = mxb::Json::Format::COMPACT;
+        }
+
+        DumpStatus status;
+
+        if (dump_format == CachingParser::DumpFormat::JSON_LINES)
+        {
+            status = dump_data(pFile, dump_format, json_format);
+        }
+        else
+        {
+            status = dump_header_and_data(pFile, timestamp, dump_format, json_format);
+        }
+
+        fclose(pFile);
+
+        if (status.code == 0)
+        {
+            if (rename(temp.c_str(), path.c_str()) != 0)
+            {
+                MXB_ERROR("Could not rename temporary file '%s' to final file '%s': %s",
+                          temp.c_str(), path.c_str(), mxb_strerror(errno));
+            }
+        }
+        else
+        {
+            errno = 0;
+            remove(temp.c_str());
+
+            if (status.code != ENOSPC || errno == 0)
+            {
+                // We did not run out of space or the removal of the file
+                // succeeded => we can log.
+                MXB_ERROR("Could not save Json data to file: %s", status.msg.c_str());
+            }
+
+            if (status.code != ENOSPC && errno != 0)
+            {
+                // We did not run out of space, so the error related to the removing
+                // of the file can be logged.
+                MXB_ERROR("Could not remove temporary file '%s': %s", temp.c_str(), mxb_strerror(errno));
+            }
+        }
+    }
+
+private:
+    struct DumpStatus
+    {
+        int         code = 0;
+        std::string msg;
+    };
+
+    DumpStatus dump_header_and_data(FILE* pFile,
+                                    const std::string& timestamp,
+                                    CachingParser::DumpFormat dump_format,
+                                    mxb::Json::Format json_format)
+    {
+        DumpStatus rv;
+
         std::stringstream out;
 
         out << "{\n";
@@ -360,90 +436,77 @@ public:
 
         std::string header = out.str();
 
-        int error_code = 0;
-        std::string error_msg;
+        DumpStatus status;
 
-        errno = 0;
         if (fwrite(header.data(), 1, header.length(), pFile) == header.length())
         {
-            bool first = true;
-            for (const auto& kv : m_infos)
-            {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    const std::string_view delimiter = ",\n";
-
-                    if (fwrite(delimiter.data(), 1, delimiter.length(), pFile) != delimiter.length())
-                    {
-                        error_code = errno;
-                        error_msg = mxb_strerror(error_code);
-                        break;
-                    }
-                }
-
-                mxb::Json info = kv.second.sInfo->to_json();
-
-                if (!info.save(pFile, mxb::Json::Format::NORMAL))
-                {
-                    error_code = errno;
-                    error_msg = info.error_msg().c_str();
-                    break;
-                }
-            }
+            status = dump_data(pFile, dump_format, json_format);
         }
         else
         {
-            error_code = errno;
-            error_msg = mxb_strerror(error_code);
+            status.code = errno;
+            status.msg = mxb_strerror(status.code);
         }
 
-        if (error_code == 0)
+        if (status.code == 0)
         {
             const std::string_view footer = "\n]\n}\n";
 
             if (fwrite(footer.data(), 1, footer.length(), pFile) != footer.length())
             {
-                error_code = errno;
-                error_msg = mxb_strerror(error_code);
+                status.code = errno;
+                status.msg = mxb_strerror(status.code);
             }
         }
 
-        fclose(pFile);
+        return status;
+    }
 
-        if (error_code == 0)
+    DumpStatus dump_data(FILE* pFile, CachingParser::DumpFormat dump_format, mxb::Json::Format json_format)
+    {
+        DumpStatus rv;
+
+        std::string_view delimiter;
+
+        if (dump_format == CachingParser::DumpFormat::JSON_LINES)
         {
-            if (rename(temp.c_str(), path.c_str()) != 0)
-            {
-                MXB_ERROR("Could not rename temporary file '%s' to final file '%s': %s",
-                          temp.c_str(), path.c_str(), mxb_strerror(errno));
-            }
+            delimiter = "\n";
         }
         else
         {
-            errno = 0;
-            remove(temp.c_str());
+            delimiter = ",\n";
+        }
 
-            if (error_code != ENOSPC || errno == 0)
+        bool first = true;
+        for (const auto& kv : m_infos)
+        {
+            if (first)
             {
-                // We did not run out of space or the removal of the file
-                // succeeded => we can log.
-                MXB_ERROR("Could not save Json data to file: %s", error_msg.c_str());
+                first = false;
+            }
+            else
+            {
+                if (fwrite(delimiter.data(), 1, delimiter.length(), pFile) != delimiter.length())
+                {
+                    rv.code = errno;
+                    rv.msg = mxb_strerror(rv.code);
+                    break;
+                }
             }
 
-            if (error_code != ENOSPC && errno != 0)
+            mxb::Json info = kv.second.sInfo->to_json();
+
+            if (!info.save(pFile, json_format))
             {
-                // We did not run out of space, so the error related to the removing
-                // of the file can be logged.
-                MXB_ERROR("Could not remove temporary file '%s': %s", temp.c_str(), mxb_strerror(errno));
+                rv.code = errno;
+                rv.msg = info.error_msg().c_str();
+                break;
             }
         }
+
+        return rv;
     }
 
-private:
     struct Entry
     {
         Entry(mxs::Parser* pParser,
@@ -870,6 +933,31 @@ std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost, in
 }
 
 // static
+bool CachingParser::from_string(std::string_view dump_format, DumpFormat* pDump_format)
+{
+    bool rv = true;
+
+    if (dump_format == "json")
+    {
+        *pDump_format = DumpFormat::JSON;
+    }
+    else if (dump_format == "pretty_json")
+    {
+        *pDump_format = DumpFormat::PRETTY_JSON;
+    }
+    else if (dump_format == "json_lines")
+    {
+        *pDump_format = DumpFormat::JSON_LINES;
+    }
+    else
+    {
+        rv = false;
+    }
+
+    return rv;
+}
+
+// static
 std::unique_ptr<json_t> CachingParser::dump(const char* zHost, json_t* pJson)
 {
     std::unique_ptr<json_t> sResult;
@@ -894,7 +982,35 @@ std::unique_ptr<json_t> CachingParser::dump(const char* zHost, json_t* pJson)
                 path += zPath;
             }
 
-            sResult = dump(zHost, path);
+            json_t* pFormat = json_object_get(pJson, "format");
+
+            if (pFormat)
+            {
+                const char* zFormat = json_string_value(pFormat);
+
+                if (zFormat)
+                {
+                    CachingParser::DumpFormat dump_format;
+
+                    if (from_string(zFormat, &dump_format))
+                    {
+                        sResult = dump(zHost, path, dump_format);
+                    }
+                    else
+                    {
+                        MXB_ERROR("'%s' is not a valid format. Valid are 'normal', 'pretty' and 'flat'.",
+                                  zFormat);
+                    }
+                }
+                else
+                {
+                    MXB_ERROR("A 'format' argument was provided, but it is not a string.");
+                }
+            }
+            else
+            {
+                sResult = dump(zHost, path, CachingParser::DumpFormat::JSON);
+            }
         }
         else
         {
@@ -910,7 +1026,7 @@ std::unique_ptr<json_t> CachingParser::dump(const char* zHost, json_t* pJson)
 }
 
 //static
-std::string CachingParser::dump(const std::string& dir)
+std::string CachingParser::dump(const std::string& dir, DumpFormat dump_format)
 {
     std::string path;
 
@@ -949,9 +1065,17 @@ std::string CachingParser::dump(const std::string& dir)
             path = dir;
             path += "/qc_dump-";
             path += timestamp;
-            path += ".json";
 
-            if (!dump(pFile, temp, path, timestamp))
+            if (dump_format == DumpFormat::JSON_LINES)
+            {
+                path += ".jsonl";
+            }
+            else
+            {
+                path += ".json";
+            }
+
+            if (!dump(pFile, temp, path, timestamp, dump_format))
             {
                 path.clear();
             }
@@ -978,11 +1102,13 @@ std::string CachingParser::dump(const std::string& dir)
 }
 
 //static
-std::unique_ptr<json_t> CachingParser::dump(const char* zHost, const std::string& dir)
+std::unique_ptr<json_t> CachingParser::dump(const char* zHost,
+                                            const std::string& dir,
+                                            DumpFormat dump_format)
 {
     std::unique_ptr<json_t> sResult;
 
-    std::string path = dump(dir);
+    std::string path = dump(dir, dump_format);
 
     if (!path.empty())
     {
@@ -1003,20 +1129,21 @@ std::unique_ptr<json_t> CachingParser::dump(const char* zHost, const std::string
 bool CachingParser::dump(FILE* pFile,
                          const std::string& temp,
                          const std::string& path,
-                         const std::string& timestamp)
+                         const std::string& timestamp,
+                         DumpFormat dump_format)
 {
     bool rv = false;
 
     RoutingWorker* pWorker = RoutingWorker::get_first();
     mxb_assert(pWorker);
 
-    auto f = [pFile, temp, path, timestamp]() {
+    auto f = [pFile, temp, path, timestamp, dump_format]() {
         QCInfoCache* pCache = this_thread.pInfo_cache;
         mxb_assert(pCache);
 
         if (pCache)
         {
-            pCache->dump(pFile, temp, path, timestamp);
+            pCache->dump(pFile, temp, path, timestamp, dump_format);
         }
         else
         {

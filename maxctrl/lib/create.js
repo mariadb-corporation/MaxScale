@@ -594,16 +594,25 @@ a compressed tarball by omitting the filename:
         function (yargs) {
             return yargs
                 .epilog(
-                    "The only argument to this command is the path of the file where " +
-                    "the contents of the cache should be saved. A relative path will " +
-                    "be interpreted in relation to the datadir of MaxScale."
+                  "The only required argument to this command is the path of the directory where " +
+                  "the contents of the cache should be saved. A relative path will " +
+                  "be interpreted in relation to the datadir of MaxScale. Optionally a " +
+                  "format argument can be provided that controls the format of the dumped file."
                 )
+                .group(["format"], "QC dump options:")
+                .option("format", {
+                  describe: "Format of the qc cache dump",
+                  type: "string",
+                  default: "json",
+                  choices: ["json", "pretty_json", "json_lines" ],
+                })
                 .usage("Usage: qc_dump <path>");
         },
         function (argv) {
             maxctrl(argv, async function (host) {
                 var dump = {
                     path: argv.path,
+                    format: argv.format
                 };
 
                 var res = await doRequest(host, "maxscale/query_classifier/dump",

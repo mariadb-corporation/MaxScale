@@ -71,8 +71,18 @@ public:
     static void                    set_thread_cache_enabled(bool enable);
 
     static std::unique_ptr<json_t> content_as_resource(const char* zHost, int top);
+
+    enum class DumpFormat
+    {
+        JSON,
+        PRETTY_JSON,
+        JSON_LINES
+    };
+
+    static bool from_string(std::string_view dump_format, DumpFormat* pDump_format);
+
     static std::unique_ptr<json_t> dump(const char* zHost, json_t* pJson);
-    static std::string             dump(const std::string& dir);
+    static std::string             dump(const std::string& dir, DumpFormat format = DumpFormat::JSON);
 
     Result           parse(const GWBUF& stmt, uint32_t collect) const override;
 
@@ -109,9 +119,15 @@ protected:
     std::unique_ptr<Parser> m_sParser;
 
 private:
-    static std::unique_ptr<json_t> dump(const char* zHost, const std::string& path);
+    static std::unique_ptr<json_t> dump(const char* zHost,
+                                        const std::string& path,
+                                        DumpFormat format);
+
     static bool dump(FILE* pFile,
-                     const std::string& temp, const std::string& path, const std::string& timestamp);
+                     const std::string& temp,
+                     const std::string& path,
+                     const std::string& timestamp,
+                     DumpFormat format);
 };
 
 }
