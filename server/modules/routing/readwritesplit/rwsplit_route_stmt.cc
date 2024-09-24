@@ -394,7 +394,8 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
         MXB_ERROR("Failed to execute session command in %s", backend->name());
         backend->close();
 
-        if (m_config->master_failure_mode == RW_FAIL_INSTANTLY && backend == m_current_master)
+        // The failure is fatal if it's m_sescmd_replier that failed
+        if (backend == m_sescmd_replier)
         {
             ok = false;
         }
@@ -467,7 +468,7 @@ void RWSplitSession::route_session_write(GWBUF&& buffer)
         {
             if (backend->in_use() && !write_session_command(backend, buffer.shallow_clone(), command))
             {
-                throw RWSException(std::move(buffer), "Could not route session command",
+                throw RWSException("Could not route session command",
                                    " (", mariadb::cmd_to_string(command), ": ", get_sql(buffer), ").");
             }
         }
