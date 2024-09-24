@@ -13,6 +13,7 @@
 
 #include "transaction.hh"
 #include "inventory.hh"
+#include "trx_test.hh"
 #include <maxbase/assert.h>
 #include <ftw.h>
 
@@ -137,6 +138,8 @@ void TrxFile::add_log_data(const char* pData, int64_t size)
 {
     m_trx_binlog.write(pData, size);
     m_size += size;
+
+    CRASH_TEST(fail_mid_trx);
 }
 
 int64_t TrxFile::size() const
