@@ -15,6 +15,7 @@ add_library(pinloki-core OBJECT
   writer.cc
   parser.cc
   transaction.cc
+  trx_test.cc
   )
 
 target_link_libraries(pinloki-core maxscale-common uuid)
