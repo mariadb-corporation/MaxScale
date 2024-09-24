@@ -341,9 +341,9 @@ defineExpose({ updateNode, getCanvas })
       @on-create-table="addTblNode"
       @on-undo="navHistory(activeHistoryIdx - 1)"
       @on-redo="navHistory(activeHistoryIdx + 1)"
-      @click-auto-arrange="autoArrange"
-      @change-graph-config-attr-value="patchGraphConfig"
-      @on-apply-script="applyScript"
+      @click-auto-arrange="autoArrange()"
+      @change-graph-config-attr-value="patchGraphConfig($event)"
+      @on-apply-script="applyScript()"
     />
     <EntityDiagram
       ref="entityDiagramRef"
@@ -374,6 +374,7 @@ defineExpose({ updateNode, getCanvas })
           variant="text"
           density="compact"
           color="primary"
+          data-test="setting-btn"
           @click.stop="openCtxMenu({ e: $event, type: NODE, item: node })"
         >
           <VIcon size="14" icon="mxs:settings" />
@@ -386,9 +387,9 @@ defineExpose({ updateNode, getCanvas })
       :graphConfig="graphConfigData"
       :exportOptions="ERD_EXPORT_OPTS"
       :colKeyCategoryMap="colKeyCategoryMap"
-      @create-tbl="addTblNode($event)"
+      @create-tbl="addTblNode()"
       @fit-into-view="fitIntoView()"
-      @auto-arrange-erd="autoArrange($event)"
+      @auto-arrange-erd="autoArrange()"
       @patch-graph-config="patchGraphConfig($event)"
       @open-editor="handleOpenEditor($event)"
       @rm-tbl="handleRmTblNode($event)"
