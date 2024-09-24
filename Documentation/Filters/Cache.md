@@ -209,17 +209,26 @@ queries.
 
 #### `storage`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `storage_inmemory`
+
 The name of the module that provides the storage for the cache. That
 module will be loaded and provided with the value of `storage_options` as
 argument. For instance:
 ```
-storage=storage_inmemory
+storage=storage_redis
 ```
-The default is `storage_inmemory`.
 
 See [Storage](#storage-1) for what storage modules are available.
 
 #### `storage_options`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**:
 
 **NOTE** Deprecated in 23.02.
 
@@ -279,6 +288,7 @@ stored in the cache. A resultset larger than this, will not be stored.
 ```
 max_resultset_rows=1000
 ```
+
 #### `max_resultset_size`
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
@@ -459,7 +469,7 @@ same effect as changing the isolation level of the backend to `read_committed`.
 
 - **Type**: number
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: `0`
 
 An integer value, using which the level of debug logging made by the cache
