@@ -124,7 +124,7 @@ private:
     std::chrono::milliseconds m_delay;
     int64_t                   m_at;
     int&                      m_rv;
-    Worker::DCId              m_dcid { 0 };
+    Worker::DCId              m_dcid {0};
     bool                      m_cancel_at_destruct;
     std::vector<int64_t>      m_tick_durations;
 };
@@ -147,17 +147,37 @@ int run_timer_test()
     TimerTest t5(&w, &rv, 600ms);
     auto cancel_at_destruct = false;
     TimerTest* pT6 = new TimerTest(&w, &rv, 500ms, cancel_at_destruct);
+    Worker::Callable callable(&w);
 
     w.execute([&]() {
-                  t1.start();
-                  t2.start();
-                  t3.start();
-                  t4.start();
-                  t5.start();
-                  pT6->start();
+        t1.start();
+        t2.start();
+        t3.start();
+        t4.start();
+        t5.start();
+        pT6->start();
 
-                  delete pT6;
-              }, mxb::Worker::EXECUTE_QUEUED);
+        delete pT6;
+
+        // MXS-5248: Check that dcalls being processed get removed by cancel_dcall.
+        std::vector<Worker::DCId> ids;
+
+        for (int i = 0; i < 100; i++)
+        {
+            ids.push_back(callable.dcall(1ms, [](){
+                return true;
+            }));
+        }
+
+        ids.push_back(callable.dcall(1ms, [&callable, ids](){
+            for (auto id : ids)
+            {
+                callable.cancel_dcall(id);
+            }
+
+            return false;
+        }));
+    }, mxb::Worker::EXECUTE_QUEUED);
 
     w.run();
 
@@ -216,15 +236,15 @@ public:
 
         set_worker(nullptr);
         pW->execute([this, pW]() {
-                set_worker(pW);
-                m_pW = pW;
+            set_worker(pW);
+            m_pW = pW;
 
-                resume_dcalls();
-                m_stopwatch.restart();
+            resume_dcalls();
+            m_stopwatch.restart();
 
-                cout << "Ping: " << flush;
-                m_moving = false;
-            }, mxb::Worker::EXECUTE_QUEUED);
+            cout << "Ping: " << flush;
+            m_moving = false;
+        }, mxb::Worker::EXECUTE_QUEUED);
     }
 
     bool ping(Callable::Action action)
@@ -250,8 +270,8 @@ public:
                 suspend_dcalls();
 
                 pW->execute([this](){
-                        move();
-                    }, mxb::Worker::EXECUTE_QUEUED);
+                    move();
+                }, mxb::Worker::EXECUTE_QUEUED);
             }
             else
             {
@@ -265,13 +285,13 @@ public:
     }
 
 private:
-    Worker*        m_pW { nullptr };
+    Worker*        m_pW {nullptr};
     Worker*        m_pW1;
     Worker*        m_pW2;
     Worker*        m_pW3;
-    int32_t        m_nMoves { 0 };
+    int32_t        m_nMoves {0};
     mxb::StopWatch m_stopwatch;
-    bool           m_moving { false };
+    bool           m_moving {false};
 };
 
 void run_move_test()
@@ -283,8 +303,8 @@ void run_move_test()
     MoveTest m(&w1, &w2, &w3);
 
     w1.execute([&]() {
-            m.start();
-        }, mxb::Worker::EXECUTE_QUEUED);
+        m.start();
+    }, mxb::Worker::EXECUTE_QUEUED);
 
     w3.start("w3");
     w2.start("w2");
@@ -293,7 +313,6 @@ void run_move_test()
     w3.join();
     w2.join();
 }
-
 }
 
 int main()
@@ -302,7 +321,7 @@ int main()
 
     int rv = 0;
     rv = run_timer_test();
-    run_move_test(); // Expected to crash, if there are issues.
+    run_move_test();    // Expected to crash, if there are issues.
 
     return rv;
 }
