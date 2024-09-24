@@ -165,6 +165,9 @@
         "name" : "binutils"
       },
       {
+        "name": "debugging_tools"
+      },
+      {
         "name" : "java"
       }
     ]

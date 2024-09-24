@@ -7,7 +7,7 @@ requirements are as follows:
 * GCC version 4.9 or later
 * OpenSSL version 1.0.1 or later
 * GNUTLS
-* Node.js 10 or newer
+* Node.js 14 or newer for building MaxCtrl and the GUI (webpack), Node.js 10 or newer for running MaxCtrl
 * PAM
 * SASL2 (cyrus-sasl)
 * SQLite3 version 3.3 or later
