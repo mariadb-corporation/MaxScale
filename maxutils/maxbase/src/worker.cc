@@ -1231,8 +1231,6 @@ void Worker::tick()
 {
     int64_t now = WorkerLoad::get_time_ms(mxb::Clock::now());
 
-    vector<DCall*> repeating_calls;
-
     auto i = m_sorted_calls.begin();
 
     // i->first is the time when the first call should be invoked.
@@ -1255,7 +1253,7 @@ void Worker::tick()
         {
             if (!pCall->owner().dcalls_suspended())
             {
-                repeating_calls.push_back(pCall);
+                m_repeating_calls.push_back(pCall);
             }
         }
         else
@@ -1269,13 +1267,15 @@ void Worker::tick()
         i = m_sorted_calls.begin();
     }
 
-    for (auto it = repeating_calls.begin(); it != repeating_calls.end(); ++it)
+    for (auto it = m_repeating_calls.begin(); it != m_repeating_calls.end(); ++it)
     {
         DCall* pCall = *it;
 
         m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
         m_calls.insert(std::make_pair(pCall->id(), pCall));
     }
+
+    m_repeating_calls.clear();
 
     adjust_timer();
 }
@@ -1347,13 +1347,29 @@ Worker::DCall* Worker::remove_dcall(DCId id)
 
         mxb_assert(pCall);
     }
-    else
+    else if (!(pCall = get_repeating_dcall(id)))
     {
         mxb_assert_message(!true,
                            "Attempt to remove delayed call using non-existent id %ld. "
                            "Calling hktask_remove() from the task function? Simply "
                            "return false instead.", id);
         MXB_WARNING("Attempt to remove a delayed call, associated with non-existing id.");
+    }
+
+    return pCall;
+}
+
+Worker::DCall* Worker::get_repeating_dcall(DCId id)
+{
+    DCall* pCall = nullptr;
+    auto it = std::find_if(m_repeating_calls.begin(), m_repeating_calls.end(), [&](const auto& pC){
+        return pC->id() == id;
+    });
+
+    if (it != m_repeating_calls.end())
+    {
+        pCall = *it;
+        m_repeating_calls.erase(it);
     }
 
     return pCall;
