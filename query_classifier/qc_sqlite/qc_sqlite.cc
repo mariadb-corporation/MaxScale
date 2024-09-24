@@ -3133,7 +3133,6 @@ public:
                     {
                     case TK_CHARACTER:
                     case TK_NAMES:
-                        i = pList->nExpr;
                         break;
 
                     case TK_EQ:

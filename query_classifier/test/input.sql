@@ -42,3 +42,5 @@ DELETE x FROM x JOIN (SELECT id FROM y) y ON x.id = y.id;
 SELECT @@identity;
 SELECT @@last_gtid;
 SELECT @@last_insert_id;
+SET autocommit=1,names UTF8MB4;
+SET names UTF8MB4,autocommit=1;

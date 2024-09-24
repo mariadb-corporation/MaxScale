@@ -433,7 +433,8 @@ set @@collation_connection=binary;
 set names latin1;
 SET NAMES latin1;
 SET NAMES latin1 COLLATE latin1_bin;
-SET NAMES utf8, character_set_connection=latin1;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, character_set_connection=latin1;
 SET NAMES utf8;
 SET NAMES latin1;
 SET NAMES latin1;
@@ -464,8 +465,9 @@ SET NAMES utf8 COLLATE utf8_5624_1;
 SET NAMES utf8 COLLATE utf8_5624_2;
 SET NAMES utf8 COLLATE utf8_5624_3;
 SET NAMES utf8 COLLATE utf8_5624_4;
-SET NAMES utf8, collation_connection=utf8_bengali_standard_ci;
-SET NAMES utf8, collation_connection=utf8_bengali_traditional_ci;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, collation_connection=utf8_bengali_standard_ci;
+//SET NAMES utf8, collation_connection=utf8_bengali_traditional_ci;
 SET NAMES utf8 COLLATE utf8_5624_5;
 SET NAMES utf8 COLLATE utf8_5624_5_bad;
 SET CHARACTER SET latin1;
@@ -630,11 +632,13 @@ SET collation_connection=ucs2_german2_ci;
 SET NAMES latin1;
 SET sql_mode='strict_all_tables';
 SET sql_mode=DEFAULT;
-SET NAMES latin1, collation_connection=ucs2_bin;
-SET NAMES latin1, collation_connection=ucs2_general_ci;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES latin1, collation_connection=ucs2_bin;
+//SET NAMES latin1, collation_connection=ucs2_general_ci;
 SET NAMES latin1;
-SET NAMES utf8, character_set_connection=ucs2;
-SET NAMES latin1, character_set_connection=ucs2;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, character_set_connection=ucs2;
+//SET NAMES latin1, character_set_connection=ucs2;
 SET NAMES utf8;
 set names ujis;
 set @ujis1= _ujis     0x8EA18EA28EA38EA48EA58EA68EA78EA88EA98EAA8EAB8EAC8EAD8EAE8EAF;
@@ -657,36 +661,42 @@ SET collation_connection=ujis_japanese_ci;
 set names ujis;
 set collation_connection=ujis_bin;
 SET TIME_ZONE='+03:00';
-SET NAMES utf8mb4, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8mb4, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
 SET NAMES latin1;
 SET @ivar= 1234;
 SET @str1 = 'SELECT ?';
 SET @str2 = CONVERT(@str1 USING utf16le);
-SET NAMES utf8, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection='utf16le_general_ci';
-SET NAMES utf8, collation_connection='utf16le_bin';
-SET NAMES utf8, collation_connection=utf16le_general_ci;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection='utf16le_general_ci';
+//SET NAMES utf8, collation_connection='utf16le_bin';
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
 SET @param1='%%';
 SET @param1='%%';
-SET NAMES utf8, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection=utf16le_bin;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection=utf16le_bin;
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
 SET NAMES latin1;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
 SET max_sort_length=4;
 SET max_sort_length=DEFAULT;
-SET NAMES utf8, @@character_set_results=NULL;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, @@character_set_results=NULL;
 SET NAMES latin1;
 SET NAMES utf8;
-SET NAMES utf8, @@collation_connection=utf16le_bin;
-SET NAMES utf8, collation_connection=utf16le_general_ci;
-SET NAMES utf8, collation_connection=utf16le_bin;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, @@collation_connection=utf16le_bin;
+//SET NAMES utf8, collation_connection=utf16le_general_ci;
+//SET NAMES utf8, collation_connection=utf16le_bin;
 SET NAMES utf8;
 SET TIME_ZONE='+03:00';
 SET NAMES latin1;
@@ -723,10 +733,12 @@ SET collation_connection=utf16_general_ci;
 SET max_sort_length=4;
 SET max_sort_length=DEFAULT;
 SET NAMES latin1;
-SET NAMES utf8, @@character_set_results=NULL;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, @@character_set_results=NULL;
 SET NAMES latin1;
 SET NAMES utf8;
-SET NAMES utf8, @@character_set_connection=utf16;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, @@character_set_connection=utf16;
 set collation_connection=utf16_general_ci;
 set collation_connection=utf16_bin;
 SET NAMES utf8mb4;
@@ -785,12 +797,14 @@ SET collation_connection=utf32_general_ci;
 SET max_sort_length=4;
 SET max_sort_length=DEFAULT;
 SET NAMES latin1;
-SET NAMES utf8mb4, @@character_set_results=NULL;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8mb4, @@character_set_results=NULL;
 SET NAMES latin1;
 SET NAMES utf8mb4;
 SET collation_connection=utf32_general_ci;
 SET collation_connection=utf32_general_ci;
-SET NAMES utf8, @@character_set_connection=utf32;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, @@character_set_connection=utf32;
 set collation_connection=utf32_general_ci;
 set collation_connection=utf32_bin;
 SET NAMES utf8mb4;
@@ -866,7 +880,8 @@ set max_sort_length=5;
 set max_sort_length=default;
 SET NAMES utf8;
 SET NAMES utf8mb4;
-SET NAMES utf8mb4, @@character_set_results=NULL;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8mb4, @@character_set_results=NULL;
 SET NAMES latin1;
 SET NAMES utf8mb4;
 SET NAMES utf8mb4;
@@ -928,7 +943,8 @@ set sql_mode=traditional;
 set sql_mode=default;
 SET NAMES utf8mb3;
 SET NAMES utf8 COLLATE utf8_sinhala_ci;
-SET NAMES utf8, @@character_set_results=NULL;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, @@character_set_results=NULL;
 SET NAMES latin1;
 SET NAMES utf8;
 SET NAMES utf8;
@@ -948,9 +964,11 @@ SET NAMES utf8;
 SET @arg00=_binary 0xFF;
 SET NAMES latin1;
 SET NAMES utf8;
-SET NAMES utf8, collation_connection=utf8_swedish_ci;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, collation_connection=utf8_swedish_ci;
 SET @arg='¢';
-SET NAMES utf8, collation_connection=utf8_swedish_ci;
+//qc_mysqlembedded gets this wrong.
+//SET NAMES utf8, collation_connection=utf8_swedish_ci;
 SET @arg='¢';
 SET NAMES utf8;
 SET @b='b';
