@@ -13,10 +13,12 @@
  */
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
+import Worksheet from '@wsModels/Worksheet'
 import ErToolbar from '@wkeComps/ErdWke/ErToolbar.vue'
 import EntityDiagram from '@wkeComps/ErdWke/EntityDiagram.vue'
 import DiagramCtxMenu from '@wkeComps/ErdWke/DiagramCtxMenu.vue'
 import erdTaskService from '@wsServices/erdTaskService'
+import schemaInfoService from '@wsServices/schemaInfoService'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
 import ddlTemplate from '@/utils/ddlTemplate'
@@ -98,6 +100,7 @@ const isFitIntoView = ref(false)
 const panAndZoom = ref({ x: 0, y: 0, k: 1 })
 
 const charset_collation_map = computed(() => store.state.schemaInfo.charset_collation_map)
+const activeRequestConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 
 const connId = computed(() => typy(props.conn, 'id').safeString)
 const activeGraphConfig = computed(() => typy(props.erdTask, 'graph_config').safeObjectOrEmpty)
@@ -334,8 +337,12 @@ function updateNode(params) {
   entityDiagramRef.value.updateNode(params)
 }
 
-function createTbl() {
+async function createTbl() {
   if (connId.value) {
+    await schemaInfoService.querySuppData({
+      connId: connId.value,
+      config: activeRequestConfig.value,
+    })
     const length = props.nodes.length
     const { genTblStructureData, genErdNode } = erdHelper
     const schema = typy(props.schemas, '[0]').safeString || 'test'
