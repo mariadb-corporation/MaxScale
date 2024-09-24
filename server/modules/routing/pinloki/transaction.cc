@@ -95,7 +95,7 @@ class TrxFile
 public:
     enum Mode {Recover, Write};
 
-    TrxFile(InventoryWriter* pInv, Mode mode);
+    TrxFile(InventoryWriter* pInv, Mode mode, const maxsql::Gtid& gtid = maxsql::Gtid {});
 
     // Writes to trx-binlog
     void add_log_data(const char* pData, int64_t size);
@@ -113,13 +113,15 @@ private:
     std::string      m_summary_filename;
     std::ofstream    m_trx_binlog;
     int64_t          m_size = 0;
+    maxsql::Gtid     m_gtid;
 };
 
 // TODO: Missing error checking in all of TrxFile
-TrxFile::TrxFile(InventoryWriter* pInv, Mode mode)
+TrxFile::TrxFile(InventoryWriter* pInv, Mode mode, const maxsql::Gtid& gtid)
     : m_inventory(*pInv)
     , m_trx_binlog_filename(m_inventory.config().trx_dir() + "/trx-binlog")
     , m_summary_filename(m_inventory.config().trx_dir() + "/summary")
+    , m_gtid(gtid)
 {
     if (mode == Recover)
     {
@@ -130,6 +132,14 @@ TrxFile::TrxFile(InventoryWriter* pInv, Mode mode)
     {
         mxb_assert(!std::ifstream(m_trx_binlog_filename).good());
         mxb_assert(!std::ifstream(m_summary_filename).good());
+
+        // Write the gtid to the summary file for logging
+        auto tmp_name = m_summary_filename + ".tmp";
+        std::ofstream tmp_summary(tmp_name);
+        tmp_summary << gtid;
+        tmp_summary.flush();
+        rename(tmp_name.c_str(), m_summary_filename.c_str());
+
         m_trx_binlog.open(m_trx_binlog_filename);
     }
 }
@@ -153,7 +163,7 @@ WritePosition& TrxFile::commit(WritePosition& pos, const maxsql::Gtid& gtid)
 
     auto tmp_name = m_summary_filename + ".tmp";
     std::ofstream tmp_summary(tmp_name);
-    tmp_summary << pos.name << ' ' << pos.write_pos << ' ' << gtid;
+    tmp_summary << gtid << ' ' << pos.name << ' ' << pos.write_pos << ' ' << "TRX";
     tmp_summary.flush();
     rename(tmp_name.c_str(), m_summary_filename.c_str());
 
@@ -163,18 +173,25 @@ WritePosition& TrxFile::commit(WritePosition& pos, const maxsql::Gtid& gtid)
 WritePosition& TrxFile::recover(WritePosition& pos)
 {
     std::ifstream summary(m_summary_filename);
-    if (!summary.good())
-    {
-        remove_dir_contents(m_inventory.config().trx_dir().c_str());
-        return pos;
-    }
-
     std::string target_name;
     int64_t start_file_pos;
     std::string gtid_str;
-    maxsql::Gtid gtid;
-    summary >> target_name >> start_file_pos >> gtid_str;
-    gtid.from_string(gtid_str);
+    std::string end_marker;
+    summary >> gtid_str >> target_name >> start_file_pos >> end_marker;
+    m_gtid = maxsql::Gtid::from_string(gtid_str);
+
+    if (end_marker != "TRX")
+    {
+        std::ifstream trx(m_trx_binlog_filename);
+        if (trx)
+        {
+            MXB_SWARNING("Binlog transaction recovery. Removing temporary transaction files for"
+                         " incomplete transaction"
+                         << (m_gtid.is_valid() ? " with gtid "s + gtid_str : "") << '.');
+        }
+        remove_dir_contents(m_inventory.config().trx_dir().c_str());
+        return pos;
+    }
 
     if (!pos.file.is_open())
     {
@@ -183,7 +200,7 @@ WritePosition& TrxFile::recover(WritePosition& pos)
         {
             MXB_SERROR("Binlog transaction recovery. The last binlog file '"
                        << last_file_name << "' is not the expected '" << target_name
-                       << "'. Removing temporary transaction files");
+                       << "'. Removing temporary transaction files for gtid " << m_gtid);
             remove_dir_contents(m_inventory.config().trx_dir().c_str());
             return pos;
         }
@@ -237,7 +254,7 @@ bool Transaction::add_event(maxsql::RplEvent& rpl_event)
     {
         if (!m_trx_file)
         {
-            m_trx_file = std::make_unique<TrxFile>(&m_inventory, TrxFile::Write);
+            m_trx_file = std::make_unique<TrxFile>(&m_inventory, TrxFile::Write, m_gtid);
         }
 
         m_trx_file->add_log_data(m_trx_buffer.data(), m_trx_buffer.size());
