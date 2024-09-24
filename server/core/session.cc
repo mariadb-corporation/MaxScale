@@ -683,6 +683,7 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
         if (action == mxb::Worker::Callable::EXECUTE && ref)
         {
             MXS_SESSION::Scope scope(this);
+            mxb::LogScope logscope(ref->endpoint().target()->name());
             // If the reference is still open but the session is about to stop then an event that triggered
             // the delayed_routing() call and an error event that closed the session were returned by the same
             // epoll_wait() call. In this case we still proceed with the function call as it makes sure it's
