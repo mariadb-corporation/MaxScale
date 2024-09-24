@@ -66,9 +66,9 @@ The comma separated list of topics to subscribe to.
 ### `batch_size`
 
 - **Type**: count
-- **Default**: `100`
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `100`
 
 Maximum number of uncommitted records. The KafkaImporter will buffer records
 into batches and commit them once either enough records are gathered (controlled
@@ -77,11 +77,11 @@ will be read again if a reconnection to either Kafka or MariaDB occurs.
 
 ### `kafka_sasl_mechanism`
 
-- **Type**: enum
-- **Default**: `PLAIN`
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `PLAIN`, `SCRAM-SHA-256`, `SCRAM-SHA-512`
+- **Default**: `PLAIN`
 
 SASL mechanism to use. The Kafka broker must be configured with the same
 authentication scheme.
@@ -90,8 +90,8 @@ authentication scheme.
 
 - **Type**: string
 - **Mandatory**: No
-- **Default**: No default value
 - **Dynamic**: Yes
+- **Default**: `""`
 
 SASL username used for authentication. If this parameter is defined,
 `kafka_sasl_password` must also be provided.
@@ -99,28 +99,28 @@ SASL username used for authentication. If this parameter is defined,
 ### `kafka_sasl_password`
 
 - **Type**: string
-- **Default**: No default value
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `""`
 
 SASL password for the user. If this parameter is defined, `kafka_sasl_user` must
 also be provided.
 
 ### `kafka_ssl`
 
-- **Type**: bool
-- **Default**: `false`
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Enable SSL for Kafka connections.
 
 ### `kafka_ssl_ca`
 
 - **Type**: path
-- **Default**: No default value
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `""`
 
 SSL Certificate Authority file in PEM format. If this parameter is not
 defined, the system default CA certificate is used.
@@ -128,9 +128,9 @@ defined, the system default CA certificate is used.
 ### `kafka_ssl_cert`
 
 - **Type**: path
-- **Default**: No default value
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `""`
 
 SSL public certificate file in PEM format. If this parameter is defined,
 `kafka_ssl_key` must also be provided.
@@ -138,20 +138,20 @@ SSL public certificate file in PEM format. If this parameter is defined,
 ### `kafka_ssl_key`
 
 - **Type**: path
-- **Default**: No default value
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `""`
 
 SSL private key file in PEM format. If this parameter is defined,
 `kafka_ssl_cert` must also be provided.
 
 ### `table_name_in`
 
-- **Type**: enum
-- **Default**: `topic`
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `topic`, `key`
+- **Default**: `topic`
 
 The Kafka message part that is used to locate the table to insert the data into.
 
@@ -175,10 +175,10 @@ the name would be:
 
 ### `timeout`
 
-- **Type**: duration
-- **Default**: `5000ms`
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `5000ms`
 
 Timeout for both Kafka and MariaDB network communication.
 
