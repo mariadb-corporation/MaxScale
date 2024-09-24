@@ -13,6 +13,7 @@
  */
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
+import Worksheet from '@wsModels/Worksheet'
 import ErToolbar from '@wkeComps/ErdWke/ErToolbar.vue'
 import EntityDiagram from '@wkeComps/ErdWke/EntityDiagram.vue'
 import erdTaskService from '@wsServices/erdTaskService'
@@ -30,6 +31,7 @@ import {
   LINK_OPT_TYPE_MAP,
 } from '@/constants/workspace'
 import html2canvas from 'html2canvas'
+import schemaInfoService from '@wsServices/schemaInfoService'
 
 const props = defineProps({
   isFormValid: { type: Boolean, required: true },
@@ -94,6 +96,7 @@ const menuX = ref(0)
 const menuY = ref(0)
 
 const charset_collation_map = computed(() => store.state.schemaInfo.charset_collation_map)
+const activeRequestConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 
 const connId = computed(() => typy(props.conn, 'id').safeString)
 const activeGraphConfig = computed(() => typy(props.erdTask, 'graph_config').safeObjectOrEmpty)
@@ -137,7 +140,7 @@ const boardOpts = computed(() => [
   { title: t('export'), children: ERD_EXPORT_OPTS },
 ])
 const entityOpts = computed(() =>
-  Object.values(ENTITY_OPT_TYPE_MAP).map((type) => ({
+  Object.values(ENTITY_OPT_TYPE_MAP).map(type => ({
     type,
     title: t(type),
     action: () => handleChooseNodeOpt({ type, node: activeCtxItem.value }),
@@ -162,7 +165,7 @@ const linkOpts = computed(() => {
     if (!refColKeyCategories.includes(CREATE_TBL_TOKEN_MAP.primaryKey))
       opts.push(genOptionalityOpt({ link, isForRefTbl: true }))
   }
-  return opts.map((opt) => ({ ...opt, action: () => handleChooseLinkOpt(opt.type) }))
+  return opts.map(opt => ({ ...opt, action: () => handleChooseLinkOpt(opt.type) }))
 })
 const ctxMenuItems = computed(() => {
   switch (ctxMenuType.value) {
@@ -182,7 +185,7 @@ const activeHistoryIdx = computed(() => typy(props.erdTaskTmp, 'active_history_i
 
 watch(
   graphConfigData,
-  (v) => {
+  v => {
     ErdTask.update({
       where: props.erdTask.id,
       data: {
@@ -202,18 +205,18 @@ watch(
 )
 watch(
   panAndZoom,
-  (v) => {
+  v => {
     if (v.eventType && v.eventType == 'wheel') isFitIntoView.value = false
   },
   { deep: true }
 )
 watch(
   () => props.activeEntityId,
-  (v) => {
+  v => {
     if (!v) fitIntoView()
   }
 )
-watch(showCtxMenu, (v) => {
+watch(showCtxMenu, v => {
   if (!v) activeCtxItem.value = null
 })
 
@@ -237,8 +240,12 @@ function genCardinalityOpt(link) {
 }
 
 function genOptionalityOpt({ link, isForRefTbl = false }) {
-  const { SET_MANDATORY, SET_FK_COL_OPTIONAL, SET_REF_COL_MANDATORY, SET_REF_COL_OPTIONAL } =
-    LINK_OPT_TYPE_MAP
+  const {
+    SET_MANDATORY,
+    SET_FK_COL_OPTIONAL,
+    SET_REF_COL_MANDATORY,
+    SET_REF_COL_OPTIONAL,
+  } = LINK_OPT_TYPE_MAP
   const {
     source,
     target,
@@ -445,7 +452,7 @@ function toggleUnique({ node, colId, value }) {
       $unset: Object.values(keyMap).reduce((ids, k) => {
         if (
           isEqual(
-            k.cols.map((c) => c.id),
+            k.cols.map(c => c.id),
             [colId]
           )
         )
@@ -560,8 +567,12 @@ function updateNode(params) {
   entityDiagramRef.value.updateNode(params)
 }
 
-function handleCreateTable() {
+async function handleCreateTable() {
   if (connId.value) {
+    await schemaInfoService.querySuppData({
+      connId: connId.value,
+      config: activeRequestConfig.value,
+    })
     const length = props.nodes.length
     const { genTblStructureData, genErdNode } = erdHelper
     const schema = typy(props.schemas, '[0]').safeString || 'test'
@@ -647,10 +658,8 @@ async function navHistory(idx) {
  */
 function addPlainIndex({ colId, node }) {
   const refTblDef = node.data.defs
-  const plainKeyMap = typy(
-    refTblDef,
-    `key_category_map[${CREATE_TBL_TOKEN_MAP.key}]`
-  ).safeObjectOrEmpty
+  const plainKeyMap = typy(refTblDef, `key_category_map[${CREATE_TBL_TOKEN_MAP.key}]`)
+    .safeObjectOrEmpty
   const newKey = erdHelper.genKey({ defs: refTblDef, category: CREATE_TBL_TOKEN_MAP.key, colId })
   return immutableUpdate(node, {
     data: {
@@ -718,7 +727,7 @@ function onClickAutoArrange() {
   ErdTask.update({
     where: props.erdTask.id,
     data: { is_laid_out: false },
-  }).then(() => entityDiagramRef.value.runSimulation((diagram) => onRendered(diagram)))
+  }).then(() => entityDiagramRef.value.runSimulation(diagram => onRendered(diagram)))
 }
 
 function immutableUpdateConfig(obj, path, value) {
