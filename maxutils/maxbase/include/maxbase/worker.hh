@@ -1220,6 +1220,10 @@ private:
     void remove_dcall(DCall* pCall);
     void restore_dcall(DCall* pCall);
 
+    // Finds a dcall from m_repeating_calls where the already executed dcalls are stored
+    // temporarily, returns the dcall if it was found, nullptr if it wasn't. Called by cancel_dcall().
+    DCall* get_repeating_dcall(DCId id);
+
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg) override;
 
     static void thread_main(Worker* pThis, mxb::Semaphore* pSem);
@@ -1284,5 +1288,10 @@ private:
     PendingPolls     m_incomplete_polls;          /*< Calls to be made at next epoll_wait(). */
     int              m_min_timeout {1};           /*< Minimum timeout when calling epoll_wait(). */
     std::atomic_bool m_messages_enabled {true};   /*< Are messages to this worker enabled. */
+
+    // Temporary container that's used to store repeating calls while the pending dcalls are being
+    // executed. This is needed so that a removal of an already executed dcall by a later dcall
+    // in the same processing batch isn't lost.
+    std::vector<DCall*> m_repeating_calls;
 };
 }
