@@ -96,9 +96,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+import { mapMutations, mapState, mapActions } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
+import Worksheet from '@wsModels/Worksheet'
 import ErToolbar from '@wsSrc/components/worksheets/ErdWke/ErToolbar.vue'
 import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue'
 import { EventBus } from '@wkeComps/EventBus'
@@ -163,6 +164,9 @@ export default {
         }),
         connId() {
             return this.$typy(this.conn, 'id').safeString
+        },
+        activeRequestConfig() {
+            return Worksheet.getters('activeRequestConfig')
         },
         diagramId() {
             return `${this.CTX_TYPES.DIAGRAM}_${this.erdTaskKey}`
@@ -348,6 +352,7 @@ export default {
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
+        ...mapActions({ queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData' }),
         onRendered(diagram) {
             this.onNodesCoordsUpdate(diagram.nodes)
             if (diagram.nodes.length) this.fitIntoView()
@@ -685,8 +690,12 @@ export default {
         updateNode(params) {
             this.$refs.diagram.updateNode(params)
         },
-        handleCreateTable() {
+        async handleCreateTable() {
             if (this.connId) {
+                await this.queryDdlEditorSuppData({
+                    connId: this.connId,
+                    config: this.activeRequestConfig,
+                })
                 const length = this.nodes.length
                 const { genDdlEditorData, genErdNode } = erdHelper
                 const { tableParser, dynamicColors, immutableUpdate } = this.$helpers
