@@ -154,6 +154,10 @@ The masking filter has one mandatory parameter - `rules`.
 
 #### `rules`
 
+- **Type**: path
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
 Specifies the path of the file where the masking rules are stored.
 A relative path is interpreted relative to the _module configuration directory_
 of MariaDB MaxScale. The default module configuration directory is
@@ -165,17 +169,26 @@ rules=/path/to/rules-file
 
 #### `warn_type_mismatch`
 
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `never`, `always`
+- **Default**: `never`
+
 With this optional parameter the masking filter can be instructed to log
 a warning if a masking rule matches a column that is not of one of the
 allowed types.
-
-The values that can be used are `never` and `always`, with `never` being
-the default.
 ```
 warn_type_mismatch=always
 ```
 
 #### `large_payload`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `ignore`, `abort`
+- **Default**: `abort`
 
 This optional parameter specifies how the masking filter should treat
 payloads larger than `16MB`, that is, payloads that are delivered in
@@ -194,6 +207,11 @@ large_payload=ignore
 ```
 
 #### `prevent_function_usage`
+
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
 
 This optional parameter specifies how the masking filter should behave
 if a column that should be masked, is used in conjunction with some
@@ -214,9 +232,13 @@ filter should be setup to allow or reject the use of certain functions.
 ```
 prevent_function_usage=false
 ```
-The default value is `true`.
 
 #### `require_fully_parsed`
+
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
 
 This optional parameter specifies how the masking filter should
 behave in case any of `prevent_function_usage`, `check_user_variables`,
@@ -229,14 +251,17 @@ parser limitation) will be blocked.
 require_fully_parsed=false
 ```
 
-The default value is `true`.
-
 Note that if this parameter is set to false, then `prevent_function_usage`,
 `check_user_variables`, `check_unions` and `check_subqueries` are rendered
 less effective, as it with a statement that can not be fully parsed may be
 possible to bypass the protection that they are intended to provide.
 
 #### `treat_string_arg_as_field`
+
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
 
 This optional parameter specifies how the masking filter should treat
 strings used as arguments to functions. If true, they will be handled
@@ -245,9 +270,13 @@ been enabled and `"` is used instead of backtick.
 ```
 treat_string_arg_as_field=false
 ```
-The default value is `true`.
 
 #### `check_user_variables`
+
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
 
 This optional parameter specifies how the masking filter should
 behave with respect to user variables. If true, then a statement like
@@ -259,9 +288,12 @@ will be rejected if `ssn` is a column that should be masked.
 check_user_variables=false
 ```
 
-The default value is `true`.
-
 #### `check_unions`
+
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
 
 This optional parameter specifies how the masking filter should
 behave with respect to UNIONs. If true, then a statement like
@@ -273,9 +305,12 @@ will be rejected if `b` is a column that should be masked.
 check_unions=false
 ```
 
-The default value is `true`.
-
 #### `check_subqueries`
+
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
 
 This optional parameter specifies how the masking filter should
 behave with respect to subqueries. If true, then a statement like
@@ -286,8 +321,6 @@ will be rejected if `a` is a column that should be masked.
 ```
 check_subqueries=false
 ```
-
-The default value is `true`.
 
 ## Rules
 
