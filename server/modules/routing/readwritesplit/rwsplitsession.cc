@@ -1061,7 +1061,7 @@ void RWSplitSession::handle_master_error(const mxs::Reply& reply, const std::str
         {
             m_current_query.buffer = reset_gtid_probe();
 
-            if (!can_retry_query())
+            if (trx_is_open() || !can_recover_master())
             {
                 throw master_exception(message, reply);
             }
