@@ -495,6 +495,7 @@ private:
             }
 
             mxb::Json info = kv.second.sInfo->to_json();
+            info.set_int("hits", kv.second.hits);
 
             if (!info.save(pFile, json_format))
             {
