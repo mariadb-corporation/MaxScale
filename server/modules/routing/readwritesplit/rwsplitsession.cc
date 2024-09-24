@@ -968,7 +968,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             {
                 m_current_query.buffer = reset_gtid_probe();
 
-                if (can_retry_query())
+                if (!trx_is_open() && can_recover_master())
                 {
                     // Not inside a transaction, we can retry the original query
                     retry_query(std::move(m_current_query.buffer), 0);

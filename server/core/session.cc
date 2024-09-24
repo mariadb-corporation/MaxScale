@@ -679,6 +679,7 @@ void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::mi
         if (action == mxb::Worker::Callable::EXECUTE && ref)
         {
             MXS_SESSION::Scope scope(this);
+            mxb::LogScope logscope(ref->endpoint().target()->name());
             mxb_assert(state() == MXS_SESSION::State::STARTED);
 
             if (!fn(std::move(*sbuf)))
