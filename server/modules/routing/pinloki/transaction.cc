@@ -169,6 +169,8 @@ WritePosition& TrxFile::commit(WritePosition& pos, const maxsql::Gtid& gtid)
     tmp_summary.flush();
     rename(tmp_name.c_str(), m_summary_filename.c_str());
 
+    CRASH_TEST(startup_recovery_soft);
+    CRASH_TEST(startup_recovery_hard);
     CRASH_TEST(fail_after_commit);
 
     return recover(pos);

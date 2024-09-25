@@ -31,11 +31,13 @@ public:
     bool fail_mid_trx();
     bool fail_after_commit();
     bool startup_recovery_soft();
+    bool startup_recovery_hard();
 private:
     InventoryWriter& m_inventory;
     int              m_fail_mid_trx = 0;
     int              m_fail_after_commit = 0;
     bool             m_startup_recovery_soft = false;
+    bool             m_startup_recovery_hard = false;
 };
 
 void       init_crash_test(InventoryWriter* pInv);
