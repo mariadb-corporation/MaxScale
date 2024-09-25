@@ -201,49 +201,57 @@ void MariaDBMonitor::build_replication_graph()
              * master_is_valid()). Emergency promotion is still possible if both threads are shut down,
              * i.e. STOP SLAVE */
             bool slave_io_on = slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO;
-            if (slave_io_on || slave_conn.slave_sql_running)
+
+            MariaDBServer* found_master = nullptr;
+            bool is_external = false;
+            if (use_hostnames)
             {
-                bool slave_threads_running = slave_io_on && slave_conn.slave_sql_running;
-                // Looks promising, check hostname or server id.
-                MariaDBServer* found_master = nullptr;
-                bool is_external = false;
-                if (use_hostnames)
+                found_master = get_server(slave_conn.settings.master_endpoint);
+                if (!found_master)
                 {
-                    found_master = get_server(slave_conn.settings.master_endpoint);
+                    // Must be an external server.
+                    is_external = true;
+                }
+            }
+            else
+            {
+                /* Cannot trust hostname:port since network may be complicated. Instead,
+                 * trust the "Master_Server_Id"-field of the SHOW SLAVE STATUS output if
+                 * the slave connection has been seen connected before. This means that
+                 * the graph will miss slave-master relations that have not connected
+                 * while the monitor has been running.
+                 *
+                 * TODO: This data should be saved so that monitor restarts do not lose
+                 * this information. */
+                if (slave_conn.master_server_id >= 0 && slave_conn.seen_connected)
+                {
+                    // Valid slave connection, find the MariaDBServer with the matching server id.
+                    found_master = get_server(slave_conn.master_server_id);
                     if (!found_master)
                     {
-                        // Must be an external server.
+                        /* Likely an external master. It's possible that the master is a monitored
+                         * server which has not been queried yet and the monitor does not know its
+                         * id. */
                         is_external = true;
                     }
                 }
-                else
-                {
-                    /* Cannot trust hostname:port since network may be complicated. Instead,
-                     * trust the "Master_Server_Id"-field of the SHOW SLAVE STATUS output if
-                     * the slave connection has been seen connected before. This means that
-                     * the graph will miss slave-master relations that have not connected
-                     * while the monitor has been running.
-                     *
-                     * TODO: This data should be saved so that monitor restarts do not lose
-                     * this information. */
-                    if (slave_conn.master_server_id >= 0 && slave_conn.seen_connected)
-                    {
-                        // Valid slave connection, find the MariaDBServer with the matching server id.
-                        found_master = get_server(slave_conn.master_server_id);
-                        if (!found_master)
-                        {
-                            /* Likely an external master. It's possible that the master is a monitored
-                             * server which has not been queried yet and the monitor does not know its
-                             * id. */
-                            is_external = true;
-                        }
-                    }
-                }
+            }
 
+            using ExtReplStatus = NodeData::ExtReplStatus;
+            auto set_ext_repl_status = [slave](ExtReplStatus status) {
+                auto& curr_status = slave->m_node.external_repl_status;
+                if (status > curr_status)
+                {
+                    curr_status = status;
+                }
+            };
+
+            if (slave_io_on || slave_conn.slave_sql_running)
+            {
                 // Valid slave connection, find the MariaDBServer with this id.
                 if (found_master)
                 {
-                    if (slave_threads_running)
+                    if (slave_io_on && slave_conn.slave_sql_running)
                     {
                         /* Building the parents-array is not strictly required as the same data is in
                          * the children-array. This construction is more for convenience and faster
@@ -258,12 +266,27 @@ void MariaDBMonitor::build_replication_graph()
                         found_master->m_node.children_failed.push_back(slave);
                     }
                 }
-                else if (is_external && slave_threads_running)
+                else if (is_external)
                 {
-                    // This is an external master connection. Save just the master id for now.
-                    // TODO: Save host:port instead
-                    slave->m_node.external_masters.push_back(slave_conn.master_server_id);
+                    // External replication is configured and at least one thread is active. Set status.
+                    if (!slave_conn.slave_sql_running
+                        || slave_conn.slave_io_running == SlaveStatus::SLAVE_IO_NO)
+                    {
+                        set_ext_repl_status(!slave_conn.slave_sql_running ? ExtReplStatus::SQL_STOP :
+                                            ExtReplStatus::IO_STOP);
+                    }
+                    else
+                    {
+
+                        set_ext_repl_status(slave_conn.slave_io_running == SlaveStatus::SLAVE_IO_YES ?
+                                            ExtReplStatus::RUNNING : ExtReplStatus::CONNECTING);
+                    }
                 }
+            }
+            else if (is_external)
+            {
+                // External replication is configured but stopped.
+                set_ext_repl_status(ExtReplStatus::STOPPED);
             }
         }
     }

@@ -55,7 +55,16 @@ struct NodeData
     ServerArray children;       /* Which nodes are replicating from this node. */
     ServerArray children_failed;/* Nodes with broken replication links. */
 
-    std::vector<int64_t> external_masters;      /* Server id:s of external masters. */
+    enum class ExtReplStatus : uint8_t
+    {
+        NONE       = 0, /**< No external replication */
+        STOPPED    = 1, /**< Replication configured but stopped */
+        SQL_STOP   = 2, /**< SQL thread stopped */
+        IO_STOP    = 3, /**< IO thread stopped */
+        CONNECTING = 4, /**< External replication connecting */
+        RUNNING    = 5  /**< External replication running */
+    };
+    ExtReplStatus external_repl_status {ExtReplStatus::NONE};
 
     NodeData();
 
