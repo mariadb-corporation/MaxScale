@@ -114,6 +114,11 @@ CrashTest::CrashTest(InventoryWriter* pInv)
             {
                 m_fail_after_commit = std::stoi(kv.second);
             }
+            else if (kv.first == "DBG_PINLOKI_FAIL_STARTUP_RECOVERY_SOFT")
+            {
+                m_fail_after_commit = std::stoi(kv.second);
+                m_startup_recovery_soft = true;
+            }
             else
             {
                 MXB_SERROR("Unknown variable in trx-crash.rc: " << kv.first);
@@ -143,6 +148,24 @@ bool CrashTest::fail_after_commit()
         {
             return true;
         }
+    }
+
+    return false;
+}
+
+bool CrashTest::startup_recovery_soft()
+{
+    if (m_startup_recovery_soft && m_fail_after_commit == 1)
+    {
+        if (m_inventory.file_names().size() > 2)
+        {
+            ::remove(last_string(m_inventory.file_names()).c_str());
+            return true;
+        }
+
+        // Don't let m_fail_after_commit go to zero, depends on order of calls to
+        // fail_after_commit and startup_recovery_soft, which should be called first.
+        ++m_fail_after_commit;
     }
 
     return false;

@@ -30,10 +30,12 @@ public:
     CrashTest(InventoryWriter* m_inventory);
     bool fail_mid_trx();
     bool fail_after_commit();
+    bool startup_recovery_soft();
 private:
     InventoryWriter& m_inventory;
     int              m_fail_mid_trx = 0;
     int              m_fail_after_commit = 0;
+    bool             m_startup_recovery_soft = false;
 };
 
 void       init_crash_test(InventoryWriter* pInv);
@@ -42,7 +44,7 @@ CrashTest& crash_test();
 #define CRASH_TEST(test_case) \
     if (crash_test().test_case()) \
     {   \
-        MXB_SERROR("Exit on test case " << #test_case); \
+        MXB_SERROR("recovery test exit on test case " << #test_case); \
         exit(101); \
     }
 

@@ -204,7 +204,7 @@ WritePosition& TrxFile::recover(WritePosition& pos)
         {
             MXB_SERROR("Binlog transaction recovery. The last binlog file '"
                        << last_file_name << "' is not the expected '" << target_name
-                       << "'. Removing temporary transaction files for gtid " << m_gtid);
+                       << "'. Removing temporary transaction files for gtid " << m_gtid << '.');
             remove_dir_contents(m_inventory.config().trx_dir().c_str());
             return pos;
         }
