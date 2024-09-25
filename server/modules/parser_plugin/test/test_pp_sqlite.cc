@@ -519,6 +519,18 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>
         SINGLE
     },
     {
+        "SET autocommit=1,names UTF8MB4",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_COMMIT,
+        mxs::sql::OP_SET,
+        SINGLE,
+    },
+    {
+        "SET names UTF8MB4,autocommit=1",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_COMMIT,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
         "select 1; select 2;",
         mxs::sql::TYPE_READ,
         mxs::sql::OP_SELECT,
