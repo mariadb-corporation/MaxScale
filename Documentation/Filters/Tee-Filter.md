@@ -40,11 +40,21 @@ statements to and accepts a number of optional parameters.
 
 ### `target`
 
+- **Type**: target
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: none
+
 The target where the filter will duplicate all queries. The target can be either
 a service or a server. The duplicate connection that is created to this target
 will be referred to as the "branch target" in this document.
 
 ### `service`
+
+- **Type**: service
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: none
 
 The service where the filter will duplicate all queries. This parameter is
 deprecated in favor of the `target` parameter and will be removed in a future
@@ -52,46 +62,82 @@ release. Both `target` and `service` cannot be defined.
 
 ### `match`, `exclude` and `options`
 
-These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
-limit the queries replicated by the tee filter.
+- **Type**: [standard regex](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
 
+What queries should be included.
 ```
 match=/insert.*into.*order*/
+```
+
+### `exclude`
+
+- **Type**: [standard regex](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
+
+What queries should be excluded.
+```
 exclude=/select.*from.*t1/
+```
+
+## `options`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `ignorecase`, `case`, `extended`
+- **Default**: `ignorecase`
+
+How regular expressions should be interpreted.
+```
 options=case,extended
 ```
 
 ### `source`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""` (ignored)
+
 The optional source parameter defines an address that is used to match against
 the address from which the client connection to MariaDB MaxScale originates.
 Only sessions that originate from this address will be replicated.
-
 ```
 source=127.0.0.1
 ```
 
 ### `user`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""` (ignored)
+
 The optional user parameter defines a user name that is used to match against
 the user from which the client connection to MariaDB MaxScale originates. Only
 sessions that are connected using this username are replicated.
-
 ```
 user=john
 ```
 
 ### `sync`
 
-Enable synchronous routing mode. This boolean parameter was added in MaxScale
-6.2.0 and is disabled by default.
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
 
-When configured with `sync=true`, the filter will queue new queries until the
-response from both the main and the branch target has been received. This means
-that for `n` executed queries, `n - 1` queries are guaranteed to be
-synchronized. Adding one extra statement (e.g. `SELECT 1`) to a batch of
-statements guarantees that all previous SQL statements have been successfully
-executed on both targets.
+Enable synchronous routing mode. When configured with `sync=true`, the filter
+will queue new queries until the response from both the main and the branch
+target has been received. This means that for `n` executed queries, `n - 1`
+queries are guaranteed to be synchronized. Adding one extra statement
+(e.g. `SELECT 1`) to a batch of statements guarantees that all previous SQL
+statements have been successfully executed on both targets.
 
 In the synchronous routing mode, a failure of the branch target will cause the
 client session to be closed.
