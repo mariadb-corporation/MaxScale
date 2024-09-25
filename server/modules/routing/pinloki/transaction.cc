@@ -107,6 +107,9 @@ public:
 
 private:
     WritePosition& recover(WritePosition& pos);
+    void           validate_recovery_files(std::ofstream& binlog,
+                                           int64_t start_file_pos,
+                                           int64_t trx_file_length);
 
     InventoryWriter& m_inventory;
     Mode             m_mode;
@@ -176,6 +179,42 @@ WritePosition& TrxFile::commit(WritePosition& pos, const maxsql::Gtid& gtid)
     return recover(pos);
 }
 
+void TrxFile::validate_recovery_files(std::ofstream& binlog, int64_t start_file_pos, int64_t trx_file_length)
+{
+    if (m_mode == WRITE)
+    {
+        return;     // In write mode the file is validated as it is written (TODO)
+    }
+
+    constexpr auto bad = " This can not be automatically recovered from."
+                         " Please check status and binlog files and possibly manually delete the last binlog."
+                         " See documentation about manual file deletion.";
+
+    binlog.seekp(0, std::ios_base::end);
+    int64_t binlog_pos = binlog.tellp();
+
+    if (binlog_pos < start_file_pos)
+    {
+        auto err = MAKE_STR("Binlog transaction recovery for gtid "
+                            << m_gtid << ". The last binlog file '" << last_string(m_inventory.file_names())
+                            << "' is " << binlog_pos << " bytes long when it was expected to be at"
+                            << " least " << start_file_pos << " bytes long. "
+                            << bad);
+
+        MXB_THROW(UnrecovableWriteError, err);
+    }
+    else if (binlog_pos > start_file_pos + trx_file_length)
+    {
+        auto err = MAKE_STR("Binlog transaction recovery for gtid "
+                            << m_gtid << ". The last binlog file '" << last_string(m_inventory.file_names())
+                            << " is " << binlog_pos << " bytes long which is longer than it should be"
+                            << " after writing the transaction into it. "
+                            << bad);
+
+        MXB_THROW(UnrecovableWriteError, err);
+    }
+}
+
 WritePosition& TrxFile::recover(WritePosition& pos)
 {
     std::ifstream summary(m_summary_filename);
@@ -218,6 +257,9 @@ WritePosition& TrxFile::recover(WritePosition& pos)
 
     std::ifstream trx_file(m_trx_binlog_filename);
     trx_file.seekg(0, std::ios_base::end);
+
+    // throws UnrecovableWriteError
+    validate_recovery_files(pos.file, start_file_pos, trx_file.tellg());
 
     append_file(trx_file, pos.file, start_file_pos);
     pos.write_pos = pos.file.tellp();

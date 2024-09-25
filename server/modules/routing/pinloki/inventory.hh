@@ -28,6 +28,7 @@
 namespace pinloki
 {
 DEFINE_EXCEPTION(BinlogWriteError);
+DEFINE_EXCEPTION(UnrecovableWriteError);
 
 /**
  * @brief List of binlog file names. Thread safe, writable inventory file.
