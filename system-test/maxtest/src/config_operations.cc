@@ -53,7 +53,7 @@ Config::~Config()
 
 void Config::add_server(int num, Expect expect)
 {
-    test_->tprintf("Adding server %i", num);
+    test_->tprintf("Adding server%i to services and monitors.", num);
     const char link[] = "link service %s server%d";
     mxs->maxctrlf(expect, link, SERVICE_NAME1, num);
     mxs->maxctrlf(expect, link, SERVICE_NAME2, num);
@@ -67,7 +67,7 @@ void Config::add_server(int num, Expect expect)
 
 void Config::remove_server(int num)
 {
-    test_->tprintf("Removing server %i", num);
+    test_->tprintf("Removing server%i from services and monitors.", num);
     const char remove[] = "unlink service %s server%d";
     mxs->maxctrlf(remove, SERVICE_NAME1, num);
     mxs->maxctrlf(remove, SERVICE_NAME2, num);
