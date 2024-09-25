@@ -26,7 +26,7 @@ const props = defineProps({
     type: Object,
     required: true,
     validator: (obj) =>
-      ['isOpened', 'type', 'item', 'target'].every((key) => key in obj) &&
+      ['isOpened', 'type', 'item', 'target', 'activatorId'].every((key) => key in obj) &&
       (obj.type === '' || [TYPE.BOARD, TYPE.NODE, TYPE.LINK].includes(obj.type)),
   },
   graphConfig: { type: Object, required: true },
@@ -82,7 +82,6 @@ const boardOpts = computed(() => [
         ? 'turnOffRelationshipHighlight'
         : 'turnOnRelationshipHighlight'
     ),
-
     action: () =>
       emit('patch-graph-config', {
         path: 'link.isHighlightAll',
