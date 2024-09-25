@@ -386,7 +386,7 @@ add_test_executable(mxs922_restart.cc mxs922_restart mxs922 LABELS maxscale REPL
 add_test_executable(mxs922_scaling.cc mxs922_scaling mxs922_base LABELS maxscale REPL_BACKEND)
 
 # Dynamic listener SSL test
-add_test_executable(mxs922_listener_ssl.cc mxs922_listener_ssl mxs922_base LABELS maxscale BACKEND_SSL REPL_BACKEND)
+add_test_executable(mxs922_listener_ssl.cc mxs922_listener_ssl mxs922_base LABELS maxscale REPL_BACKEND)
 
 # Alter routers at runtime
 add_test_executable(alter_router.cc alter_router alter_router LABELS maxscale REPL_BACKEND)
