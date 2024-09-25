@@ -44,7 +44,9 @@ public:
         test.expect(maxscale.query("START SLAVE"), "START SLAVE failed: %s", maxscale.error());
         sync(master, maxscale);
 
-        slave.query(change_master_sql(test.maxscale->ip(), test.maxscale->rwsplit_port));
+        std::string slave_change_master = change_master_sql(test.maxscale->ip(), test.maxscale->rwsplit_port);
+        slave_change_master += ", MASTER_SSL=1";
+        slave.query(slave_change_master);
         slave.query("START SLAVE");
         sync(maxscale, slave);
     }
