@@ -1,0 +1,34 @@
+[maxscale]
+threads=###threads###
+log_info=true
+###server###
+
+[mariadb-cluster]
+type=monitor
+module=mariadbmon
+servers=###server_line###, pinloki
+user=maxskysql
+password=skysql
+monitor_interval=1000ms
+auto_failover=true
+
+[pinloki-service]
+type=service
+router=binlogrouter
+user=maxskysql
+password=skysql
+cluster=mariadb-cluster
+
+[pinloki-listener]
+type=listener
+service=pinloki-service
+protocol=mariadbclient
+port=4006
+ssl=true
+###mxs_cert_files###
+
+[pinloki]
+type = server
+address = 127.0.0.1
+port = 4006
+protocol = MariaDBBackend
