@@ -52,8 +52,7 @@ void do_test(TestConnections& test, bool should_succeed)
     test.log_printf("Read the result of the COMMIT and INSERT");
     test.expect(c2.read_query_result() == should_succeed,
                 "COMMIT should %s", should_succeed ? "succeed" : "fail");
-    test.expect(c3.read_query_result() == should_succeed,
-                "INSERT should %s", should_succeed ? "succeed" : "fail");
+    test.expect(!c3.read_query_result(), "INSERT should fail");
 
     test.log_printf("Drop the table");
     c1.query("DROP TABLE test.t1");
