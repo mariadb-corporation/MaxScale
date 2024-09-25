@@ -38,18 +38,23 @@ struct ServerStatusDesc
     string                    desc;
 };
 
+using Status = mxt::ServerInfo;
 const ServerStatusDesc status_flag_to_str[] = {
-    {mxt::ServerInfo::MASTER,     StatusType::STATUS, "Master"                  },
-    {mxt::ServerInfo::SLAVE,      StatusType::STATUS, "Slave"                   },
-    {mxt::ServerInfo::RUNNING,    StatusType::STATUS, "Running"                 },
-    {mxt::ServerInfo::DOWN,       StatusType::STATUS, "Down"                    },
-    {mxt::ServerInfo::MAINT,      StatusType::STATUS, "Maintenance"             },
-    {mxt::ServerInfo::DRAINING,   StatusType::STATUS, "Draining"                },
-    {mxt::ServerInfo::DRAINED,    StatusType::STATUS, "Drained"                 },
-    {mxt::ServerInfo::RELAY,      StatusType::STATUS, "Relay Master"            },
-    {mxt::ServerInfo::BLR,        StatusType::STATUS, "Binlog Relay"            },
-    {mxt::ServerInfo::SYNCED,     StatusType::STATUS, "Synced"                  },
-    {mxt::ServerInfo::EXT_MASTER, StatusType::DETAIL, "Slave of External Server"}};
+    {Status::MASTER,                 StatusType::STATUS, "Master"                                },
+    {Status::SLAVE,                  StatusType::STATUS, "Slave"                                 },
+    {Status::RUNNING,                StatusType::STATUS, "Running"                               },
+    {Status::DOWN,                   StatusType::STATUS, "Down"                                  },
+    {Status::MAINT,                  StatusType::STATUS, "Maintenance"                           },
+    {Status::DRAINING,               StatusType::STATUS, "Draining"                              },
+    {Status::DRAINED,                StatusType::STATUS, "Drained"                               },
+    {Status::RELAY,                  StatusType::STATUS, "Relay Master"                          },
+    {Status::BLR,                    StatusType::STATUS, "Binlog Relay"                          },
+    {Status::SYNCED,                 StatusType::STATUS, "Synced"                                },
+    {Status::EXT_MASTER,             StatusType::DETAIL, "Slave of External Server"              },
+    {Status::EXT_MASTER_STOPPED,     StatusType::DETAIL, "Slave of External Server (stopped)"    },
+    {Status::EXT_MASTER_IO_STOPPED,  StatusType::DETAIL, "Slave of External Server (IO stopped)" },
+    {Status::EXT_MASTER_SQL_STOPPED, StatusType::DETAIL, "Slave of External Server (SQL stopped)"},
+    {Status::EXT_MASTER_CONNECTING,  StatusType::DETAIL, "Slave of External Server (connecting)" }};
 }
 
 namespace maxtest

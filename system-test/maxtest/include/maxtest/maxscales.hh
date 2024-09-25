@@ -46,9 +46,13 @@ struct ServerInfo
     static constexpr bitfield DRAINING = (1 << 5);
     static constexpr bitfield DRAINED = (1 << 6);
     static constexpr bitfield SYNCED = (1 << 7);
-    static constexpr bitfield EXT_MASTER = (1 << 10);
-    static constexpr bitfield BLR = (1 << 12);
-    static constexpr bitfield DOWN = (1 << 13);
+    static constexpr bitfield DOWN = (1 << 8);
+    static constexpr bitfield BLR = (1 << 9);
+    static constexpr bitfield EXT_MASTER = (1 << 20);
+    static constexpr bitfield EXT_MASTER_STOPPED = (1 << 21);
+    static constexpr bitfield EXT_MASTER_IO_STOPPED = (1 << 22);
+    static constexpr bitfield EXT_MASTER_SQL_STOPPED = (1 << 23);
+    static constexpr bitfield EXT_MASTER_CONNECTING = (1 << 24);
 
     static constexpr bitfield master_st = MASTER | RUNNING;
     static constexpr bitfield slave_st = SLAVE | RUNNING;

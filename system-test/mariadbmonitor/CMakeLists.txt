@@ -89,6 +89,7 @@ add_test_executable_ex(NAME mysqlmon_switchover_stress SOURCE mysqlmon_switchove
         CONFIG mysqlmon_switchover_stress.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # Check monitoring and failover with an external master
+# Also MXS-5272
 add_test_executable_ex(NAME mysqlmon_external_master SOURCE mysqlmon_external_master.cc
         CONFIG mysqlmon_external_master.cnf VMS repl_backend LABELS mysqlmon)
 
