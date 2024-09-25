@@ -93,7 +93,7 @@ namespace pinloki
 class TrxFile
 {
 public:
-    enum Mode {Recover, Write};
+    enum Mode {RECOVER, WRITE};
 
     TrxFile(InventoryWriter* pInv, Mode mode, const maxsql::Gtid& gtid = maxsql::Gtid {});
 
@@ -109,6 +109,7 @@ private:
     WritePosition& recover(WritePosition& pos);
 
     InventoryWriter& m_inventory;
+    Mode             m_mode;
     std::string      m_trx_binlog_filename;
     std::string      m_summary_filename;
     std::ofstream    m_trx_binlog;
@@ -119,11 +120,12 @@ private:
 // TODO: Missing error checking in all of TrxFile
 TrxFile::TrxFile(InventoryWriter* pInv, Mode mode, const maxsql::Gtid& gtid)
     : m_inventory(*pInv)
+    , m_mode(mode)
     , m_trx_binlog_filename(m_inventory.config().trx_dir() + "/trx-binlog")
     , m_summary_filename(m_inventory.config().trx_dir() + "/summary")
     , m_gtid(gtid)
 {
-    if (mode == Recover)
+    if (mode == RECOVER)
     {
         WritePosition pos;
         recover(pos);
@@ -166,6 +168,8 @@ WritePosition& TrxFile::commit(WritePosition& pos, const maxsql::Gtid& gtid)
     tmp_summary << gtid << ' ' << pos.name << ' ' << pos.write_pos << ' ' << "TRX";
     tmp_summary.flush();
     rename(tmp_name.c_str(), m_summary_filename.c_str());
+
+    CRASH_TEST(fail_after_commit);
 
     return recover(pos);
 }
@@ -218,13 +222,19 @@ WritePosition& TrxFile::recover(WritePosition& pos)
 
     remove_dir_contents(m_inventory.config().trx_dir().c_str());
 
+    if (m_mode == RECOVER)
+    {
+        MXB_SWARNING("Binlog transaction recovery. Recovered transaction with gtid "
+                     << m_gtid << " from temporary transaction files.");
+    }
+
     return pos;
 }
 
 void perform_transaction_recovery(InventoryWriter* inv)
 {
     // The constructor does recovery
-    TrxFile trx_file(inv, TrxFile::Recover);
+    TrxFile trx_file(inv, TrxFile::RECOVER);
 }
 
 /////
@@ -254,7 +264,7 @@ bool Transaction::add_event(maxsql::RplEvent& rpl_event)
     {
         if (!m_trx_file)
         {
-            m_trx_file = std::make_unique<TrxFile>(&m_inventory, TrxFile::Write, m_gtid);
+            m_trx_file = std::make_unique<TrxFile>(&m_inventory, TrxFile::WRITE, m_gtid);
         }
 
         m_trx_file->add_log_data(m_trx_buffer.data(), m_trx_buffer.size());

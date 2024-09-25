@@ -29,9 +29,11 @@ class CrashTest
 public:
     CrashTest(InventoryWriter* m_inventory);
     bool fail_mid_trx();
+    bool fail_after_commit();
 private:
     InventoryWriter& m_inventory;
-    int              m_fail_mid_trx;
+    int              m_fail_mid_trx = 0;
+    int              m_fail_after_commit = 0;
 };
 
 void       init_crash_test(InventoryWriter* pInv);

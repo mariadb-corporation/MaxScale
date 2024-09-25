@@ -110,6 +110,10 @@ CrashTest::CrashTest(InventoryWriter* pInv)
             {
                 m_fail_mid_trx = std::stoi(kv.second);
             }
+            else if (kv.first == "DBG_PINLOKI_FAIL_AFTER_TRX_COMMIT")
+            {
+                m_fail_after_commit = std::stoi(kv.second);
+            }
             else
             {
                 MXB_SERROR("Unknown variable in trx-crash.rc: " << kv.first);
@@ -123,6 +127,19 @@ bool CrashTest::fail_mid_trx()
     if (m_fail_mid_trx)
     {
         if (--m_fail_mid_trx == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool CrashTest::fail_after_commit()
+{
+    if (m_fail_after_commit)
+    {
+        if (--m_fail_after_commit == 0)
         {
             return true;
         }
