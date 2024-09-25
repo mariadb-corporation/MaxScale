@@ -436,7 +436,15 @@ void PinlokiSession::start_slave()
 {
     GWBUF* buf = nullptr;
 
-    std::string err_str = m_router->start_slave();
+    std::string err_str;
+    try
+    {
+        err_str = m_router->start_slave();
+    }
+    catch (const UnrecovableWriteError& ex)
+    {
+        err_str = ex.what();
+    }
 
     if (err_str.empty())
     {

@@ -243,9 +243,9 @@ WritePosition& TrxFile::recover(WritePosition& pos)
         auto last_file_name = last_string(m_inventory.file_names());
         if (!comp_paths(target_name, last_file_name))
         {
-            MXB_SERROR("Binlog transaction recovery. The last binlog file '"
-                       << last_file_name << "' is not the expected '" << target_name
-                       << "'. Removing temporary transaction files for gtid " << m_gtid << '.');
+            MXB_SWARNING("Binlog transaction recovery. The last binlog file '"
+                         << last_file_name << "' is not the expected '" << target_name
+                         << "'. Removing temporary transaction files for gtid " << m_gtid << '.');
             remove_dir_contents(m_inventory.config().trx_dir().c_str());
             return pos;
         }

@@ -174,16 +174,25 @@ Pinloki::~Pinloki()
 
 bool Pinloki::post_configure()
 {
-    if (m_master_config.load(m_config))
+    try
     {
-        if (m_master_config.slave_running)
+        std::string err;
+        if (m_master_config.load(m_config))
         {
-            start_slave();
+            if (m_master_config.slave_running)
+            {
+                err = start_slave();
+            }
+        }
+        else if (m_config.select_master())
+        {
+            err = start_slave();
         }
     }
-    else if (m_config.select_master())
+    catch (const UnrecovableWriteError& ex)
     {
-        start_slave();
+        MXB_SERROR(ex.what());
+        // return false; if maxscale should exit (this is startup)
     }
 
     // Kick off the independent purging
@@ -555,7 +564,7 @@ std::string Pinloki::start_slave()
 
         if (err_str.empty())
         {
-            MXS_INFO("Starting slave");
+            MXS_INFO("Starting writer");
             m_writer = std::make_unique<Writer>(generate_details(), inventory());
             m_master_config.slave_running = true;
             m_master_config.save(m_config);
