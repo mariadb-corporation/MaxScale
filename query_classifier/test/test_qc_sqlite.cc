@@ -455,6 +455,16 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
         "SELECT @@last_insert_id",
         QUERY_TYPE_READ|QUERY_TYPE_MASTER_READ,
         QUERY_OP_SELECT
+    },
+    {
+        "SET autocommit=1,names UTF8MB4",
+        QUERY_TYPE_SESSION_WRITE|QUERY_TYPE_GSYSVAR_WRITE|QUERY_TYPE_ENABLE_AUTOCOMMIT|QUERY_TYPE_COMMIT,
+        QUERY_OP_SET
+    },
+    {
+        "SET names UTF8MB4,autocommit=1",
+        QUERY_TYPE_SESSION_WRITE|QUERY_TYPE_GSYSVAR_WRITE|QUERY_TYPE_ENABLE_AUTOCOMMIT|QUERY_TYPE_COMMIT,
+        QUERY_OP_SET
     }
 };
 
