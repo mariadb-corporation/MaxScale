@@ -111,6 +111,10 @@ function addPlainIndex({ colId, node }) {
   })
 }
 
+// Expose private functions for testing
+const __internal =
+  process.env.NODE_ENV === 'test' ? { toggleUnique, toggleNotNull, addPlainIndex } : undefined
+
 /**
  * Assign new coord attributes from nodeMap to provided nodes
  * @param {object} param
@@ -314,6 +318,7 @@ function updateCardinality({ nodeMap, type, link }) {
       method = toggleNotNull
       if (type === SET_REF_COL_OPTIONAL || type === SET_REF_COL_MANDATORY) {
         nodeId = link.target.id
+        node = nodeMap[nodeId]
         colId = target_attr_id
       }
       value = type === SET_MANDATORY || type === SET_REF_COL_MANDATORY
@@ -324,6 +329,7 @@ function updateCardinality({ nodeMap, type, link }) {
 }
 
 export default {
+  __internal,
   assignCoord,
   immutableUpdateConfig,
   genTblNode,
