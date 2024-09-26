@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { t as typy } from 'typy'
 import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 export function isServerOrListenerType(type) {
@@ -89,12 +90,16 @@ export function convertDuration({ unit, v, toMilliseconds = true }) {
   return Math.round(result)
 }
 
+function isNotStrOrArr(v) {
+  return !typy(v).isString && !typy(v).isArray
+}
 /**
  * @param {[array,string]} param.v
  * @param {boolean} param.reverse convert array to string, otherwise string to array
  * @returns {[string,array]}
  */
 export function typeCastingEnumMask({ v, reverse = false }) {
+  if (isNotStrOrArr(v)) return v
   if (reverse) return v.join(',')
   return v.split(',')
 }
@@ -105,6 +110,7 @@ export function typeCastingEnumMask({ v, reverse = false }) {
  * @returns {string} string with comma separator and line break
  */
 export function typeCastingStringList({ v, reverse = false }) {
+  if (isNotStrOrArr(v)) return v
   if (reverse) return v.split(',').map((item) => item.trim())
   return v.join(',\n').trim()
 }
