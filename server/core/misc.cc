@@ -113,8 +113,8 @@ void maxscale_log_info_blurb(LogBlurbAction action)
                mxb::pretty_size(get_available_memory()).c_str(),
                mxb::pretty_size(get_total_memory()).c_str(),
                get_vcpu_count(), get_processor_count());
-    MXB_NOTICE("Host: '%s', OS: %s@%s, %s, %s",
-               cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
+    MXB_NOTICE("Host: '%s', OS: %s, %s@%s, %s, %s",
+               cnf.nodename.c_str(), cnf.os_name.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
                cnf.version.c_str(), cnf.machine.c_str());
 
     const char* thp_enable_path = "/sys/kernel/mm/transparent_hugepage/enabled";
