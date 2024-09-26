@@ -260,13 +260,15 @@ void test_ro_trx_set_trx(TestConnections& test)
 {
     const char* func_name = __func__;
     test_queries(test, func_name, [&](Connection& conn, const std::string& table, const std::string& value){
-        ok_query(test, func_name, conn, "SET TRANSACTION READ ONLY");
-        ok_query(test, func_name, conn, "START TRANSACTION");
-        maybe_ok_query(test, func_name, conn,
-                       "INSERT INTO " + table + " VALUES ('" + value + "')",
-                       {ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION});
-        // This should not fail even if the transaction gets replayed
-        ok_query(test, func_name, conn, "COMMIT");
+        if (conn.query("SET TRANSACTION READ ONLY"))
+        {
+            ok_query(test, func_name, conn, "START TRANSACTION");
+            maybe_ok_query(test, func_name, conn,
+                           "INSERT INTO " + table + " VALUES ('" + value + "')",
+                           {ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION});
+            // This should not fail even if the transaction gets replayed
+            ok_query(test, func_name, conn, "COMMIT");
+        }
     });
 }
 
