@@ -128,15 +128,28 @@ configured, all attempts to start a session will fail.
 
 ### `bootstrap_servers`
 
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: No
+
 The list of Kafka brokers to use in `host:port` format. Multiple values
 can be separated with commas. This is a mandatory parameter.
 
 ### `topic`
 
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: No
+
 The Kafka topic where the replicated events will be sent. This is a
 mandatory parameter.
 
 ### `enable_idempotence`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
 
 Enable idempotent producer mode. This feature requires Kafka version 0.11 or
 newer to work and is disabled by default.
@@ -159,10 +172,19 @@ describes the parameter as follows:
 
 ### `timeout`
 
-The connection and read timeout for the replication stream. The default
-value is 10 seconds.
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10s`
+
+The connection and read timeout for the replication stream.
 
 ### `gtid`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 The initial GTID position from where the replication is started. By default the
 replication is started from the beginning. The value of this parameter is only
@@ -185,6 +207,11 @@ parameter will be ignored. To reset the recorded GTID position, delete the
 
 ### `server_id`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `1234`
+
 The
 [server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
 used when replicating from the primary in direct replication mode. The default
@@ -195,6 +222,7 @@ value is 1234. This parameter was added in MaxScale 2.5.7.
 - **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `""`
 
 Only include data from tables that match this pattern.
 
@@ -229,6 +257,7 @@ exclude=db1[.](accounts|users)
 - **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `""`
 
 Exclude data from tables that match this pattern.
 
@@ -240,6 +269,11 @@ parameters. See [`match`](#match) for an explanation on how the patterns are
 matched against the database and table names.
 
 ### `cooperative_replication`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
 
 Controls whether multiple instances cooperatively replicate from the same
 cluster. This is a boolean parameter and is disabled by default. It was added in
@@ -276,15 +310,30 @@ parameter.
 
 ### `kafka_ssl`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
+
 Enable SSL for Kafka connections. This is a boolean parameter and is disabled by
 default.
 
 ### `kafka_ssl_ca`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 Path to the certificate authority file in PEM format. If this is not provided,
 the default system certificates will be used.
 
 ### `kafka_ssl_cert`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 Path to the public certificate in PEM format.
 
@@ -297,11 +346,21 @@ If `kafka_ssl_cert` is provided, `kafka_ssl_key` must also be provided.
 
 ### `kafka_ssl_key`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 Path to the private key in PEM format.
 
 If `kafka_ssl_key` is provided, `kafka_ssl_cert` must also be provided.
 
 ### `kafka_sasl_user`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 Username for SASL authentication.
 
@@ -309,11 +368,22 @@ If `kafka_sasl_user` is provided, `kafka_sasl_password` must also be provided.
 
 ### `kafka_sasl_password`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 Password for SASL authentication.
 
 If `kafka_sasl_password` is provided, `kafka_sasl_user` must also be provided.
 
 ### `kafka_sasl_mechanism`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `PLAIN`, `SCRAM-SHA-256`, `SCRAM-SHA-512`
+- **Default**: `PLAIN`
 
 The SASL mechanism used. The default value is `PLAIN` which uses plaintext
 authentication. It is recommended to enable SSL whenever plaintext

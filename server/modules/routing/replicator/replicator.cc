@@ -17,7 +17,6 @@
 #include <atomic>
 #include <chrono>
 #include <fstream>
-#include <sstream>
 #include <thread>
 #include <tuple>
 #include <vector>
@@ -457,13 +456,6 @@ void Replicator::Imp::process_events()
     mxs::CachingParser::thread_finish();
 }
 
-std::string to_gtid_string(const MARIADB_RPL_EVENT& event)
-{
-    std::stringstream ss;
-    ss << event.event.gtid.domain_id << '-' << event.server_id << '-' << event.event.gtid.sequence_nr;
-    return ss.str();
-}
-
 bool Replicator::Imp::load_gtid_state()
 {
     bool rval = false;
@@ -540,7 +532,9 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
             m_implicit_commit = true;
         }
 
-        m_current_gtid.parse(to_gtid_string(*event).c_str());
+        m_current_gtid.domain = event->event.gtid.domain_id;
+        m_current_gtid.server_id = event->server_id,
+        m_current_gtid.seq = event->event.gtid.sequence_nr;
         MXB_INFO("GTID: %s", m_current_gtid.to_string().c_str());
         break;
 

@@ -1067,20 +1067,6 @@ int get_metadata_len(uint8_t type)
     }
 }
 
-// Make sure that both `i` and `trace` are defined before using this macro
-#define check_overflow(t) \
-    do \
-    { \
-        if (!(t)) \
-        { \
-            for (long x = 0; x < i; x++) \
-            { \
-                MXB_ALERT("%s", trace[x]); \
-            } \
-            raise(SIGABRT); \
-        } \
-    } while (false)
-
 // Debug function for checking whether a row event consists of only NULL values
 bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
 {
@@ -1106,11 +1092,12 @@ bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * @param dest Destination where the string is stored
  * @param len Size of destination
  */
-void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, char* dest, size_t len)
+std::pair<std::string, uint64_t> read_table_info(uint8_t* ptr, uint8_t post_header_len)
 {
-    uint64_t table_id = 0;
+    std::pair<std::string, uint64_t> rval;
+    auto& [ident, tbl_id] = rval;
     size_t id_size = post_header_len == 6 ? 4 : 6;
-    memcpy(&table_id, ptr, id_size);
+    memcpy(&tbl_id, ptr, id_size);
     ptr += id_size;
 
     uint16_t flags = 0;
@@ -1118,57 +1105,15 @@ void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, ch
     ptr += 2;
 
     uint8_t schema_name_len = *ptr++;
-    char schema_name[schema_name_len + 2];
 
-    /** Copy the NULL byte after the schema name */
-    memcpy(schema_name, ptr, schema_name_len + 1);
+    ident.assign((const char*)ptr, (const char*)ptr + schema_name_len);
+    ident += '.';
     ptr += schema_name_len + 1;
 
     uint8_t table_name_len = *ptr++;
-    char table_name[table_name_len + 2];
+    ident.append((const char*)ptr, table_name_len);
 
-    /** Copy the NULL byte after the table name */
-    memcpy(table_name, ptr, table_name_len + 1);
-
-    snprintf(dest, len, "%s.%s", schema_name, table_name);
-    *tbl_id = table_id;
-}
-
-void normalize_sql_string(std::string& str)
-{
-    // remove mysql comments
-    const char* remove_comments_pattern =
-        "(?:`[^`]*`\\K)|"
-        "(\\/[*](?!(M?!)).*?[*]\\/)|"
-        "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
-
-    str = mxb::Regex(remove_comments_pattern, PCRE2_SUBSTITUTE_GLOBAL).replace(str, "");
-
-    // unify whitespace
-    for (auto& a : str)
-    {
-        if (isspace(a) && a != ' ')
-        {
-            a = ' ';
-        }
-    }
-
-    // strip executable comments
-    if (strncmp(str.c_str(), "/*!", 3) == 0 || strncmp(str.c_str(), "/*M!", 4) == 0)
-    {
-        str.erase(0, 3);
-
-        if (str.front() == '!')
-        {
-            str.erase(0, 1);
-        }
-
-        // Skip the versioning part
-        while (!str.empty() && isdigit(str.front()))
-        {
-            str.erase(0, 1);
-        }
-    }
+    return rval;
 }
 
 /**
@@ -1366,6 +1311,12 @@ STable load_table_from_schema(const char* file, const char* db, const char* tabl
 
     return rval;
 }
+
+// remove mysql comments
+const char* REMOVE_COMMENTS_PATTERN =
+    "(?:`[^`]*`\\K)|"
+    "(\\/[*](?!(M?!)).*?[*]\\/)|"
+    "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
 }
 
 void gtid_pos_t::extract(const REP_HEADER& hdr, uint8_t* ptr)
@@ -1450,17 +1401,9 @@ uint64_t Table::map_table(uint8_t* ptr, uint8_t hdr_len)
     ptr += 2;
 
     uint8_t schema_name_len = *ptr++;
-    char schema_name[schema_name_len + 2];
-
-    /** Copy the NULL byte after the schema name */
-    memcpy(schema_name, ptr, schema_name_len + 1);
     ptr += schema_name_len + 1;
 
     uint8_t table_name_len = *ptr++;
-    char table_name[table_name_len + 2];
-
-    /** Copy the NULL byte after the table name */
-    memcpy(table_name, ptr, table_name_len + 1);
     ptr += table_name_len + 1;
 
     uint64_t column_count = mxq::leint_value(ptr);
@@ -1657,7 +1600,42 @@ Rpl::Rpl(SERVICE* service,
     , m_exclude(exclude)
     , m_md_match(m_match ? pcre2_match_data_create_from_pattern(m_match, NULL) : nullptr)
     , m_md_exclude(m_exclude ? pcre2_match_data_create_from_pattern(m_exclude, NULL) : nullptr)
+    , m_no_comments_re(REMOVE_COMMENTS_PATTERN, PCRE2_SUBSTITUTE_GLOBAL)
 {
+}
+
+void Rpl::normalize_sql_string(std::string& str) const
+{
+    if (m_no_comments_re.match(str))
+    {
+        str = m_no_comments_re.replace(str, "");
+    }
+
+    // unify whitespace
+    for (auto& a : str)
+    {
+        if (isspace(a) && a != ' ')
+        {
+            a = ' ';
+        }
+    }
+
+    // strip executable comments
+    if (strncmp(str.c_str(), "/*!", 3) == 0 || strncmp(str.c_str(), "/*M!", 4) == 0)
+    {
+        str.erase(0, 3);
+
+        if (str.front() == '!')
+        {
+            str.erase(0, 1);
+        }
+
+        // Skip the versioning part
+        while (!str.empty() && isdigit(str.front()))
+        {
+            str.erase(0, 1);
+        }
+    }
 }
 
 void Rpl::flush()
@@ -1723,9 +1701,6 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
     ptr += (ncolumns + 7) / 8;
     mxb_assert(ptr < end || (bit_is_set(null_bitmap, ncolumns, 0)));
 
-    char trace[ncolumns][768];
-    memset(trace, 0, sizeof(trace));
-
     for (long i = 0; i < ncolumns && npresent < ncolumns; i++)
     {
         if (bit_is_set(columns_present, ncolumns, i))
@@ -1734,7 +1709,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
 
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
-                sprintf(trace[i], "[%ld] NULL", i);
+                MXB_INFO("[%ld] NULL", i);
                 conv->column_null(create, i);
             }
             else if (column_is_fixed_string(create.column_types[i]))
@@ -1747,10 +1722,10 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                     uint64_t bytes = unpack_enum(ptr, &metadata[metadata_offset], val);
                     char strval[bytes * 2 + 1];
                     mxs::bin2hex(val, bytes, strval);
-                    conv->column_string(create, i, strval);
-                    sprintf(trace[i], "[%ld] ENUM: %lu bytes", i, bytes);
+                    conv->column_string(create, i, std::string_view(strval, bytes * 2));
+                    MXB_INFO("[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
-                    check_overflow(ptr <= end);
+                    mxb_assert(ptr <= end);
                 }
                 else
                 {
@@ -1780,23 +1755,20 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                         bytes = *ptr++;
                     }
 
-                    sprintf(trace[i], "[%ld] %s: field: %d bytes, data: %d bytes", i,
-                            mxb::upper_case_copy(create.columns[i].type).c_str(), field_length, bytes);
-                    char str[bytes + 1];
-                    memcpy(str, ptr, bytes);
-                    str[bytes] = '\0';
+                    MXB_INFO("[%ld] %s: field: %d bytes, data: %d bytes", i,
+                             mxb::upper_case_copy(create.columns[i].type).c_str(), field_length, bytes);
 
-                    if (strcasecmp(create.columns[i].type.c_str(), "binary") == 0)
+                    if (create.columns[i].is_binary)
                     {
-                        conv->column_bytes(create, i, (uint8_t*)str, bytes);
+                        conv->column_bytes(create, i, ptr, bytes);
                     }
                     else
                     {
-                        conv->column_string(create, i, str);
+                        conv->column_string(create, i, std::string_view((const char*)ptr, bytes));
                     }
 
                     ptr += bytes;
-                    check_overflow(ptr <= end);
+                    mxb_assert(ptr <= end);
                 }
             }
             else if (column_is_bit(create.column_types[i]))
@@ -1812,17 +1784,17 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                     MXB_WARNING("BIT is not currently supported, values are stored as 0.");
                 }
                 conv->column_int(create, i, 0);
-                sprintf(trace[i], "[%ld] BIT", i);
+                MXB_INFO("[%ld] BIT", i);
                 ptr += bytes;
-                check_overflow(ptr <= end);
+                mxb_assert(ptr <= end);
             }
             else if (column_is_decimal(create.column_types[i]))
             {
                 double f_value = 0.0;
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
                 conv->column_double(create, i, f_value);
-                sprintf(trace[i], "[%ld] DECIMAL", i);
-                check_overflow(ptr <= end);
+                MXB_INFO("[%ld] DECIMAL", i);
+                mxb_assert(ptr <= end);
             }
             else if (column_is_variable_string(create.column_types[i]))
             {
@@ -1839,13 +1811,10 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                     ptr++;
                 }
 
-                sprintf(trace[i], "[%ld] VARCHAR: field: %d bytes, data: %lu bytes", i, bytes, sz);
-                char buf[sz + 1];
-                memcpy(buf, ptr, sz);
-                buf[sz] = '\0';
+                MXB_INFO("[%ld] VARCHAR: field: %d bytes, data: %lu bytes", i, bytes, sz);
+                conv->column_string(create, i, std::string_view((const char*)ptr, sz));
                 ptr += sz;
-                conv->column_string(create, i, buf);
-                check_overflow(ptr <= end);
+                mxb_assert(ptr <= end);
             }
             else if (column_is_blob(create.column_types[i]))
             {
@@ -1853,7 +1822,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                 uint64_t len = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
-                sprintf(trace[i], "[%ld] BLOB: field: %d bytes, data: %lu bytes", i, bytes, len);
+                MXB_INFO("[%ld] BLOB: field: %d bytes, data: %lu bytes", i, bytes, len);
                 if (len)
                 {
                     conv->column_bytes(create, i, ptr, len);
@@ -1864,7 +1833,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                     uint8_t nullvalue = 0;
                     conv->column_bytes(create, i, &nullvalue, 1);
                 }
-                check_overflow(ptr <= end);
+                mxb_assert(ptr <= end);
             }
             else if (column_is_temporal(create.column_types[i]))
             {
@@ -1874,8 +1843,8 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                                              create.columns[i].length,
                                              buf, sizeof(buf));
                 conv->column_string(create, i, buf);
-                sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(create.column_types[i]), buf);
-                check_overflow(ptr <= end);
+                MXB_INFO("[%ld] %s: %s", i, column_type_to_string(create.column_types[i]), buf);
+                mxb_assert(ptr <= end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
             else
@@ -1884,18 +1853,16 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                 memset(lval, 0, sizeof(lval));
                 ptr += unpack_numeric_field(ptr, create.column_types[i], &metadata[metadata_offset], lval);
                 set_numeric_field_value(conv, create, i, &metadata[metadata_offset], lval);
-                sprintf(trace[i], "[%ld] %s", i, column_type_to_string(create.column_types[i]));
-                check_overflow(ptr <= end);
+                MXB_INFO("[%ld] %s", i, column_type_to_string(create.column_types[i]));
+                mxb_assert(ptr <= end);
             }
             mxb_assert(metadata_offset <= create.column_metadata.size());
             metadata_offset += get_metadata_len(create.column_types[i]);
         }
         else
         {
-            sprintf(trace[i], "[%ld] %s: Not present", i, column_type_to_string(create.column_types[i]));
+            MXB_INFO("[%ld] %s: Not present", i, column_type_to_string(create.column_types[i]));
         }
-
-        MXB_INFO("%s", trace[i]);
     }
 
     return ptr;
@@ -1913,11 +1880,8 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
 bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 {
     bool rval = false;
-    uint64_t id;
-    char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
     int ev_len = m_event_type_hdr_lens[hdr->event_type];
-
-    read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident));
+    auto [table_ident, id] = read_table_info(ptr, ev_len);
 
     if (!table_matches(table_ident))
     {
@@ -1940,7 +1904,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
                 // Returns one row with the CREATE in the second field
                 auto sql = rset[0][1];
                 normalize_sql_string(sql);
-                parse_sql(sql, std::string(table_ident, strchr(table_ident, '.')));
+                parse_sql(sql, table_ident.substr(0, table_ident.find('.')));
                 create = m_created_tables.find(table_ident);
             }
             else if (int err = res.second->errnum())
@@ -1951,7 +1915,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
         }
         else
         {
-            MXB_ERROR("Failed to fetch CREATE for '%s': %s", table_ident,
+            MXB_ERROR("Failed to fetch CREATE for '%s': %s", table_ident.c_str(),
                       res.first.empty() ? res.second->error().c_str() : res.first.c_str());
         }
     }
@@ -1974,7 +1938,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
         MXB_WARNING("Table map event for table '%s' read before the DDL statement "
                     "for that table  was read. Data will not be processed for this "
                     "table until a DDL statement for it is read.",
-                    table_ident);
+                    table_ident.c_str());
     }
 
     return rval;

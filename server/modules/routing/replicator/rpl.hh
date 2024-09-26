@@ -115,6 +115,7 @@ struct Column
         , type(type)
         , length(length)
         , is_unsigned(is_unsigned)
+        , is_binary(strcasecmp(type.c_str(), "binary") == 0)
     {
     }
 
@@ -122,6 +123,7 @@ struct Column
     std::string type;
     int         length;
     bool        is_unsigned;
+    bool        is_binary;
     bool        first = false;
     std::string after;
 };
@@ -243,7 +245,7 @@ public:
     virtual void column_double(const Table& create, int i, double value) = 0;
 
     // String handler
-    virtual void column_string(const Table& create, int i, const std::string& value) = 0;
+    virtual void column_string(const Table& create, int i, std::string_view value) = 0;
 
     // Bytes handler
     virtual void column_bytes(const Table& create, int i, uint8_t* value, int len) = 0;
@@ -331,6 +333,8 @@ private:
     std::string       m_datadir;
     cdc::Server       m_server;
 
+    mxb::Regex m_no_comments_re;
+
     std::unordered_map<std::string, int> m_versions;    // Table version numbers per identifier
 
     void handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
@@ -383,4 +387,6 @@ private:
     void do_add_column(const STable& create, Column c);
     void do_drop_column(const STable& create, const std::string& name);
     void do_change_column(const STable& create, const std::string& old_name);
+
+    void normalize_sql_string(std::string& str) const;
 };
