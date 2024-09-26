@@ -11,6 +11,7 @@
  * Public License.
  */
 const { maxctrl, _, doRequest, helpMsg } = require("./common.js");
+const { execSync } = require("child_process");
 
 var resolved = {};
 
@@ -28,12 +29,10 @@ async function toFunction(fn) {
     if (parts) {
       const lib = parts[1];
       const symbol = parts[2].length > 0 ? parts[2] : parts[3];
-      const util = require("node:util");
-      const exec = util.promisify(require("node:child_process").exec);
       var result;
 
       try {
-        const { stdout } = await exec("addr2line -f -C -e " + lib + " " + symbol);
+        const { stdout } = execSync("addr2line -f -C -e " + lib + " " + symbol);
         result = stdout.split("\n")[0];
       } catch (err) {}
 
