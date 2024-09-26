@@ -58,15 +58,15 @@ public:
             return m_master.get();
         }
 
-        bool persist_performance_data() const
-        {
-            return m_persist_performance_data.get();
-        }
+        // bool persist_performance_data() const
+        // {
+        //     return m_persist_performance_data.get();
+        // }
 
     private:
         config::Target m_master;
-        config::Bool   m_persist_performance_data;
-        SmartRouter*   m_router;
+        // config::Bool   m_persist_performance_data;
+        SmartRouter* m_router;
     };
 
     static SmartRouter* create(SERVICE* pService);
