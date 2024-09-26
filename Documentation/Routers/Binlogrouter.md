@@ -249,27 +249,40 @@ configuration can be found in the [example](#example) section of this document.
 
 ### `datadir`
 
-Directory where binary log files are stored. By default the files are stored in
-`/var/lib/maxscale/binlogs`. **NOTE:** If you are upgrading from a version prior
-to 2.5, make sure this directory is different from what it was before, or
-move the old data.
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/lib/maxscale/binlogs`
+
+Directory where binary log files are stored.
 
 ### `server_id`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `1234`
+
 The server ID that MaxScale uses when connecting to the master and when serving
-binary logs to the slaves. Default value is 1234.
+binary logs to the slaves.
 
 ### `net_timeout`
 
-Network connection and read timeout for the connection to the master. The value
-is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations). Default value is 10
-seconds.
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `10s`
+
+Network connection and read timeout in seconds for the connection to the master.
 
 ### `select_master`
 
-Automatically select the master server to replicate from. The default value is
-false.
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
+
+Automatically select the master server to replicate from.
 
 When this feature is enabled, the master which binlogrouter will replicate
 from will be selected from the servers defined by a monitor `cluster=TheMonitor`.
@@ -296,9 +309,12 @@ replication manually with `CHANGE MASTER TO`.
 
 ### `expire_log_duration`
 
-Duration after which a binary log file can be automatically removed. The default is 0,
-or no automatic removal. This is similar to the server system variable
-[expire_log_days](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#expire_logs_days).
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0s`
+
+Duration after which a binary log file can be automatically removed.
 
 The duration is measured from the last modification of the log file. Files are
 purged in the order they were created. The automatic purge works in a similar
@@ -310,8 +326,13 @@ The duration can be specified as explained
 
 ### `expire_log_minimum_files`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `2`
+
 The minimum number of log files the automatic purge keeps. At least one file
-is always kept. The default setting is 2.
+is always kept.
 
 ## New installation
 
