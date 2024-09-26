@@ -71,6 +71,7 @@ void test_main(TestConnections& test)
                 }
 
                 repl.start_node(node_to_stop);
+                mxs.wait_for_monitor(1);
                 test.tprintf("Restarted %s.", srv_stopped.name.c_str());
             };
 

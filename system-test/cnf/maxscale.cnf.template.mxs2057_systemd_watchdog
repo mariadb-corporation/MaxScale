@@ -16,7 +16,7 @@ router = readwritesplit
 servers = server1
 user = maxskysql
 password = skysql
-filters = Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow
+filters = Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow
 
 [RW-Split-Listener]
 type = listener
@@ -35,3 +35,51 @@ type=filter
 module=namedserverfilter
 match01=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
 target01=server1
+match02=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target02=server1
+match03=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target03=server1
+match04=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target04=server1
+match05=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target05=server1
+match06=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target06=server1
+match07=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target07=server1
+match08=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target08=server1
+match09=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target09=server1
+match10=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target10=server1
+match11=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target11=server1
+match12=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target12=server1
+match13=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target13=server1
+match14=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target14=server1
+match15=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target15=server1
+match16=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target16=server1
+match17=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target17=server1
+match18=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target18=server1
+match19=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target19=server1
+match20=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target20=server1
+match21=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target21=server1
+match22=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target22=server1
+match23=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target23=server1
+match24=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target24=server1
+match25=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
+target25=server1

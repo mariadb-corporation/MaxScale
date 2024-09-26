@@ -179,10 +179,22 @@ MaxScale's hostname.
 
 ### `ignore_tables`
 
+- **Type**: stringlist
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
+
 List of full table names (e.g. db1.t1) to ignore when checking for duplicate
 tables. By default no tables are ignored.
 
+This parameter was once called `ignore_databases`.
+
 ### `ignore_tables_regex`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 A [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
 that is matched against database names when checking for duplicate databases.
@@ -201,21 +213,7 @@ password=mypwd
 ignore_tables_regex=^db1|^db2|^db3\.t
 ```
 
-### `preferred_server`
-
-This parameter has been removed in MaxScale 6.0. It is no longer needed after
-the fix to MXS-2793 made it possible to correctly store the database location
-information.
-
-### `ignore_databases`
-
-This parameter has been removed in MaxScale 6.0, use
-[ignore_tables](#ignore_tables) instead.
-
-### `ignore_databases_regex`
-
-This parameter has been removed in MaxScale 6.0, use
-[ignore_tables_regex](#ignore_tables_regex) instead.
+This parameter was once called `ignore_databases_regex`.
 
 ### `max_sescmd_history`
 
@@ -231,6 +229,11 @@ in MaxScale 6.0.
 
 ### `refresh_databases`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
+
 Enable database map refreshing mid-session. These are triggered by a failure to
 change the database i.e. `USE ...` queries. This feature is disabled by default.
 
@@ -239,6 +242,11 @@ release of MaxScale this parameter now works again but it is disabled by default
 to retain the same behavior as in older releases.
 
 ### `refresh_interval`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `300s`
 
 The minimum interval between database map refreshes in seconds. The default
 value is 300 seconds.
