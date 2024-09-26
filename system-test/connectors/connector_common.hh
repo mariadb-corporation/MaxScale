@@ -5,6 +5,15 @@
 #include <iostream>
 #include <maxbase/string.hh>
 
+static inline mxt::ScopedUser create_user(TestConnections& test)
+{
+    test.repl->ping_or_open_admin_connections();
+    auto* adm = test.repl->backend(0)->admin_connection();
+    adm->cmd("CREATE USER connector@'%' IDENTIFIED BY 'connector'");
+    adm->cmd("GRANT ALL ON *.* TO connector@'%' WITH GRANT OPTION");
+    return mxt::ScopedUser("connector@'%'", adm);
+}
+
 static inline bool clone_repo(TestConnections& test, const std::string& repo,
                               const std::string& branch, const std::string& repo_dir)
 {
@@ -24,12 +33,13 @@ static inline int run_maven_test(TestConnections& test_arg, int argc, char** arg
     auto maven_test_main = [&repo, &branch, &repo_dir](TestConnections& test){
         if (clone_repo(test, repo, branch, repo_dir))
         {
+            auto user = create_user(test);
             std::ofstream of("./" + repo_dir + "/src/test/resources/conf.properties");
             of << "DB_HOST=" << test.maxscale->ip() << "\n"
                << "DB_PORT=4006\n"
                << "DB_DATABASE=test\n"
-               << "DB_USER=" << test.maxscale->user_name() << "\n"
-               << "DB_PASSWORD=" << test.maxscale->password() << "\n"
+               << "DB_USER=connector\n"
+               << "DB_PASSWORD=connector\n"
                << "DB_OTHER=\n";
             of.close();
 
@@ -62,14 +72,15 @@ static inline int run_npm_test(TestConnections& test_arg, int argc, char** argv,
     auto npm_test_main = [&repo, &branch, &repo_dir](TestConnections& test){
         if (clone_repo(test, repo, branch, repo_dir))
         {
+            auto user = create_user(test);
             std::ostringstream ss;
             ss << "cd " << repo_dir << " && npm i &&"
                << " TEST_DB_HOST=" << test.maxscale->ip()
                << " TEST_DB_PORT=4006"
                << " TEST_MAXSCALE_TLS_PORT=4007"
                << " TEST_DB_DATABASE=test"
-               << " TEST_DB_USER=" << test.maxscale->user_name()
-               << " TEST_DB_PASSWORD=" << test.maxscale->password()
+               << " TEST_DB_USER=connector"
+               << " TEST_DB_PASSWORD=connector"
                << " srv=maxscale"
                << " npm run test:base";
 
