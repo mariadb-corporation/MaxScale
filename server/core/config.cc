@@ -1223,6 +1223,41 @@ Config::Config(int argc, char** argv)
         this->version = uname_data.version;
         this->machine = uname_data.machine;
     }
+
+    std::ifstream infile("/etc/os-release");
+    std::string name;
+    std::string version;
+
+    for (std::string line; std::getline(infile, line);)
+    {
+        auto pos = line.find('=');
+
+        if (pos != std::string::npos)
+        {
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
+
+            if (!value.empty() && value.front() == '"' && value.back() == '"')
+            {
+                value = value.substr(1, value.size() - 2);
+            }
+
+            if (key == "NAME")
+            {
+                name = std::move(value);
+            }
+            else if (key == "VERSION")
+            {
+                version = std::move(value);
+            }
+        }
+
+        if (!name.empty() && !version.empty())
+        {
+            this->os_name = name + " " + version;
+            break;
+        }
+    }
 }
 
 // static
