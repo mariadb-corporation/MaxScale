@@ -80,6 +80,11 @@ For information about common service parameters, refer to the
 
 #### `gtid_start_pos`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 The GTID where avrorouter starts the replication from in direct replication
 mode. The parameter value must be in the MariaDB GTID format e.g. 0-1-123 where
 the first number is the replication domain, the second the server_id value of
@@ -91,20 +96,22 @@ serves.
 
 #### `server_id`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `1234`
+
 The
 [server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
-used when replicating from the primary in direct replication mode. The default
-value is 1234.
-
-#### `source`
-
-**Note:** This parameter has been removed in MaxScale 2.5.0 due to changes in
-          the binlogrouter. The direct replication mode is the recommended mode
-          of operation. Using the binlogrouter is less efficient and more
-          cumbersome to both configure and manage than the direct replication
-          mode.
+used when replicating from the primary in direct replication mode.
 
 #### `codec`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `null`, `deflate`
+- **Default**: `null`
 
 The compression codec to use. By default, the avrorouter does not use compression.
 
@@ -114,6 +121,11 @@ Avro specification. For more information about the compression types,
 refer to the [Avro specification](https://avro.apache.org/docs/current/spec.html#Required+Codecs).
 
 #### `match` and `exclude`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
 filter events for processing depending on table names. Avrorouter does not support the
@@ -127,14 +139,21 @@ them: `match=(^test[.]t1$)|(^test[.]t2$)`.
 
 #### `binlogdir`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/lib/maxscale/`
+
 The location of the binary log files. This is the first mandatory parameter
 and it defines where the module will read binlog files from. Read access to
 this directory is required.
 
-If used in conjunction with the binlogrouter, the value of this option should be
-the same for both the binlogrouter and the avrorouter.
-
 #### `avrodir`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/lib/maxscale/`
 
 The location where the Avro files are stored. This is the second mandatory
 parameter and it governs where the converted files are stored. This directory
@@ -149,19 +168,30 @@ MaxScale, the value of _binlogdir_ was used as the default value for _avrodir_.
 
 ##### `filestem`
 
-The base name of the binlog files. The default value is "mysql-bin". The binlog
-files are assumed to follow the naming schema _<filestem>.<N>_ where _<N>_ is
-the binlog number and _<filestem>_ is the value of this router option.
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `mysql-bin`
 
-For example, with the following router option:
+The base name of the binlog files. The binlog files are assumed to follow the
+naming schema _<filestem>.<N>_ where _<N>_ is the binlog number and _<filestem>_
+is the value of this router option.
+
+For example, with the following parameters:
 
 ```
-filestem=mybin,binlogdir=/var/lib/mysql/binlogs/
+filestem=mybin
+binlogdir=/var/lib/mysql/binlogs/
 ```
 
 The first binlog file the avrorouter would look for is `/var/lib/mysql/binlogs/mybin.000001`.
 
 #### `start_index`
+
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `1`
 
 The starting index number of the binlog file. The default value is 1.
 For the binlog _mysql-bin.000001_ the index would be 1, for _mysql-bin.000005_
@@ -172,6 +202,11 @@ of this option to the correct index. The avrorouter will always start from the
 beginning of the binary log file.
 
 ### `cooperative_replication`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
 
 Controls whether multiple instances cooperatively replicate from the same
 cluster. This is a boolean parameter and is disabled by default. It was
@@ -211,16 +246,30 @@ the conversion process noticeably faster.
 
 ##### `group_trx`
 
-Controls the number of transactions that are grouped into a single Avro
-data block. The default value is 1 transaction.
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `1`
 
+Controls the number of transactions that are grouped into a single Avro
+data block.
 
 ##### `group_rows`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `1000`
+
 Controls the number of row events that are grouped into a single Avro
-data block. The default value is 1000 row events.
+data block.
 
 ##### `block_size`
+
+- **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `16KiB`
 
 The Avro data block size in bytes. The default is 16 kilobytes. Increase this
 value if individual events in the binary logs are very large. The value is a
