@@ -9,7 +9,7 @@ This filter was introduced in MariaDB MaxScale 2.3.0.
 The `binlogfilter` can be combined with a `binlogrouter` service to selectively
 replicate the binary log events to slave servers.
 
-The filter uses two parameters, *match* and *exclude*, to decide which events
+The filter uses two settings, *match* and *exclude*, to determine which events
 are replicated. If a binlog event does not match or is excluded, the event is
 replaced with an empty data event. The empty event is always 35 bytes which
 translates to a space reduction in most cases.
@@ -26,17 +26,31 @@ that there are no ambiguities in the event filtering.
 
 ## Configuration
 
-### `match` and `exclude`
+### `match`
 
-Both the *match* and *exclude* parameters are optional and work mostly as other
-[typical regular expression parameters](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters).
-If neither of them is defined, the filter does nothing and all events are replicated. This
-filter does not accept regular expression options as a separate parameter, such settings
-must be defined in the patterns themselves. See the
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+Include queries that match the regex. See next entry, `exclude`, for more information.
+
+### `exclude`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+Exclude queries that match the regex.
+
+If neither `match` nor `exclude` are defined, the filter does nothing and all events
+are replicated. This filter does not accept regular expression options as a separate
+setting, such settings must be defined in the patterns themselves. See the
 [PCRE2 api documentation](https://www.pcre.org/current/doc/html/pcre2api.html#SEC20) for
 more information.
 
-The two parameters are matched against the database and table name concatenated
+The two settings are matched against the database and table name concatenated
 with a period.  For example, the string the patterns are matched against for the
 database `test` and table `t1` is `test.t1`.
 
@@ -45,10 +59,24 @@ in the statements. If any of the tables matches the *match* pattern, the event
 is replicated. If any of the tables matches the *exclude* pattern, the event is
 not replicated.
 
-### `rewrite_src` and `rewrite_dest`
+### `rewrite_src`
 
-These two parameters control the statement rewriting of the binlogfilter. The
-`rewrite_src` parameter is a PCRE2 regular expression that is matched against
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+See the next entry, `rewrite_dest`, for more information.
+
+### `rewrite_dest`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+`rewrite_src` and `rewrite_dest` control the statement rewriting of the binlogfilter.
+The `rewrite_src` setting is a PCRE2 regular expression that is matched against
 the default database and the SQL of statement based replication events (query
 events). `rewrite_dest` is the replacement string which supports the normal
 PCRE2 backreferences (e.g the first capture group is `$1`, the second is `$2`,
