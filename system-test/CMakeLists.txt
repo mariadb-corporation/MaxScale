@@ -936,6 +936,9 @@ add_test_executable_ex(NAME env_var_substitution SOURCE env_var_substitution.cc
 # MXS-5193: SET autocommit=1; UPDATE ...; is stored in the session command history
 add_test_executable(mxs5193_multistmt_sescmd.cc mxs5193_multistmt_sescmd mxs5193_multistmt_sescmd LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5302: Executing more than max_sescmd_history prepared statements may lose some of them
+add_test_executable(mxs5302_ps_overflow.cc mxs5302_ps_overflow mxs5302_ps_overflow LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
