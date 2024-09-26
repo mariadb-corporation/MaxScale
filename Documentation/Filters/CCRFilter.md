@@ -47,6 +47,11 @@ The CCR filter has no mandatory parameters.
 
 ### `time`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `60s`
+
 The time window during which queries are routed to the master. The duration
 can be specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations)
@@ -66,6 +71,11 @@ conditions are met, the query is re-routed to the master.
 
 ### `count`
 
+- **Type**: count
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0`
+
 The number of SQL statements to route to master after detecting a data modifying
 SQL statement. This feature is disabled by default.
 
@@ -76,7 +86,12 @@ the counter reaches zero, the statements are routed normally. If a new data
 modifying SQL statement is processed, the counter is reset to the value of
 _count_.
 
-### `match`, `ignore` and `options`
+### `match`, `ignore`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
 control which statements trigger statement re-routing. Only non-SELECT statements are
@@ -89,7 +104,22 @@ ignore=.*UPDATE.*
 options=case,extended
 ```
 
+### `options`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `ignorecase`, `case`, `extended`
+- **Default**: `ignorecase`
+
+Regular expression options for `match` and `ignore`.
+
 ### `global`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
 
 `global` is a boolean parameter that when enabled causes writes from one
 connection to propagate to all other connections. This can be used to work

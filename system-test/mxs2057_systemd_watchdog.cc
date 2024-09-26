@@ -58,8 +58,10 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
      */
     std::string query = "SELECT id FROM t1 where id = '";
 
-    // About 15MiB of data, below max_allowed_packet but big enough to cause regex problems.
-    while (query.size() < 0xefffff)
+    // Making the query 750 bytes long keeps it short enough that it doesn't hit the PCRE2 match limit but
+    // long enough that it gets maximally close to it. Matching 25 times takes roughly 3 seconds and with 100
+    // filters is enough that the watchdog is hit.
+    while (query.size() < 750)
     {
         query += "x";
     }
