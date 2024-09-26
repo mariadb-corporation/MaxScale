@@ -1402,10 +1402,39 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
 
 void MariaDBClientConnection::prune_history()
 {
+    auto& history = m_session_data->history;
+    auto it = history.begin();
+
+    // Find the first non-COM_STMT_PREPARE command that can be pruned. The COM_STMT_PREPARE commands are
+    // excluded from this as they must always be kept in the history.
+    while (it != history.end() && it->data()[MYSQL_HEADER_LEN] == MXS_COM_STMT_PREPARE)
+    {
+        ++it;
+    }
+
+    if (it == history.end())
+    {
+        // The history consists solely of COM_STMT_PREPARE commands, cannot prune anything.
+        return;
+    }
+
+    size_t num_sescmd = std::count_if(it, history.end(), [](const auto& cmd){
+        return cmd.data()[MYSQL_HEADER_LEN] != MXS_COM_STMT_PREPARE;
+    });
+
+    if (num_sescmd <= m_max_sescmd_history)
+    {
+        // The total number of non-COM_STMT_PREPARE commands is below max_sescmd_history, no need to prune
+        // anything.
+        return;
+    }
+
     // Using the about-to-be-pruned command as the minimum ID prevents the removal of responses that are still
     // needed when the ID overflows. If only the stored positions were used, the whole history would be
     // cleared.
-    uint32_t min_id = m_session_data->history.front().id();
+    uint32_t first_id = history.front().id();
+    uint32_t start_id = it->id();
+    uint32_t min_id = start_id;
 
     for (const auto& kv : m_session_data->history_info)
     {
@@ -1415,9 +1444,22 @@ void MariaDBClientConnection::prune_history()
         }
     }
 
-    m_session_data->history_responses.erase(m_session_data->history_responses.begin(),
-                                            m_session_data->history_responses.lower_bound(min_id));
-    m_session_data->history.pop_front();
+    if (min_id >= first_id)
+    {
+        // All of the backends have executed at least the oldest command whose response is stored. We can
+        // prune any responses that were stored while the backends were waiting for their responses
+        auto& responses = m_session_data->history_responses;
+        responses.erase(responses.begin(), responses.lower_bound(first_id));
+
+        if (min_id == start_id)
+        {
+            // The about-to-be-pruned command has also been executed by all of the backends and its response
+            // can be removed as well.
+            responses.erase(min_id);
+        }
+    }
+
+    m_session_data->history.erase(it);
     m_session_data->history_pruned = true;
 }
 
