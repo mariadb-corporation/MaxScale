@@ -1,17 +1,35 @@
 # Common Monitor Parameters
 
-This document lists optional parameters that all current monitors support.
+This document settings supported by all monitors. These should be defined
+in the monitor section of the configuration file.
 
 [TOC]
 
 ## Parameters
 
+### `module`
+
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: No
+
+The monitor module this monitor should use. Typically `mariadbmon` or
+`galeramon`.
+
 ### `user`
+
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: Yes
 
 Username used by the monitor to connect to the backend servers. If a server defines
 the `monitoruser` parameter, that value will be used instead.
 
 ### `password`
+
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: Yes
 
 Password for the user defined with the `user` parameter. If a server defines
 the `monitorpw` parameter, that value will be used instead.
@@ -19,11 +37,23 @@ the `monitorpw` parameter, that value will be used instead.
 **Note:** In older versions of MaxScale this parameter was called `passwd`. The
   use of `passwd` was deprecated in MaxScale 2.3.0.
 
+### `servers`
+
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+A comma-separated list of servers the monitor should monitor.
+```
+servers=MyServer1,MyServer2
+```
+
 ### `monitor_interval`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
-- **Default**: 2s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `2s`
 
 Defines how often the monitor updates the status of the servers. Choose a lower
 value if servers should be queried more often. The smallest possible value is
@@ -42,8 +72,9 @@ versions a value without a unit may be rejected.
 ### `backend_connect_timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
-- **Default**: 3s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `3s`
 
 This parameter controls the timeout for connecting to a monitored server.
 The interval is specified as documented
@@ -60,8 +91,9 @@ backend_connect_timeout=3s
 ### `backend_write_timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
-- **Default**: 3s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `3s`
 
 This parameter controls the timeout for writing to a monitored server.
 The timeout is specified as documented
@@ -78,8 +110,9 @@ backend_write_timeout=3s
 ### `backend_read_timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
-- **Default**: 3s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `3s`
 
 This parameter controls the timeout for reading from a monitored server.
 The timeout is specified as documented
@@ -95,9 +128,10 @@ backend_read_timeout=3s
 
 ### `backend_connect_attempts`
 
-- **Type**: integer
-- **Default**: 1
+- **Type**: number
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `1`
 
 This parameter defines the maximum times a backend connection is attempted every
 monitoring loop. Every attempt may take up to `backend_connect_timeout` seconds
@@ -109,6 +143,11 @@ backend_connect_attempts=1
 ```
 
 ### `disk_space_threshold`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 This parameter duplicates the `disk_space_threshold`
 [server parameter](../Getting-Started/Configuration-Guide.md#disk_space_threshold).
@@ -201,8 +240,9 @@ at `/DbData` while both `server2` and `server3` have it mounted on
 ### `disk_space_check_interval`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
-- **Default**: 0s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `0s`
 
 With this parameter it can be specified the minimum amount of time
 between disk space checks. The interval is specified as documented
@@ -221,8 +261,9 @@ the checking will still take place at `monitor_interval` intervals.
 ### `script`
 
 - **Type**: string
-- **Default**: none
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: None
 
 This command will be executed on a server state change. The parameter should
 be an absolute path to a command or the command should be in the executable
@@ -284,8 +325,9 @@ calls as they cause a deadlock:
 ### `script_timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
-- **Default**: 90s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `90s`
 
 The timeout for the executed script. The interval is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
@@ -301,6 +343,7 @@ sent to it once the execution time is greater than twice the configured timeout.
 ### `events`
 
 - **Type**: enum
+- **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `master_down`, `master_up`, `slave_down`, `slave_up`, `server_down`, `server_up`, `lost_master`, `lost_slave`, `new_master`, `new_slave`
 - **Default**: All events
@@ -332,8 +375,9 @@ new_slave   |A new Slave was detected
 ### `journal_max_age`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
-- **Default**: 28800s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `28800s`
 
 The maximum journal file age. The interval is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
