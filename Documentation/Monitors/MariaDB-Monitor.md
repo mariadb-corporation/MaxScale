@@ -158,7 +158,12 @@ parameters are described in the [ColumnStore commands-section](#settings).
 
 ### `assume_unique_hostnames`
 
-Boolean, default: ON. When active, the monitor assumes that server hostnames and
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
+
+When active, the monitor assumes that server hostnames and
 ports are consistent between the server definitions in the MaxScale
 configuration file  and the "SHOW ALL SLAVES STATUS" outputs of the servers
 themselves. Specifically, the monitor assumes that if server A is replicating
@@ -188,13 +193,19 @@ case, the slave connection is ignored.
 
 ### `master_conditions`
 
-Enum, default: *primary_monitor_master*. Designate additional conditions for
+- **Type**: [enum_mask](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `none`, `connecting_slave`, `connected_slave`, `running_slave`, `primary_monitor_master`
+- **Default**: `primary_monitor_master`
+
+Designate additional conditions for
 *Master*-status, i.e qualified for read and write queries.
 
 Normally, if a suitable master candidate server is found as described in
 [Master selection](#master-selection), MaxScale designates it *Master*.
 *master_conditions* sets additional conditions for a master server. This
-setting is an enum, allowing multiple conditions to be set simultaneously.
+setting is an enum_mask, allowing multiple conditions to be set simultaneously.
 Conditions 2, 3 and 4 refer to slave servers. If combined, a single slave must
 fulfill all of the given conditions for the master to be viable.
 
@@ -231,7 +242,13 @@ master_conditions=connected_slave,running_slave
 
 ### `slave_conditions`
 
-Enum, default: *none*. Designate additional conditions for *Slave*-status,
+- **Type**: [enum_mask](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `none`, `linked_master`, `running_master`, `writable_master`, `primary_monitor_master`
+- **Default**: `none`
+
+Designate additional conditions for *Slave*-status,
 i.e qualified for read queries.
 
 Normally, a server is *Slave* if it is at least attempting to replicate from the
@@ -239,7 +256,7 @@ master candidate or a relay (Slave_IO_Running is 'Yes' or 'Connecting',
 Slave_SQL_Running is 'Yes', valid replication credentials). The master candidate
 does not necessarily need to be writable, e.g. if it fails its
 *master_conditions*. *slave_conditions* sets additional conditions for a slave
-server. This setting is an enum, allowing multiple conditions to be set
+server. This setting is an enum_mask, allowing multiple conditions to be set
 simultaneously.
 
 The available conditions are:
@@ -263,6 +280,11 @@ slave_conditions=running_master,writable_master
 
 ### `failcount`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `5`
+
 Number of consecutive monitor passes a master server must be down before it is
 considered failed. If automatic failover is enabled (`auto_failover=true`), it
 may be performed at this time. A value of 0 or 1 enables immediate failover.
@@ -274,8 +296,6 @@ for more details. Changing the master may break replication as queries could be
 routed to a server without previous events. To prevent this, avoid having
 multiple valid master servers in the cluster.
 
-The default value is 5 failures.
-
 The worst-case delay between the master failure and the start of the failover
 can be estimated by summing up the timeout values and `monitor_interval` and
 multiplying that by `failcount`:
@@ -286,7 +306,12 @@ multiplying that by `failcount`:
 
 ### `enforce_writable_master`
 
-This feature is disabled by default. If set to ON, the monitor attempts to
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
+
+If set to ON, the monitor attempts to
 disable the *read_only*-flag on the master when seen. The flag is
 checked every monitor tick. The monitor user requires the SUPER-privilege for
 this feature to work.
@@ -303,7 +328,12 @@ prefers to select a writable server as master if possible.
 
 ### `enforce_read_only_slaves`
 
-This feature is disabled by default. If set to ON, the monitor attempts to
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
+
+If set to ON, the monitor attempts to
 enable the *read_only*-flag on any writable slave server. The flag is checked
 every monitor tick. The monitor user requires the SUPER-privilege
 (or READ_ONLY ADMIN) for this
@@ -319,7 +349,12 @@ marked [Slave].
 
 ### `enforce_read_only_servers`
 
-Boolean, default: false. Works similar to
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
+
+Works similar to
 [enforce_read_only_slaves](#enforce_read_only_slaves) except will set
 *read_only* on any writable server that is not the primary and not in
 maintenance (a superset of the servers altered by *enforce_read_only_slaves*).
@@ -331,7 +366,12 @@ unclear which servers should be altered.
 
 ### `maintenance_on_low_disk_space`
 
-This feature is enabled by default. If a running server that is not the master
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
+
+If a running server that is not the master
 or a relay master is out of disk space the server is set to maintenance mode.
 Such servers are not used for router sessions and are ignored when performing a
 failover or other cluster modification operation. See the general monitor
@@ -348,6 +388,12 @@ maxctrl clear server server2 Maint
 ```
 
 ### `cooperative_monitoring_locks`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `none`, `majority_of_all`, `majority_of_running`
+- **Default**: `none`
 
 Using this setting is recommended when multiple MaxScales are monitoring the
 same backend cluster. When enabled, the monitor attempts to acquire exclusive
@@ -371,7 +417,12 @@ the *passive*-setting.
 
 ### `script_max_replication_lag`
 
-Integer, default: -1. Defines a replication lag limit in seconds for
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `-1`
+
+Defines a replication lag limit in seconds for
 launching the monitor script configured in the *script*-parameter. If the
 replication lag of a server goes above this limit, the script is ran with the
 $EVENT-placeholder replaced by "rlag_above". If the lag goes back below the
@@ -754,10 +805,13 @@ master.
 
 #### `auto_failover`
 
-Enable automated master failover. This parameter expects a boolean value and the
-default value is false.
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
 
-When automatic failover is enabled, traditional MariaDB Master-Slave clusters
+Enable automated master failover. When automatic failover is enabled,
+traditional MariaDB Master-Slave clusters
 will automatically elect a new master if the old master goes down and stays down
 a number of iterations given in `failcount`. Failover will not take place when
 MaxScale is configured as a passive instance. For details on how MaxScale
@@ -767,10 +821,13 @@ The monitor user must have the SUPER and RELOAD privileges for failover to work.
 
 #### `auto_rejoin`
 
-Enable automatic joining of server to the cluster. This parameter expects a
-boolean value and the default value is false.
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
 
-When enabled, the monitor will attempt to direct standalone servers and servers
+Enable automatic joining of server to the cluster. When enabled, the monitor
+will attempt to direct standalone servers and servers
 replicating from a relay master to the main cluster master server, enforcing a
 1-master-N-slaves configuration.
 
@@ -786,7 +843,12 @@ redirected to Slave B, the current master.
 
 #### `switchover_on_low_disk_space`
 
-This feature is disabled by default. If enabled, the monitor will attempt to
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
+
+If enabled, the monitor will attempt to
 switchover a master server low on disk space with a slave. The switch is only
 done if a slave without disk space issues is found. If
 `maintenance_on_low_disk_space` is also enabled, the old master (now a slave)
@@ -802,6 +864,11 @@ switchover_on_low_disk_space=true
 ```
 
 #### `enforce_simple_topology`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
 
 This setting tells the monitor to assume that the servers should be arranged in a
 1-master-N-slaves topology and the monitor should try to keep it that way. If
@@ -826,6 +893,11 @@ enforce_simple_topology=true
 
 #### `replication_user` and `replication_password`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
 The username and password of the replication user. These are given as the values
 for `MASTER_USER` and `MASTER_PASSWORD` whenever a `CHANGE MASTER TO` command is
 executed.
@@ -844,7 +916,10 @@ encrypted with the same key to avoid erroneous decryption.
 
 #### `replication_master_ssl`
 
-Type: bool Default: off
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
 
 If set to ON, any `CHANGE MASTER TO`-command generated will set `MASTER_SSL=1` to enable
 encryption for the replication stream. This setting should only be enabled if the backend
@@ -856,6 +931,11 @@ If the setting is left OFF, `MASTER_SSL` is not set at all, which will preserve 
 settings when redirecting a slave connection.
 
 #### `failover_timeout` and `switchover_timeout`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `90s`
 
 Time limit for failover and switchover operations. The default
 values are 90 seconds for both. `switchover_timeout` is also used as the time
@@ -873,18 +953,16 @@ If no successful failover/switchover takes place within the configured time
 period, a message is logged and automatic failover is disabled. This prevents
 further automatic modifications to the misbehaving cluster.
 
-#### `verify_master_failure` and `master_failure_timeout`
+#### `verify_master_failure`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
 
 Enable additional master failure verification for automatic failover.
-`verify_master_failure` is a boolean value (default: true) which enables this
-feature and `master_failure_timeout` defines the timeout (default: 10 seconds).
-
-The master failure timeout is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
-is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
-versions a value without a unit may be rejected. Note that since the granularity
-of the timeout is seconds, a timeout specified in milliseconds will be rejected,
-even if the duration is longer than a second.
+`verify_master_failure` enables this  feature and
+[master_failure_timeout](#master_failure_timeout) defines the timeout.
 
 Failure verification is performed by checking whether the slave servers are
 still connected to the master and receiving events. An event is either a change
@@ -902,7 +980,26 @@ faster failover when the master properly disconnects.
 For automatic failover to activate, the `failcount` requirement must also be
 met.
 
+#### `master_failure_timeout`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10s`
+
+The master failure timeout is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
+
 #### `servers_no_promotion`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 This is a comma-separated list of server names that will not be chosen for
 master promotion during a failover or autoselected for switchover. This does not
@@ -916,6 +1013,11 @@ servers_no_promotion=backup_dc_server1,backup_dc_server2
 ```
 
 #### `promotion_sql_file` and `demotion_sql_file`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 These optional settings are paths to text files with SQL statements in them.
 During promotion or demotion, the contents are read line-by-line and executed on
@@ -949,9 +1051,15 @@ slave threads are stopped, breaking replication.
 promotion_sql_file=/home/root/scripts/promotion.sql
 demotion_sql_file=/home/root/scripts/demotion.sql
 ```
+
 #### `handle_events`
 
-This setting is on by default. If enabled, the monitor continuously queries the
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
+
+If enabled, the monitor continuously queries the
 servers for enabled scheduled events and uses this information when performing
 cluster operations, enabling and disabling events as appropriate.
 
@@ -1186,21 +1294,41 @@ automatic, can run until the rebuild completes.
 
 #### `ssh_user`
 
-String. Ssh username. Used when logging in to backend servers to run commands.
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+Ssh username. Used when logging in to backend servers to run commands.
 
 #### `ssh_keyfile`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 Path to file with an ssh private key. Used when logging in to backend servers to
 run commands.
 
 #### `ssh_check_host_key`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
+
 Boolean, default: true. When logging in to backends, require that the server is
 already listed in the known_hosts-file of the user running MaxScale.
 
 #### `ssh_timeout`
 
-Time, default: 10s. The rebuild operation consists of multiple ssh
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10s`
+
+The rebuild operation consists of multiple ssh
 commands. Most of the commands are assumed to complete quickly. If these
 commands take more than *ssh_timeout* to complete, the operation fails. Adjust
 this setting if rebuild fails due to ssh commands timing out. This setting does
@@ -1208,11 +1336,21 @@ not affect steps 5 and 6, as these are assumed to take significant time.
 
 #### `ssh_port`
 
-Numeric, default: 22. SSH port. Used for running remote commands on servers.
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `22`
+
+SSH port. Used for running remote commands on servers.
 
 #### `rebuild_port`
 
-Numeric, default: 4444. The port which the source server listens on for a
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `4444`
+
+The port which the source server listens on for a
 connection. The port must not be blocked by a firewall or listened on by any
 other program. If another process is listening on the port when rebuild is
 starting, MaxScale will attempt to kill the process.
