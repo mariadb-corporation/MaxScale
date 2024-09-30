@@ -26,6 +26,7 @@ void test_main(TestConnections& test)
     if (clone_repo(test, "https://github.com/mariadb-corporation/mariadb-connector-odbc",
                    "master", "mariadb-connector-odbc"))
     {
+        auto user = create_user(test);
         auto log_dir = mxb::string_printf("%s/LOGS/%s", mxt::BUILD_DIR, test.shared().test_name.c_str());
         std::string file_name = "connector_odbc_result.txt";
         std::ostringstream ss;
@@ -33,8 +34,8 @@ void test_main(TestConnections& test)
            << " && export TEST_DSN=maodbc_test"
            << " && export TEST_DRIVER=maodbc_test"
            << " && export TEST_SERVER=" << test.maxscale->ip()
-           << " && export TEST_UID=" << test.maxscale->user_name()
-           << " && export TEST_PASSWORD=" << test.maxscale->password()
+           << " && export TEST_UID=connector"
+           << " && export TEST_PASSWORD=connector"
            << " && export TEST_PORT=4006"
            << " && export TEST_SCHEMA=test"
            << " && export srv=maxscale"

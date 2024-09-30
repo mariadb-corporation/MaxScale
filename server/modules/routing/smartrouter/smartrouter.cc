@@ -31,12 +31,12 @@ config::ParamTarget
            "master",
            "The server/cluster to be treated as master, that is, the one where updates are sent.");
 
-config::ParamBool
-    persist_performance_data(&specification,
-                             "persist_performance_data",
-                             "Persist performance data so that the smartrouter can use information "
-                             "collected during earlier runs.",
-                             true);     // Default value
+// config::ParamBool
+// persist_performance_data(&specification,
+//                          "persist_performance_data",
+//                          "Persist performance data so that the smartrouter can use information "
+//                          "collected during earlier runs.",
+//                          true);     // Default value
 }
 }
 
@@ -72,7 +72,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 SmartRouter::Config::Config(const std::string& name, SmartRouter* router)
     : config::Configuration(name, &smartrouter::specification)
     , m_master(this, &smartrouter::master)
-    , m_persist_performance_data(this, &smartrouter::persist_performance_data)
+    // , m_persist_performance_data(this, &smartrouter::persist_performance_data)
+    , m_router(router)
 {
 }
 
@@ -90,9 +91,6 @@ SmartRouter::SmartRouter(SERVICE* service)
     : m_service(service)
     , m_config(service->name(), this)
 {
-    using namespace maxscale;
-    using namespace maxbase;
-
     m_updater.start();
 }
 
