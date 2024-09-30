@@ -62,7 +62,11 @@ If the client continues to query at high speed and throttling duration is set to
 
 #### `max_qps`
 
-_Maximum queries per second_. Required parameter.
+- **Type**: number
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+Maximum queries per second.
 
 This is the frequency to which a session will be limited over a given time
 period. QPS is not measured as an instantaneous value but over a configurable
@@ -70,19 +74,19 @@ sampling duration (see `sampling_duration`).
 
 #### `throttling_duration`
 
-Required parameter.
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: Yes
+- **Dynamic**: Yes
 
 This defines how long a session is allowed to be throttled before MaxScale
 disconnects the session.
 
-The value is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations).
-If no explicit unit is provided, the value is interpreted as milliseconds
-in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
-
 ### `sampling_duration`
 
-Optional parameter. Default 250 milliseconds.
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 250ms
 
 Sampling duration defines the window of time over which QPS is measured. This
 parameter directly affects the amount of time that high frequency queries are
@@ -91,23 +95,13 @@ allowed before throttling kicks in.
 The lower this value is, the more strict throttling becomes. Conversely, the
 longer this time is, the longer bursts of high frequency querying is allowed.
 
-Due to the underlying granularity of time measurement (as of June 2018), it is
-not recommended that this value is set to less than 100 milliseconds.
-
-The value is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations).
-If no explicit unit is provided, the value is interpreted as milliseconds
-in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
-
 ### `continuous_duration`
 
-Optional parameter. Default 2000 milliseconds or 2 seconds.
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 2s
 
 This value defines what continuous throttling means. Continuous throttling
 starts as soon as the filter throttles the frequency. Continuous throttling ends
 when no throttling has been performed in the past `continuous_duration` time.
-
-The value is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations).
-If no explicit unit is provided, the value is interpreted as milliseconds
-in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
