@@ -288,22 +288,21 @@ configuration can be found in the [example](#example) section of this document.
 
 ### `datadir`
 
-- **Type**: string
+- **Type**: path
 - **Mandatory**: No
-- **Default**: `/var/lib/maxscale/binlogs`
 - **Dynamic**: No
+- **Default**: `/var/lib/maxscale/binlogs`
 
-Directory where binary log files are stored. By default the files are stored in
-`/var/lib/maxscale/binlogs`. **NOTE:** If you are upgrading from a version prior
-to 2.5, make sure this directory is different from what it was before, or
-move the old data.
+Directory where binary log files are stored.
 
 ### `archivedir`
 
 - **Type**: string
-- **Mandatory**: Yes if `expiration_mode=archive"
+- **Mandatory**: Yes
 - **Default**: No
 - **Dynamic**: No
+
+Mandatory if `expiration_mode=archive`
 
 The directory to where files are archived. This is presumably a directory
 mounted to a remote file system or an S3 bucket. Ensure that the user running
@@ -336,7 +335,7 @@ Network connection and read timeout for the connection to the primary.
 
 ### `select_master`
 
-- **Type**: boolean
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
 - **Dynamic**: No
 - **Default**: `false`
@@ -380,10 +379,13 @@ Choose whether expired logs should be purged or archived.
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
 - **Dynamic**: No
-- **Default**: `0s` (off)
+- **Default**: `0s`
 
 Duration after which a binary log file expires, i.e. becomes eligible for purge or archive.
-This is similar to the server system variable
+This is similar to the server system variable.
+
+A value of `0s` turns off purging.
+
 [expire_log_days](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#expire_logs_days).
 
 The duration is measured from the last modification of the log file. Files are
@@ -392,7 +394,8 @@ manner to `PURGE BINARY LOGS TO <filename>` in that it will stop the purge if
 an eligible file is in active use, i.e. being read by a replica.
 
 ### `expire_log_minimum_files`
-- **Type**: count
+
+- **Type**: number
 - **Mandatory**: No
 - **Dynamic**: No
 - **Default**: `2`
