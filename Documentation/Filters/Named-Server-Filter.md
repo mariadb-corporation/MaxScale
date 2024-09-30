@@ -58,23 +58,43 @@ filters=NamedServerFilter
 
 NamedServerFilter requires at least one *matchXY* - *targetXY* pair.
 
-### `matchXY`, `options`
+### `matchXY`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 *matchXY* defines a
 [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
 against which the incoming SQL query is matched. *XY* must be a number in the range
-01 - 25. Each *match*-setting pairs with a similarly indexed *target*- setting. If one is
+01 - 25. Each *match*-setting pairs with a similarly indexed *target*-setting. If one is
 defined, the other must be defined as well. If a query matches the pattern, the filter
 attaches a routing hint defined by the *target*-setting to the query. The
-*options*-parameter affects how the patterns are compiled as
-[usual](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters).
+*options*-parameter affects how the patterns are compiled.
 
 ```
 match01=^SELECT
 options=case,extended
 ```
 
+#### `options`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `ignorecase`, `case`, `extended`
+- **Default**: `ignorecase`
+
+[Regular expression options](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+for `matchXY`.
+
 ### `targetXY`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 The hint which is attached to the queries matching the regular expression defined by
 *matchXY*. If a compatible router is used in the service the query will be routed
@@ -96,6 +116,11 @@ target01=MyServer2
 ```
 
 ### `source`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 This optional parameter defines an IP address or mask which a connecting
 client's IP address is matched against. Only sessions whose address matches this
@@ -122,10 +147,15 @@ source=192.168.21.3,192.168.10.%
 
 ### `user`
 
-This optional parameter defines a user name the connecting client username is
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+This optional parameter defines a username the connecting client username is
 matched against. Only sessions that are connected using this username will have
-the match and routing hints applied to them. Traffic from users is simply left
-as is and routed straight through.
+the match and routing hints applied to them. Traffic from other users is simply
+left as is and routed straight through.
 
 ```
 user=john
