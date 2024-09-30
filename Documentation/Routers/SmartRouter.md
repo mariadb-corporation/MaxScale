@@ -25,6 +25,10 @@ For details about the standard service parameters, refer to the
 
 ### `master`
 
+- **Type**: target
+- **Mandatory**: Yes
+- **Dynamic**: No
+
 One of the clusters must be designated as the **`master`**. All writes go to the
 master cluster, which for all practical purposes should be a master-slave
 ReadWriteSplit. This document does not go into details about setting up
