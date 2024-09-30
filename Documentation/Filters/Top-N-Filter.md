@@ -35,6 +35,10 @@ parameters.
 
 #### `filebase`
 
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
 The basename of the output file created for each session. The session ID is
 added to the filename for each file written. This is a mandatory parameter.
 
@@ -48,18 +52,26 @@ parameter setting will be used and the filter option ignored.
 
 #### `count`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10`
+
 The number of SQL statements to store and report upon.
 
 ```
 count=30
 ```
 
-The default value for the number of statements recorded is 10.
+#### `match`
 
-#### `match`, `exclude` and `options`
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
-These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
-limit the queries logged by the top filter.
+[Limits](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+the queries logged by the filter.
 
 ```
 match=select.*from.*customer.*where
@@ -67,9 +79,35 @@ exclude=where
 options=case,extended
 ```
 
+#### `exclude`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+[Limits](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+the queries logged by the filter.
+
+#### `options`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `ignorecase`, `case`, `extended`
+- **Default**: `case`
+
+[Regular expression options](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+for `match` and `exclude`.
+
 #### `source`
 
-The optional source parameter defines an address that is used to match against
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+Defines an address that is used to match against
 the address from which the client connection to MariaDB MaxScale originates.
 Only sessions that originate from this address will be logged.
 
@@ -79,7 +117,12 @@ source=127.0.0.1
 
 #### `user`
 
-The optional user parameter defines a user name that is used to match against
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+Defines a username that is used to match against
 the user from which the client connection to MariaDB MaxScale originates. Only
 sessions that are connected using this username will result in results being
 generated.
