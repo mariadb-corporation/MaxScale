@@ -449,12 +449,13 @@ round, but only if the servers of the service are monitored by a monitor.
 
 ### `threads`
 
-- **Type**: positive integer or `auto`
+- **Type**: number or `auto`
+- **Mandatory**: No
+- **Dynamic**: No
 - **Default**: `auto`
-- **Dynamic**: Yes
 
-This parameter controls the number of worker threads that are routing
-client traffic. The default is `auto` which uses as many threads
+This parameter controls the number of worker threads that are handling the
+events coming from the kernel. The default is `auto` which uses as many threads
 as there are CPU cores. MaxScale versions older than 6 used one thread by
 default.
 
@@ -503,6 +504,11 @@ increase the value of `threads` beyond that of `threads_max` is an error.
 
 ### `rebalance_period`
 
+- **Type**: [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0s`
+
 This duration parameter controls how often the load of the worker threads
 should be checked. The default value is 0, which means that no checks and
 no rebalancing will be performed.
@@ -518,6 +524,11 @@ moved from one thread to another.
 
 ### `rebalance_threshold`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `20`
+
 This integer parameter controls at which point MaxScale should start
 moving work from one worker thread to another.
 
@@ -526,7 +537,7 @@ the thread with the minimum load is larger than the value of this parameter,
 then work will be moved from the former to the latter.
 
 Although the load of a thread can vary between 0 and 100, the value of this
-parameter must be between 5 and 100. The default value is 20.
+parameter must be between 5 and 100.
 ```
 rebalance_threshold=15
 ```
@@ -534,6 +545,11 @@ Note that rebalancing will not be performed unless `rebalance_period`
 has been specified.
 
 ### `rebalance_window`
+
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10`
 
 This integer parameter controls how many seconds of load should be
 taken into account when deciding whether work should be moved from
@@ -546,9 +562,10 @@ The minimum value is 1 and the maximum 60.
 
 ### `skip_name_resolve`
 
-- **Type**: boolean
-- **Default**: false
+- **Type**: [boolean](#booleans)
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 This parameter controls whether reverse domain name lookups are made to convert
 client IP addresses to hostnames. If enabled, client IP addresses will not be
@@ -561,6 +578,11 @@ is why it is recommended that they are disabled and that users are defined using
 an IP address.
 
 ### `auth_connect_timeout`
+
+- **Type**: [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10s`
 
 Duration, default 10s. This setting defines the connection timeout when
 attempting to fetch MariaDB/MySQL/Clustrix users from a backend server. The same
@@ -588,6 +610,11 @@ Deprecated and ignored as of MaxScale 2.5.0. See *auth_connect_timeout* above.
 
 ### `query_retries`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `1`
+
 The number of times an interrupted internal query will be retried. The default
 is to retry the query once. This feature was added in MaxScale 2.1.10 and was
 disabled by default until MaxScale 2.3.0.
@@ -599,6 +626,11 @@ adequate value. Internal queries are only used to retrieve authentication data
 and monitor the servers.
 
 ### `query_retry_timeout`
+
+- **Type**: [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10s`
 
 The total timeout in seconds for any retried queries. The default value is 5
 seconds.
@@ -615,8 +647,9 @@ even if the duration is longer than a second.
 ### `passive`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Controls whether MaxScale is a passive node in a cluster of multiple MaxScale
 instances.
@@ -638,8 +671,9 @@ The following functionality is disabled when passive mode is enabled:
 ### `ms_timestamp`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Enable or disable the high precision timestamps in logfiles. Enabling this adds
 millisecond precision to all logfile timestamps.
@@ -647,8 +681,9 @@ millisecond precision to all logfile timestamps.
 ### `skip_permission_checks`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Skip service and monitor user permission checks. This is useful when you know
 the permissions are OK and you want to speed up the startup process.
@@ -666,8 +701,9 @@ skip_permission_checks=true
 ### `syslog`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Log messages to the system journal. This logs messages using the native SystemD
 journal interface. The logs can be viewed with `journalctl`.
@@ -680,8 +716,9 @@ logged twice: once into the system journal and once into MaxScale's own logfile.
 ### `maxlog`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `true`
 
 Log messages to MariaDB MaxScale's log file. The name of the log file is
 `maxscale.log` and it is located in the directory pointed by [logdir](#logdir).
@@ -689,8 +726,9 @@ Log messages to MariaDB MaxScale's log file. The name of the log file is
 ### `log_warning`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `true`
 
 Log messages whose syslog priority is *warning*.
 
@@ -701,8 +739,9 @@ indicates a minor problem.
 ### `log_notice`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `true`
 
 Log messages whose syslog priority is *notice*.
 
@@ -713,8 +752,9 @@ happens in either MaxScale or in the servers it monitors.
 ### `log_info`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Log messages whose syslog priority is *info*.
 
@@ -728,8 +768,9 @@ routing related problems.
 ### `log_debug`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Log messages whose syslog priority is *debug*.
 
@@ -743,8 +784,9 @@ effect. If an attempt to enable these is made, a warning is logged.
 ### `log_warn_super_user`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: `false`
 
 When enabled, a warning is logged whenever a client with SUPER-privilege
 successfully authenticates. This also applies to COM_CHANGE_USER-commands. The
@@ -754,9 +796,10 @@ switchover uses to block writes to the primary.
 
 ### `log_augmentation`
 
-- **Type**: integer
-- **Default**: 0
+- **Type**: number
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `0`
 
 Enable or disable the augmentation of messages. If this is enabled, then each
 logged message is appended with the name of the function where the message was
@@ -772,6 +815,11 @@ log_augmentation=1
 To disable the augmentation use the value 0 and to enable it use the value 1.
 
 ### `log_throttling`
+
+- **Type**: number, [duration](#durations), [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10, 1000ms, 10000ms`
 
 It is possible that a particular error (or warning) is logged over and over
 again, if the cause for the error persistently remains. To prevent the log from
@@ -824,10 +872,13 @@ Note that *notice*, *info* and *debug* messages are never throttled.
 
 ### `logdir`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/log/maxscale`
+
 Set the directory where the logfiles are stored. The folder needs to be both
 readable and writable by the user running MariaDB MaxScale.
-
-The default value is `/var/log/maxscale/`.
 
 ```
 logdir=/var/log/maxscale/
@@ -835,14 +886,17 @@ logdir=/var/log/maxscale/
 
 ### `datadir`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/lib/maxscale`
+
 Set the directory where the data files used by MariaDB MaxScale are stored.
 Modules can write to this directory and for example the binlogrouter uses this
 folder as the default location for storing binary logs.
 
 This is also the directory where the password encryption key is read from that
 is generated by `maxkeys`.
-
-The default value is `/var/lib/maxscale/`.
 
 ```
 datadir=/var/lib/maxscale/
@@ -863,6 +917,11 @@ and 24.02.2.
 
 ### `libdir`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: OS Dependent
+
 Set the directory where MariaDB MaxScale looks for modules. The library
 directory is the only directory that MariaDB MaxScale uses when it searches for
 modules. If you have custom modules for MariaDB MaxScale, make sure you have
@@ -878,6 +937,11 @@ libdir=/usr/lib64/maxscale/
 
 ### `sharedir`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/usr/share/maxscale`
+
 Sets the directory where static data assets are loaded.
 
 The MaxScale GUI static files are located in the `gui/` subdirectory. If the GUI
@@ -891,13 +955,14 @@ is done to prevent other files from being accessible via the MaxScale REST
 API. This means that path to the GUI source directory can contain symbolic links
 but all parts after the `/gui/` directory must reside inside it.
 
-The default value is `/usr/share/maxscale/`.
-
 ### `cachedir`
 
-Configure the directory MariaDB MaxScale uses to store cached data.
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/cache/maxscale`
 
-The default value is `/var/cache/maxscale/`.
+Configure the directory MariaDB MaxScale uses to store cached data.
 
 ```
 cachedir=/var/cache/maxscale/
@@ -905,10 +970,13 @@ cachedir=/var/cache/maxscale/
 
 ### `piddir`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/run/maxscale`
+
 Configure the directory for the PID file for MariaDB MaxScale. This file
 contains the Process ID for the running MariaDB MaxScale process.
-
-The default value is `/var/run/maxscale/`.
 
 ```
 piddir=/var/run/maxscale/
@@ -916,17 +984,25 @@ piddir=/var/run/maxscale/
 
 ### `execdir`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/usr/bin`
+
 Configure the directory where the executable files reside. All internal
 processes which are launched will use this directory to look for executable
 files.
-
-The default value is `/usr/bin/`.
 
 ```
 execdir=/usr/bin/
 ```
 
 ### `connector_plugindir`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: OS Dependent
 
 Location of the MariaDB Connector-C plugin directory. The MariaDB Connector-C
 used in MaxScale can use this directory to load authentication plugins. The
@@ -947,19 +1023,27 @@ connector_plugindir=/usr/lib64/maxscale/plugin/
 
 ### `persistdir`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/lib/maxscale/maxscale.cnf.d/`
+
 Configure the directory where persisted configurations are stored. When a new
 object is created via MaxCtrl, it will be stored in this directory. Do not use
 this directory for normal configuration files, use _/etc/maxscale.cnf.d/_
 instead. The user MaxScale is running as must be able to write into this
 directory.
 
-The default value is `/var/lib/maxscale/maxscale.cnf.d/`.
-
 ```
 persistdir=/var/lib/maxscale/maxscale.cnf.d/
 ```
 
 ### `module_configdir`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/etc/maxscale.modules.d/`
 
 Configure the directory where module configurations are stored. Path arguments
 are resolved relative to this directory. This directory should be used to store
@@ -973,18 +1057,19 @@ For example, the configuration parameter `file=my_file.txt` would be interpreted
 as `/etc/maxscale.modules.d/my_file.txt` whereas `file=/home/user/my_file.txt` would
 be interpreted as `/home/user/my_file.txt`.
 
-The default value is `/etc/maxscale.modules.d/`.
-
 ```
 module_configdir=/etc/maxscale.modules.d/
 ```
 
 ### `language`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `/var/lib/maxscale/`
+
 Set the folder where the errmsg.sys file is located in. MariaDB MaxScale will
 look for the errmsg.sys file installed with MariaDB MaxScale from this folder.
-
-The default value is `/var/lib/maxscale/`.
 
 ```
 language=/var/lib/maxscale/
@@ -992,12 +1077,22 @@ language=/var/lib/maxscale/
 
 ### `query_classifier`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `qc_sqlite`
+
 The module used by MariaDB MaxScale for query classification. The information
 provided by this module is used by MariaDB MaxScale when deciding where a
 particular statement should be sent. The default query classifier is
 _qc_sqlite_.
 
 ### `query_classifier_cache_size`
+
+- **Type**: [size](#sizes)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: System Dependent
 
 Specifies the maximum size of the query classifier cache. The default limit is
 15% of total system memory starting with MaxScale 2.3.7. In older versions the
@@ -1044,6 +1139,11 @@ QC cache evictions|How many times a cache entry has had to be removed from the c
 
 ### `query_classifier_args`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 Arguments for the query classifier. What arguments are accepted depends on the
 particular query classifier being used. The default query classifier -
 _qc_sqlite_ - supports the following arguments:
@@ -1070,8 +1170,9 @@ server (e.g. to a replica instead of to a primary).
 ### `substitute_variables`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: `false`
 
 Enable or disable the substitution of environment variables in the MaxScale
 configuration file. If the substitution of variables is enabled and a
@@ -1099,6 +1200,12 @@ to ensure that substitution will take place, place the
 
 ### `sql_mode`
 
+- **Type**: [enum](#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `default`, `oracle`
+- **Default**: `default`
+
 Specifies whether the query classifier parser should initially expect _MariaDB_
 or _PL/SQL_ kind of SQL.
 
@@ -1109,8 +1216,6 @@ The allowed values are:
 ```
 sql_mode=oracle
 ```
-
-The default value is `default`.
 
 **NOTE** If `sql_mode` is set to `oracle`, then MaxScale will also assume
 that `autocommit` initially is off.
@@ -1136,6 +1241,11 @@ when the server is started.
 
 ### `local_address`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 What specific local address/interface to use when connecting to servers.
 
 This can be used for ensuring that MaxScale uses a particular interface
@@ -1146,6 +1256,11 @@ local_address=192.168.1.254
 ```
 
 ### `users_refresh_time`
+
+- **Type**: [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `30s`
 
 How often, in seconds, MaxScale at most may refresh the users from the
 backend server.
@@ -1172,6 +1287,11 @@ but, due to a bug, the default value was 0 which allowed infinite refreshes.
 
 ### `users_refresh_interval`
 
+- **Type**: [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0s`
+
 How often, in seconds, MaxScale will automatically refresh the users from the
 backend server.
 
@@ -1183,10 +1303,12 @@ failed authentication depending on `users_refresh_time`.
 users_refresh_interval=2h
 ```
 
-The value is specified as documented [here](#durations). If no explicit unit
-is provided, the value is interpreted as seconds in MaxScale 2.4.
-
 ### `retain_last_statements`
+
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0`
 
 How many statements MaxScale should store for each session. This is for
 debugging purposes, as in case of problems it is often of value to be able
@@ -1201,9 +1323,13 @@ problem turned up.
 retain_last_statements=20
 ```
 
-Default is `0`.
-
 ### `dump_last_statements`
+
+- **Type**: [enum](#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `on_close`, `on_error`, `never`
+- **Default**: `never`
 
 With this configuration item it is specified in what circumstances MaxScale
 should dump the last statements that a client sent. The allowed values are
@@ -1214,13 +1340,17 @@ is closed.
 ```
 dump_last_statements=on_error
 ```
-Default is `never`.
 
 Note that you need to specify with `retain_last_statements` how many statements
 MaxScale should retain for each session. Unless it has been set to another value
 than `0`, this configuration setting will not have an effect.
 
 ### `session_trace`
+
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0`
 
 How many log entries are stored in the session specific trace log. This log is
 written to disk when a session ends abnormally and can be used for debugging
@@ -1252,8 +1382,9 @@ the newest messages first and oldest ones last.
 ### `session_trace_match`
 
 - **Type**: [regex](#regular-expressions)
-- **Default**: none
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: None
 
 If both `session_trace` and `session_trace_match` are defined, and a trace log
 entry of a session matches the regular expression, the trace log is written to
@@ -1282,6 +1413,11 @@ the MaxScale log.
 
 ### `writeq_high_water`
 
+- **Type**: [size](#size)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `16Mi`
+
 High water mark for network write buffer. When the size of the outbound network
 buffer in MaxScale for a single connection exceeds this value, network traffic
 throtting for that connection is started. The parameter accepts
@@ -1302,6 +1438,11 @@ Network throttling is only enabled when both `writeq_high_water` and
 to 0.
 
 ### `writeq_low_water`
+
+- **Type**: [size](#size)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `8Ki`
 
 Low water mark for network write buffer. Once the traffic throttling is enabled,
 it will only be disabled when the network write buffer is below
@@ -1332,8 +1473,9 @@ static configuration files whenever MaxScale is starting up.
 ### `load_persisted_configs`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: `true`
 
 Load persisted runtime changes on startup. This parameter was added in MaxScale
 2.3.6.
@@ -1348,6 +1490,11 @@ unexpected outage happens.
 
 ### `max_auth_errors_until_block`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `10`
+
 The maximum number of authentication failures that are tolerated before a host
 is temporarily blocked. The default value is 10 failures. After a host is
 blocked, connections from it are rejected for 60 seconds. To disable this
@@ -1360,6 +1507,11 @@ configured value of this parameter and `threads` is the number of configured
 threads.
 
 ### `debug`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 Define debug options from the --debug command line option. Either the command
 line option or the parameter should be used, not both. The debug options are
@@ -1375,18 +1527,29 @@ configuration file.
 
 ### `admin_host`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `"127.0.0.1"`
+
 The network interface where the REST API listens on. The default value is the
 IPv4 address `127.0.0.1` which only listens for local connections.
 
 ### `admin_port`
+
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `8989`
 
 The port where the REST API listens on. The default value is port 8989.
 
 ### `admin_auth`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: `true`
 
 Enable REST API authentication using HTTP Basic Access
 authentication. This is not a secure method of authentication without HTTPS but
@@ -1396,12 +1559,22 @@ For more information, read the [REST API documentation](../REST-API/API.md).
 
 ### `admin_ssl_key`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 The path to the TLS private key in PEM format for the admin interface.
 
 If the `admin_ssl_key` and `admin_ssl_cert` options are all defined, the admin
 interface will use encrypted HTTPS instead of plain HTTP.
 
 ### `admin_ssl_cert`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 The path to the TLS public certificate in PEM format. See `admin_ssl_key`
 documentation for more details.
@@ -1411,6 +1584,11 @@ documentation for more details.
 Deprecated since MariaDB MaxScale 22.08. See `admin_ssl_ca`.
 
 ### `admin_ssl_ca`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 The path to the TLS CA certificate in PEM format. If defined, the client
 certificate, if provided, will be validated against it. This parameter is
@@ -1464,8 +1642,9 @@ retain the old behavior, specify all the accepted values with
 ### `admin_enabled`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: `true`
 
 Enable or disable the admin interface. This allows the admin interface to
 be completely disabled to prevent access to it.
@@ -1473,8 +1652,9 @@ be completely disabled to prevent access to it.
 ### `admin_gui`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: `true`
 
 Enable or disable the admin graphical user interface.
 
@@ -1487,8 +1667,9 @@ health check.
 ### `admin_secure_gui`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: `true`
 
 Whether to serve the GUI only over secure HTTPS connections.
 
@@ -1502,12 +1683,18 @@ the MaxScale REST API, set this parameter to false.
 ### `admin_log_auth_failures`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `true`
 
 Log authentication failures for the admin interface.
 
-### `admin_pam_readwrite_service` and `admin_pam_readonly_service`
+### `admin_pam_readwrite_service/admin_pam_readonly_service`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 Use Pluggable Authentication Modules (PAM) for REST API authentication. The settings
 accept a PAM service name which is used during authentication if normal authentication
@@ -1718,8 +1905,9 @@ setting is ignored in the main configuration file (usually maxscale.cnf).
 ### `config_sync_cluster`
 
 - **Type**: monitor
-- **Default**: No default value
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: None
 
 This parameter controls which cluster (i.e. monitor) is used to synchronize
 configuration changes between MaxScale instances. The first server labeled
@@ -1737,8 +1925,9 @@ Synchronization](#configuration-synchronization) section.
 ### `config_sync_user`
 
 - **Type**: string
-- **Default**: No default value
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: None
 
 The username for the account that is used to synchronize configuration changes
 across MaxScale instances. Both this parameter and `config_sync_password` are
@@ -1770,8 +1959,9 @@ grants must be adjusted to target that database instead.
 ### `config_sync_password`
 
 - **Type**: password
-- **Default**: No default value
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: None
 
 The password for `config_sync_user`. Both this parameter and `config_sync_user`
 are required if `config_sync_cluster` is configured. This password can
@@ -1780,8 +1970,9 @@ optionally be encrypted using `maxpasswd`.
 ### `config_sync_db`
 
 - **Type**: string
-- **Default**: `mysql`
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: `mysql`
 
 The database where the `maxscale_config` table is created. By default the table
 is created in the `mysql` database. This parameter was added in MaxScale
@@ -1795,8 +1986,9 @@ changes done to MaxScale by inserting them into a separate table.
 ### `config_sync_interval`
 
 - **Type**: [duration](#durations)
-- **Default**: 5s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `5s`
 
 How often to synchronize the configuration with the cluster.
 
@@ -1808,8 +2000,9 @@ how much load it places on the database.
 ### `config_sync_timeout`
 
 - **Type**: [duration](#durations)
-- **Default**: 10s
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `10s`
 
 Timeout for all SQL operations done during the configuration synchronization. If
 an operation exceeds this timeout, the configuration change is treated as failed
@@ -1930,6 +2123,10 @@ is merely present to link together the other configuration elements.
 
 ### `router`
 
+- **Type**: router
+- **Mandatory**: Yes
+- **Dynamic**: No
+
 The router parameter of a service defines the name of the router module that
 will be used to implement the routing algorithm between the client of MariaDB
 MaxScale and the backend databases. Additionally routers may also be passed a
@@ -1957,13 +2154,12 @@ router_options=master,slave
 A more complete description of router options and what is available for a given
 router is included with the documentation of the router itself.
 
-### `router_options`
-
-Option string given to the router module. The value of this parameter should be
-a comma-separated list of key-value pairs. See router specific documentation for
-more details.
-
 ### `filters`
+
+- **Type**: filter list
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 The filters option allow a set of filters to be defined for a service; requests
 from the client are passed through these filters before being sent to the router
@@ -1979,6 +2175,11 @@ The requests pass through the filters from left to right in the order defined in
 the configuration parameter.
 
 ### `targets`
+
+- **Type**: target list
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
 The `targets` parameter is a comma separated list of server and/or service names
 that comprise the routing targets of the service. This parameter was added in
@@ -1998,6 +2199,11 @@ sharding of schemarouter with the high-availability of readwritesplit.
 
 ### `servers`
 
+- **Type**: server list
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
 The servers parameter in a service definition provides a comma separated list of
 the backend servers that comprise the service. The server names are those used
 in the name section of a block with a type parameter of server (see below).
@@ -2011,6 +2217,11 @@ servers=server1,server2,server3
 
 ### `cluster`
 
+- **Type**: monitor
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
 The servers the service uses are defined by the monitor specified as value
 of this configuration parameter.
 
@@ -2022,11 +2233,34 @@ cluster=TheMonitor
 **NOTE:** The `cluster` parameter is mutually exclusive with the `servers` and
   `targets` parameters.
 
-### `user` and `password`
+### `user`
 
-These settings define the credentials the service uses to fetch user account
-information from backends. The *password* may be either a plain text password or
-an [encrypted password](#encrypting-passwords).
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+This setting defines the _user_ the service uses to fetch user account
+information from backends. A _password_ is specified using [password](#password).
+
+```
+user=maxscale
+password=Mhu87p2D
+```
+
+See [MySQL protocol authentication documentation](../Authenticators/Authentication-Modules.md)
+for more information (such as required grants) and troubleshooting tips
+regarding user account management and client authentication.
+
+### `password`
+
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+This settings defines the _password_ the service uses to fetch user account
+information from backends. The _password_ may be either a plain text password or
+an [encrypted password](#encrypting-passwords). The _user_ is specified
+using [user](#user).
 
 ```
 user=maxscale
@@ -2040,8 +2274,9 @@ regarding user account management and client authentication.
 ### `enable_root_user`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 This parameter controls the ability of the root user to connect to MariaDB
 MaxScale and hence onwards to the backend servers via MariaDB MaxScale.
@@ -2051,6 +2286,11 @@ MaxScale and hence onwards to the backend servers via MariaDB MaxScale.
 Deprecated and ignored.
 
 ### `version_string`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: None
 
 This parameter sets a custom version string that is sent in the MySQL Handshake
 from MariaDB MaxScale to clients.
@@ -2075,8 +2315,9 @@ MaxScale.
 ### `auth_all_servers`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 This parameter controls whether only a single server or all of the servers are
 used when loading the users from the backend servers.
@@ -2088,8 +2329,9 @@ loaded from all the servers and combined into one big data set.
 ### `strip_db_esc`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `true`
 
 This setting controls whether escape characters (`\`) are removed from database
 names when loading user grants from a backend server.  When enabled, a grant
@@ -2108,8 +2350,9 @@ this might cause conflicts when MaxScale tries to authenticate users.
 ### `log_auth_warnings`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `true`
 
 Enable or disable the logging of authentication failures and warnings. If
 enabled, messages about failed authentication attempts will be logged with
@@ -2118,8 +2361,9 @@ details about who tried to connect to MariaDB MaxScale and from where.
 ### `log_warning`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 When enabled, this allows a service to log warning messages even if the global
 log level configuration disables them.
@@ -2131,8 +2375,9 @@ logging configuration: with `log_warning=false` in the service and
 ### `log_notice`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 When enabled, this allows a service to log notice messages even if the global
 log level configuration disables them.
@@ -2140,8 +2385,9 @@ log level configuration disables them.
 ### `log_info`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 When enabled, this allows a service to log info messages even if the global log
 level configuration disables them.
@@ -2149,8 +2395,9 @@ level configuration disables them.
 ### `log_debug`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 When enabled, this allows a service to log debug messages even if the global log
 level configuration disables them.
@@ -2161,9 +2408,9 @@ release build does nothing.
 ### `connection_timeout`
 
 - **Type**: [duration](#durations)
-- **Default**: 0s
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `0s`
 - **Auto tune**: [Yes](#auto_tune)
 
 The connection_timeout parameter is used to disconnect sessions to MariaDB
@@ -2210,6 +2457,11 @@ connection_timeout=300s
 
 ### `max_connections`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0`
+
 The maximum number of simultaneous connections MaxScale should permit to this
 service. If the parameter is zero or is omitted, there is no limit. Any attempt
 to make more connections after the limit is reached will result in a "Too many
@@ -2229,8 +2481,9 @@ max_connections=100
 ### `session_track_trx_state`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Enable transaction state tracking by offloading it to the backend servers.
 Getting the transaction state from the server will be more accurate for stored
@@ -2255,6 +2508,11 @@ session_track_transaction_info = CHARACTERISTICS
 
 ### `retain_last_statements`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `-1`
+
 How many statements MaxScale should store for each session of this service.
 This overrides the value of the global setting with the same name. If
 `retain_last_statements` has been specified in the global section of the
@@ -2273,9 +2531,9 @@ maxctrl alter service MyService retain_last_statements 5
 ### `connection_keepalive`
 
 - **Type**: [duration](#durations)
-- **Default**: 300s
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `300s`
 - **Auto tune**: [Yes](#auto_tune)
 
 Keep idle connections alive by sending pings to backend servers. This feature
@@ -2318,8 +2576,9 @@ keepalive feature, you can disable it with `connection_keepalive=0s`.
 ### `force_connection_keepalive`
 
 - **Type**: boolean
-- **Default**: false
+- **Mandatory** No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 By default, connection keepalive pings are only sent if the client is either
 executing a query or has been idle for less than the duration configured in
@@ -2338,6 +2597,11 @@ behave like it is not idle and thus the connections will never be killed due to
 
 ### `net_write_timeout`
 
+- **Type**: [durations](#durations)
+- **Mandatory** No
+- **Dynamic**: Yes
+- **Default**: `0s`
+
 This parameter controls how long a network write to the client can stay
 buffered. This feature is disabled by default.
 
@@ -2353,9 +2617,10 @@ even if the duration is longer than a second.
 
 ### `max_sescmd_history`
 
-- **Type**: integer
-- **Default**: 50
+- **Type**: number
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `50`
 
 `max_sescmd_history` sets a limit on how many distinct session commands are
 stored in the session command history. When the history limit is exceeded, the
@@ -2377,8 +2642,9 @@ history. Currently only `readwritesplit` and `schemarouter` support it.
 ### `prune_sescmd_history`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `true`
 
 This option enables pruning of the session command history when it exceeds the
 value configured in `max_sescmd_history`. When this option is enabled, only a
@@ -2416,8 +2682,9 @@ history. Currently only `readwritesplit` and `schemarouter` support it.
 ### `disable_sescmd_history`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 This option disables the session command history. This way no history is stored
 and if a replica server fails, the router will not try to replace the failed
@@ -2433,6 +2700,11 @@ can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
 
 ### `user_accounts_file`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
 
 Defines path to a file with additional user accounts for incoming clients.
 Default value is empty, which disables the feature.
@@ -2526,6 +2798,12 @@ An example users file is below.
 
 ### `user_accounts_file_usage`
 
+- **Type**: [enum](#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `add_when_load_ok`, `file_only_always`
+- **Default**: `add_when_load_ok`
+
 Defines when *user_accounts_file* is read. The value is an enum, either
 "add_when_load_ok" (default) or "file_only_always".
 
@@ -2544,7 +2822,12 @@ user_accounts_file_usage=file_only_always
 
 ### `idle_session_pool_time`
 
-Time, default: -1s. Normally, MaxScale only pools backend connections when
+- **Type**: [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `-1s`
+
+Normally, MaxScale only pools backend connections when
 a session is closed (controlled by server settings *persistpoolmax* and
 *persistmaxtime*). Other sessions can use the pooled connections
 instead of creating new connections to backends. If connection sharing is enabled,
@@ -2682,7 +2965,12 @@ lazy_connect=1
 
 ### `multiplex_timeout`
 
-Time, default: 60s. When connection sharing (as described above) is on, clients
+- **Type**: [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `60s`
+
+When connection sharing (as described above) is on, clients
 may have to wait for their turn to use a backend connection. If too much time
 passes without a connection becoming available, MaxScale returns an error to
 the client, usually also ending the session. *multiplex_timeout* sets this
@@ -2709,28 +2997,65 @@ port=3000
 
 ### `address`
 
+- **Type**: string
+- **Mandatory**: Yes, if `socket` is not provided.
+- **Dynamic**: Yes
+- **Default**: `""`
+
 The IP-address or hostname of the machine running the database server. MaxScale
-uses this address to connect to the server. This parameter is mandatory unless
-*socket* is defined.
+uses this address to connect to the server.
+
+Either *address* or *socket* must be defined, but not both.
 
 ### `port`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `3306`
+
 The port the backend server listens on for incoming connections. MaxScale uses
-this port to connect to the server. The default value is 3306.
+this port to connect to the server.
 
 ### `socket`
 
+- **Type**: string
+- **Mandatory**: Yes, if `address` is not provided.
+- **Dynamic**: Yes
+- **Default**: `""`
+
 The absolute path to a UNIX domain socket the MariaDB server is listening
-on. Either *address* or *socket* must be defined and defining them both is an
-error.
+on.
 
-### `monitoruser` and `monitorpw`
+Either *address* or *socket* must be defined, but not both.
 
-These settings define a server-specific username and password for monitoring the
-server. Monitors typically use the credentials in their own configuration
-sections to connect to all servers. If server-specific settings are given, the
-monitor uses those instead.
+### `monitoruser`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+This setting together with [monitorpasswd](#monitorpasswd) define server-specific
+credentials for monitoring the server. Monitors typically use the credentials in their
+own configuration sections to connect to all servers. If server-specific settings are
+given, the monitor uses those instead.
+```
+monitoruser=mymonitoruser
+monitorpw=mymonitorpasswd
+```
+
+### `monitorpw`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+This setting together with [monitoruser](#monitoruser) define server-specific
+credentials for monitoring the server. Monitors typically use the credentials in their
+own configuration sections to connect to all servers. If server-specific settings are
+given, the monitor uses those instead.
 ```
 monitoruser=mymonitoruser
 monitorpw=mymonitorpasswd
@@ -2740,6 +3065,11 @@ monitorpw=mymonitorpasswd
 the section [encrypting passwords](#encrypting-passwords) for more information.
 
 ### `extra_port`
+
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0`
 
 An alternative port used for administrative connections to the server.  If this
 setting is defined, MaxScale uses it for monitoring the server and to fetch user
@@ -2759,10 +3089,10 @@ and [extra_max_connections](https://mariadb.com/kb/en/thread-pool-system-status-
 
 ### `persistpoolmax`
 
-
-- **Type**: integer
-- **Default**: 0
+- **Type**: number
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `0`
 
 Sets the size of the server connection pool. Disabled by default. When enabled,
 MaxScale places unused connections to the server to a pool and reuses them
@@ -2778,6 +3108,11 @@ restores the connection to match the session state. Other routers do not.
 
 ### `persistmaxtime`
 
+- **Type**: [duration](#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0s`
+
 The `persistmaxtime` parameter defaults to zero but can be set to a duration as
 documented [here](#durations). If no explicit unit is provided, the value is
 interpreted as seconds in MaxScale 2.4. In subsequent versions a value without a
@@ -2790,6 +3125,11 @@ elapsed time since it joined the pool is less than the given value. Otherwise,
 the DCB will be discarded and the connection closed.
 
 ### `max_routing_connections`
+
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `0`
 
 Maximum number of routing connections to this server. Connections held in a pool
 also count towards this maximum. Does not limit monitor connections or user
@@ -2817,8 +3157,9 @@ max_routing_connections=1234
 ### `proxy_protocol`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 If `proxy_protocol` is enabled, MaxScale will send a
 [PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
@@ -2856,6 +3197,11 @@ required for MariaDB 10.3, since its implementation is more flexible and allows
 both PROXY-headered and headerless connections from a proxy-enabled IP.
 
 ### `disk_space_threshold`
+
+- **Type**: Custom
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: None
 
 This parameter specifies how full a disk may be, before MaxScale should start
 logging warnings or take other actions (e.g. perform a switchover). This
@@ -2909,6 +3255,12 @@ if the disk space situation should be monitored.
 
 ### `rank`
 
+- **Type**: [enum](#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `primary`, `secondary`
+- **Default**: `primary`
+
 This parameter controls the order in which servers are used. Valid values for
 this parameter are `primary` and `secondary`. The default value is
 `primary`.
@@ -2955,9 +3307,10 @@ they are available. When they are no longer available, the `DR-site-primary` and
 
 ### `priority`
 
-- **Type**: integer
-- **Default**: 0
+- **Type**: number
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: 0
 
 Server priority. Currently only used by galeramon to choose the order in which
 nodes are selected as the current primary server. Refer to the
@@ -3016,10 +3369,19 @@ port=3006
 
 ### `service`
 
+- **Type**: service
+- **Mandatory**: Yes
+- **Dynamic**: No
+
 The service to which the listener is associated. This is the name of a service
 that is defined elsewhere in the configuration file.
 
 ### `protocol`
+
+- **Type**: protocol
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `mariadb`
 
 The name of the protocol module used for communication between the client and
 MaxScale. The same protocol is also used for backend communication. Usually this
@@ -3027,16 +3389,31 @@ is set to `MariaDBClient`.
 
 ### `address`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `"::"`
+
 This sets the address the listening socket is bound to. The address may be
 specified as an IP address in 'dot notation' or as a hostname. If left undefined
 the listener will bind to all network interfaces.
 
 ### `port`
 
+- **Type**: number
+- **Mandatory**: Yes, if `socket` is not provided.
+- **Dynamic**: No
+- **Default**: `0`
+
 The port the listener listens on. If left undefined a default port for the
 protocol is used.
 
 ### `socket`
+
+- **Type**: string
+- **Mandatory**: Yes, if `port` is not provided.
+- **Dynamic**: No
+- **Default**: `""`
 
 If defined, the listener uses Unix domain sockets to listen for incoming
 connections. The parameter value is the name of the socket to use.
@@ -3046,6 +3423,11 @@ define two separate listeners that connect to the same service.
 
 ### `authenticator`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 The authenticator module to use. Each protocol module defines a default
 authentication module, which is used if the setting is left undefined.
 *MariaDBClient*-protocol supports multiple authenticators and they can be used
@@ -3054,12 +3436,23 @@ simultaneously by giving a comma-separated list e.g.
 
 ### `authenticator_options`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
 This defines additional options for authentication. As of MaxScale 2.5.0, only
 *MariaDBClient* and its authenticators support additional options. The value of
 this parameter should be a comma-separated list of key-value pairs. See
 authenticator specific documentation for more details.
 
 ### `sql_mode`
+
+- **Type**: [enum](#enumeration)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `default`, `oracle`
+- **Default**: `default`
 
 Specify the sql mode for the listener similarly to global `sql_mode` setting.
 If both are used this setting will override the global setting for this listener.
@@ -3096,6 +3489,11 @@ if `proxy_protocol_networks` is configured for the listener.
 
 ### `connection_init_sql_file`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
+
 Path to a text file with sql queries. Any sessions created from the listener
 will send the contents of the file to backends after authentication. Each
 non-empty line in the file is interpreted as a query. Each query must succeed
@@ -3112,6 +3510,11 @@ set @myvar2 = 4;
 ```
 
 ### `user_mapping_file`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
 
 Path to a json-text file with user and group mapping, as well as server
 credentials. Only affects MariaDB-protocol based listeners. Default value is
@@ -3272,8 +3675,9 @@ listeners and servers, it must have both the clientAuth and serverAuth usages.
 ### `ssl`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: Yes
+- **Default**: false
 
 This enables SSL connections when set to true. The legacy values `required` and
 `disabled` were removed in MaxScale 6.0.
@@ -3289,11 +3693,21 @@ with `REQUIRE SSL` or `REQUIRE X509`.
 
 ### `ssl_key`
 
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
+
 A string giving a file path that identifies an existing readable file. The file
 must be the SSL client private key MaxScale should use. This is a required
 parameter for listeners but an optional parameter for servers.
 
 ### `ssl_cert`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
 
 A string giving a file path that identifies an existing readable file. The file
 must be the SSL client certificate MaxScale should use with the server. The
@@ -3305,6 +3719,11 @@ parameter for listeners but an optional parameter for servers.
 Deprecated since MariaDB MaxScale 22.08. See `ssl_ca`.
 
 ### `ssl_ca`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
 
 A string giving a file path that identifies an existing readable file. The file
 must be the Certificate Authority (CA) certificate for the CA that signed the
@@ -3364,17 +3783,32 @@ parameter works.
 
 ### `ssl_cipher`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
+
 Set the list of TLS ciphers. By default, no explicit ciphers are defined and the
 system defaults are used. Note that this parameter does not modify TLSv1.3
 ciphers.
 
 ### `ssl_cert_verify_depth`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `9`
+
 The maximum length of the certificate authority chain that will be accepted. The
 default value is 9, same as the OpenSSL default. The configured value must be
 larger than 0.
 
 ### `ssl_verify_peer_certificate`
+
+- **Type**: [boolean](#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
 
 Peer certificate verification. This functionality is disabled by default. In
 versions prior to 2.3.17 the feature was enabled by default.
@@ -3388,8 +3822,9 @@ make sure the peer is who they claim to be. For listeners, this behaves as if
 ### `ssl_verify_peer_host`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Mandatory** No
 - **Dynamic**: Yes
+- **Default**: `false`
 
 Peer host verification.
 
@@ -3400,6 +3835,11 @@ closed. If the peer does not provide a certificate, the host verification is not
 done. To require peer certificates, use `ssl_verify_peer_certificate`.
 
 ### `ssl_crl`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
 
 A string giving a file path that identifies an existing readable file. The file
 must be a Certificate Revocation List in the PEM format that defines the revoked
