@@ -39,37 +39,63 @@ parameters. These were introduced in the 1.0 release of MariaDB MaxScale.
 
 ### `filebase`
 
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: No
+
 The basename of the output file created for each session. A session index is
 added to the filename for each written session file. For unified log files,
-*.unified* is appended. This is a mandatory parameter.
+*.unified* is appended.
 
 ```
 filebase=/tmp/SqlQueryLog
 ```
 
-### `match`, `exclude` and `options`
+### `match`
 
-These
-[regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
-limit which queries are logged.
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
-```
-match=select.*from.*customer.*where
-exclude=^insert
-options=case,extended
-```
+Include queries that match the regex.
 
-### `user` and `source`
+### `exclude`
 
-These optional parameters limit logging on a session level. If `user` is
-defined, only the sessions with a matching client username are logged. If
-`source` is defined, only sessions with a matching client source address are
-logged.
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
 
-```
-user=john
-source=127.0.0.1
-```
+Exclude queries that match the regex.
+
+### `options`
+
+- **Type**: [enum_mask](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `case`, `ignorecase`, `extended`
+- **Default**: `case`
+
+The `extended` option enables PCRE2 extended regular expressions.
+
+### `user`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
+
+Limit logging to sessions with this user.
+
+### `source`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `""`
+
+Limit logging to sessions with this client source address.
 
 ### `user_match`
 
@@ -135,7 +161,13 @@ source_exclude=/(^127[.]0[.]0[.]1)|(^192[.]168[.]0[.]109)/
 
 ### `log_type`
 
-The type of log file to use. The default value is _session_.
+- **Type**: [enum_mask](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `session`, `unified`, `stdout`
+- **Default**: `session`
+
+The type of log file to use.
 
 |Value   | Description                    |
 |--------|--------------------------------|
@@ -143,18 +175,15 @@ The type of log file to use. The default value is _session_.
 |unified |Use one file for all sessions   |
 |stdout  |Same as unified, but to stdout  |
 
-```
-log_type=session
-```
-
-The log types can be combined, e.g. setting `log_type=session,stdout`
-will write both session-specific files, and all sessions to stdout.
-
 ### `log_data`
 
-Type of data to log in the log files. The parameter value is a comma separated
-list of the following elements. By default the _date_, _user_ and _query_
-options are enabled.
+- **Type**: [enum_mask](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `service`, `session`, `date`, `user`, `reply_time`, `total_reply_time`, `query`, `default_db`, `num_rows`, `reply_size`, `transaction`, `transaction_time`, `num_warnings`, `error_msg`
+- **Default**: `date, user, query`
+
+Type of data to log in the log files.
 
 | Value             | Description                                            |
 | --------          |--------------------------------------------------------|
@@ -174,12 +203,8 @@ options are enabled.
 | error_msg         | Error message from the server (if any) (v6.2)          |
 | server            | The server where the query was routed (if any) (v22.08)|
 
-```
-log_data=date, user, query, total_reply_time
-```
-
 The durations *reply_time* and *total_reply_time* are by default in milliseconds,
-but can be specified to be in microseconds using *duration_unit*.
+but can be specified to another unit using *duration_unit*.
 
 The log entry is written when the last reply from the server is received.
 Prior to version 6.2 the entry was written when the query was received from
@@ -197,65 +222,64 @@ use near 'password="clear text pwd"' at line 1
 
 ### `duration_unit`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `milliseconds`
+
 The unit for logging a duration. The unit can be `milliseconds` or `microseconds`.
 The abbreviations `ms` for milliseconds and `us` for microseconds are also valid.
-The default is `milliseconds`.
 This option is available as of MaxScale version 6.2.
-
-```
-duration_unit=microseconds
-```
 
 ### `use_canonical_form`
 
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
+
 When this option is true the canonical form of the query is logged. In the
 canonical form all user defined constants are replaced with question marks.
-The default is false, i.e. log the sql as is.
 This option is available as of MaxScale version 6.2.
-
-```
-use_canonical_form=true
-```
 
 ### `flush`
 
-Flush log files after every write. The default is false.
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
 
-```
-flush=true
-```
+Flush log files after every write.
 
 ### `append`
 
-Append new entries to log files instead of overwriting them. The default is
-true.
-**NOTE**: the default was changed from false to true, as of the following
-versions: 2.4.18, 2.5.16 and 6.2.
-
-```
-append=true
-```
+- **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `true`
 
 ### `separator`
 
-Default value is "," (a comma). Defines the separator string between elements of
-a log entry. The value should be enclosed in quotes.
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `","`
 
-```
-separator=" | "
-```
+Defines the separator string between elements of
+log entries. The value should be enclosed in quotes.
 
 ### `newline_replacement`
 
-Default value is " " (one space). SQL-queries may include line breaks, which, if
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `" "`
+
+Default value is `" "` (one space). SQL-queries may include line breaks, which, if
 printed directly to the log, may break automatic parsing. This parameter defines
 what should be written in the place of a newline sequence (\r, \n or \r\n). If
 this is set as the empty string, then newlines are not replaced and printed as
 is to the output. The value should be enclosed in quotes.
-
-```
-newline_replacement=" NL "
-```
 
 ## Examples
 
