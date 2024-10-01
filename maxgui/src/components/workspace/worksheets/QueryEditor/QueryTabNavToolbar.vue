@@ -11,10 +11,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryTab from '@/store/orm/models/QueryTab'
 import ConnectionBtn from '@wsComps/ConnectionBtn.vue'
+import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({ activeQueryTabConn: { type: Object, required: true } })
-const emit = defineEmits(['get-total-btn-width', 'edit-conn', 'add'])
+const emit = defineEmits(['get-total-btn-width', 'edit-conn', 'add', 'show-user-management'])
+
+const { USER_MANAGEMENT } = QUERY_TAB_TYPE_MAP
 
 const typy = useTypy()
 
@@ -22,9 +26,14 @@ const buttonWrapperRef = ref(null)
 const toolbarRightRef = ref(null)
 
 const connectedServerName = computed(() => typy(props.activeQueryTabConn, 'meta.name').safeString)
+const hasUserManagementTab = computed(
+  () => !typy(QueryTab.query().where('type', USER_MANAGEMENT).first()).isNull
+)
+const isUserManagementBtnDisabled = computed(
+  () => hasUserManagementTab.value || !connectedServerName.value
+)
 
 watch(connectedServerName, () => calcWidth())
-
 onMounted(() => calcWidth())
 
 function calcWidth() {
@@ -51,6 +60,20 @@ function calcWidth() {
       </VBtn>
     </div>
     <div ref="toolbarRightRef" class="ml-auto d-flex align-center px-3 fill-height">
+      <TooltipBtn
+        icon
+        variant="text"
+        density="compact"
+        class="mr-1"
+        :disabled="!connectedServerName"
+        data-test="user-management-btn"
+        @click="emit('show-user-management')"
+      >
+        <template #btn-content>
+          <VIcon size="18" color="primary" icon="mxs:users" />
+        </template>
+        {{ $t('userManagement') }}
+      </TooltipBtn>
       <ConnectionBtn
         :activeConn="activeQueryTabConn"
         data-test="conn-btn"

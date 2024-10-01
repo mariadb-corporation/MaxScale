@@ -20,6 +20,7 @@ import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import TblEditor from '@wkeComps/QueryEditor/TblEditor.vue'
 import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
 import DdlEditor from '@wkeComps/QueryEditor/DdlEditor.vue'
+import UserManagement from '@wkeComps/QueryEditor/UserManagement.vue'
 import queryEditorService from '@wsServices/queryEditorService'
 import queryConnService from '@wsServices/queryConnService'
 import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
@@ -32,7 +33,7 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { pxToPct } = useHelpers()
-const { SQL_EDITOR, TBL_EDITOR, DDL_EDITOR, INSIGHT_VIEWER } = QUERY_TAB_TYPE_MAP
+const { SQL_EDITOR, TBL_EDITOR, DDL_EDITOR, INSIGHT_VIEWER, USER_MANAGEMENT } = QUERY_TAB_TYPE_MAP
 
 const QUERY_TAB_CTR_HEIGHT = 30
 
@@ -123,7 +124,8 @@ function getComponentType(queryTab) {
       data.component = DdlEditor
       break
     case INSIGHT_VIEWER:
-      data.component = InsightViewer
+    case USER_MANAGEMENT:
+      data.component = queryTab.type === INSIGHT_VIEWER ? InsightViewer : UserManagement
       data.props = { queryTab, dim: editorDim.value }
       break
   }

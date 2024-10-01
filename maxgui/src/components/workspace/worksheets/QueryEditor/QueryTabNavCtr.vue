@@ -15,7 +15,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryTabNavToolbar from '@wkeComps/QueryEditor/QueryTabNavToolbar.vue'
 import QueryTabNavItem from '@wkeComps/QueryEditor/QueryTabNavItem.vue'
 import queryTabService from '@wsServices/queryTabService'
-import { CONN_TYPE_MAP } from '@/constants/workspace'
+import { CONN_TYPE_MAP, QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   queryEditorId: { type: String, required: true },
@@ -25,7 +25,10 @@ const props = defineProps({
   height: { type: Number, required: true },
 })
 
+const { USER_MANAGEMENT } = QUERY_TAB_TYPE_MAP
+
 const store = useStore()
+const { t } = useI18n()
 
 const queryTabNavToolbarWidth = ref(0)
 
@@ -52,6 +55,15 @@ function openCnnDlg() {
   store.commit('workspace/SET_CONN_DLG', {
     is_opened: true,
     type: CONN_TYPE_MAP.QUERY_EDITOR,
+  })
+}
+
+async function showUserManagement() {
+  await queryTabService.handleAdd({
+    query_editor_id: props.queryEditorId,
+    name: t('userManagement'),
+    type: USER_MANAGEMENT,
+    schema: props.activeQueryTabConn.active_db,
   })
 }
 </script>
@@ -84,6 +96,7 @@ function openCnnDlg() {
       @add="addTab()"
       @edit-conn="openCnnDlg()"
       @get-total-btn-width="queryTabNavToolbarWidth = $event"
+      @show-user-management="showUserManagement()"
     >
       <template v-for="(_, name) in $slots" #[name]="slotData">
         <slot :name="name" v-bind="slotData" />
