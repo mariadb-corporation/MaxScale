@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-09-09
+ * Change Date: 2027-09-09a
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -22,6 +22,7 @@ export const ORM_NAMESPACE = 'ORM'
 export const PERSISTENT_ORM_ENTITY_MAP = Object.freeze({
   TBL_EDITORS: 'tblEditors',
   DDL_EDITORS: 'ddlEditors',
+  USER_MANAGEMENTS: 'userManagements',
   ERD_TASKS: 'erdTasks',
   ETL_TASKS: 'etlTasks',
   INSIGHT_VIEWERS: 'insightViewers',
@@ -272,6 +273,7 @@ export const QUERY_TAB_TYPE_MAP = Object.freeze({
   INSIGHT_VIEWER: 'INSIGHT_VIEWER',
   SQL_EDITOR: 'SQL_EDITOR',
   DDL_EDITOR: 'DDL_EDITOR',
+  USER_MANAGEMENT: 'USER_MANAGEMENT',
 })
 
 export const DEF_ROW_LIMIT_OPTS = [10, 50, 100, 200, 300, 400, 500, 1000, 2000, 5000, 10000, 50000]

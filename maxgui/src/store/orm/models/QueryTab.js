@@ -55,6 +55,7 @@ export default class QueryTab extends Extender {
       ddlEditor: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.DDL_EDITORS, 'id'),
       insightViewer: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.INSIGHT_VIEWERS, 'id'),
       txtEditor: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.TXT_EDITORS, 'id'),
+      userManagement: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.USER_MANAGEMENTS, 'id'),
       queryResult: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.QUERY_RESULTS, 'id'),
       queryTabTmp: this.hasOne(TMP_ORM_ENTITY_MAP.QUERY_TABS_TMP, 'id'),
     }

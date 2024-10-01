@@ -16,6 +16,7 @@ import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import DdlEditor from '@wsModels/DdlEditor'
 import InsightViewer from '@wsModels/InsightViewer'
+import UserManagement from '@wsModels/UserManagement'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
@@ -35,6 +36,7 @@ export default {
   EtlTaskTmp,
   DdlEditor,
   InsightViewer,
+  UserManagement,
   QueryConn,
   QueryEditor,
   QueryEditorTmp,

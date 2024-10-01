@@ -13,6 +13,7 @@
 import { Database } from '@vuex-orm/core'
 import TblEditor from '@wsModels/TblEditor'
 import InsightViewer from '@wsModels/InsightViewer'
+import UserManagement from '@wsModels/UserManagement'
 import ErdTask from '@wsModels/ErdTask'
 import EtlTask from '@wsModels/EtlTask'
 import DdlEditor from '@wsModels/DdlEditor'
@@ -40,6 +41,7 @@ import worksheets from '@/store/orm/modules/worksheets'
 const database = new Database()
 database.register(TblEditor)
 database.register(InsightViewer)
+database.register(UserManagement)
 database.register(ErdTask, erdTasks)
 database.register(EtlTask, etlTasks)
 database.register(DdlEditor)

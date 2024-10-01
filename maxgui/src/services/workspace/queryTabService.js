@@ -14,6 +14,7 @@ import InsightViewer from '@wsModels/InsightViewer'
 import TblEditor from '@wsModels/TblEditor'
 import TxtEditor from '@wsModels/TxtEditor'
 import DdlEditor from '@wsModels/DdlEditor'
+import UserManagement from '@wsModels/UserManagement'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
@@ -26,7 +27,7 @@ import queryConnService from '@wsServices/queryConnService'
 import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 import { uuidv1, tryAsync } from '@/utils/helpers'
 
-const { TBL_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { TBL_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR, USER_MANAGEMENT } = QUERY_TAB_TYPE_MAP
 /**
  * If a record is deleted, then the corresponding records in the child
  * tables will be automatically deleted
@@ -42,6 +43,7 @@ function cascadeDelete(payload) {
     TblEditor.delete(id)
     TxtEditor.delete(id)
     DdlEditor.delete(id)
+    UserManagement.delete(id)
     store.dispatch('fileSysAccess/deleteFileHandleData', id)
     QueryResult.delete(id)
     QueryConn.delete((c) => c.query_tab_id === id)
@@ -79,6 +81,8 @@ function cascadeRefresh(payload) {
         QueryResult.insert({ data: { id } })
         TblEditor.delete(id)
         InsightViewer.delete(id)
+        DdlEditor.delete(id)
+        UserManagement.delete(id)
       }
       QueryResult.refresh(id)
     }
@@ -120,6 +124,9 @@ function insert({ query_editor_id, query_tab_id = uuidv1(), name = '', type }) {
       break
     case DDL_EDITOR:
       DdlEditor.insert({ data: { id: query_tab_id } })
+      break
+    case USER_MANAGEMENT:
+      UserManagement.insert({ data: { id: query_tab_id } })
       break
   }
   QueryTabTmp.insert({ data: { id: query_tab_id } })
