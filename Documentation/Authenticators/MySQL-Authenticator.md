@@ -44,7 +44,12 @@ ssl=true
 
 ### `log_password_mismatch`
 
-Boolean, default value is "false". The service setting *log_auth_warnings* must
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
+
+The service setting *log_auth_warnings* must
 also be enabled for this setting to have effect. When both settings are enabled,
 password hashes are logged if a client gives a wrong password. This feature may
 be useful when diagnosing authentication issues. It should only be enabled on a

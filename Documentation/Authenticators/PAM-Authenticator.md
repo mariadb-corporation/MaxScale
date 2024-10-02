@@ -46,8 +46,12 @@ account         required        pam_unix.so
 
 ### `pam_use_cleartext_plugin`
 
-Boolean, default value is "false". If enabled, MaxScale communicates with the
-client as if using
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
+
+If enabled, MaxScale communicates with the client as if using
 [mysql_clear_password](https://mariadb.com/kb/en/connection/#mysql_clear_password-plugin).
 This setting has no effect on MaxScale-to-backend communication, which adapts to
 either "dialog" or "mysql_clear_password", depeding on which one the backend
@@ -60,10 +64,14 @@ authenticator_options=pam_use_cleartext_plugin=1
 
 ### `pam_mode`
 
-This setting defines the authentication mode used. The following values are
-supported:
+- **Type**: [enumeration](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `password`, `password_2FA`, `suid`
+- **Default**: `password`
 
-- `password` (default) Normal password-based authentication
+This setting defines the authentication mode used. Two values are supported:
+- `password` Normal password-based authentication
 - `password_2FA` Password + 2FA-code based authentication
 - `suid` Authenticate using suid sandbox subprocess
 
@@ -95,10 +103,16 @@ authentication.
 
 ### `pam_backend_mapping`
 
+- **Type**: [enumeration](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `none`, `mariadb`
+- **Default**: `none`
+
 Defines backend authentication mapping, i.e. switch of authentication method
 between client-to-MaxScale and MaxScale-to-backend. Supported values:
 
-- `none` (default) No mapping
+- `none` No mapping
 - `mariadb` Map users to normal MariaDB accounts
 
 ```
@@ -134,6 +148,11 @@ as it is easier to configure. `pam_backend_mapping` should only be used when
 the user mapping needs to be defined by pam.
 
 ### `pam_mapped_pw_file`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: None
 
 Path to a json-text file with user passwords. Default value is empty, which
 disables the feature.
