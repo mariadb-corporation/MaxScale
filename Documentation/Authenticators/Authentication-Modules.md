@@ -118,7 +118,12 @@ authenticator_options=skip_authentication=true,lower_case_table_names=1
 
 ### `skip_authentication`
 
-Boolean, default value is "false". If enabled, MaxScale will not check the
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
+
+If enabled, MaxScale will not check the
 passwords of incoming clients and just assumes that they are correct.
 Wrong passwords are instead detected when MaxScale tries to authenticate to the
 backend servers.
@@ -140,7 +145,12 @@ authenticator_options=skip_authentication=true
 
 ### `match_host`
 
-Boolean, default value is "true". If disabled, MaxScale does not require that a
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `true`
+
+If disabled, MaxScale does not require that a
 valid user account entry for incoming clients exists on the backends.
 Specifically, only the client username needs to match a user account,
 hostname/IP is ignored.
@@ -157,7 +167,12 @@ authenticator_options=match_host=false
 
 ### `lower_case_table_names`
 
-Integer, default value is 0. Controls database name matching for authentication
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0`
+
+Controls database name matching for authentication
 when an incoming client logs in to a non-empty database. The setting functions
 similar to the MariaDB Server setting
 [lower_case_table_names](https://mariadb.com/kb/en/library/server-system-variables/#lower_case_table_names)
