@@ -37,6 +37,39 @@ change; *not* as part of other modifications.
 * No trailing white space.
 * Maximum line length 110 characters.
 
+## Comments
+
+* In general, comment only what is not obvious from the code.
+* APIs intended to be implemented by components independent of the API
+  itself should be documented properly. Use `include/maxscale/filter.hh`
+  and `include/maxscale/router.hh` as example.
+* On a particular line, the number of characters in documenting text should
+  not exceed 80, for ease of reading. When counting the characters, any
+  prepending code or space, due to indentation, is not included. The hard
+  line length limit of 110 still applies.
+
+```
+/*
+ * Text consisting of 33 characters.
+ */
+struct S
+{
+    int field; // Text consisting of 33 characters.
+};
+
+void f()
+{
+   if (this)
+   {
+       if (that)
+       {
+           // Text consisting of 33 characters.
+           ...
+       }
+    }
+}
+```
+
 ## Indentation Style
 
 We follow the
