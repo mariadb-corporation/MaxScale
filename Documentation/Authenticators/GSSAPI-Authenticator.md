@@ -37,14 +37,23 @@ The principal name should be the same as on the MariaDB servers.
 
 ### `principal_name`
 
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `mariadb/localhost.localdomain`
+
 The service principal name to send to the client. This parameter is a string
-parameter which is used by the client to request the token. The default value
-for this option is _mariadb/localhost.localdomain_.
+parameter which is used by the client to request the token.
 
 This parameter *must* be the same as the principal name that the backend MariaDB
 server uses.
 
 ### `gssapi_keytab_path`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: Kerberos Default
 
 Keytab file location. This should be an absolute path to the file containing the
 keytab. If not defined, Kerberos will search from a default location, usually
