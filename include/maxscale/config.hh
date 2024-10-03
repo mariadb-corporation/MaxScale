@@ -331,7 +331,6 @@ public:
     bool                  config_check;         /**< Only check config */
     std::string           release_string;       /**< The release name string of the system */
 
-    std::string os_name {"undefined"};      // NAME + VERSION from /etc/os-release
     std::string sysname {"undefined"};      // Name of the implementation of the operating system
     std::string nodename {"undefined"};     // Name of this node on the network (i.e. hostname)
     std::string release {"undefined"};      // Current release level of this implementation

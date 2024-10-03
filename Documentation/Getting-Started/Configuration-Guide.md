@@ -2548,11 +2548,31 @@ history is either pruned to the last `max_sescmd_history` command (when
 reconnections are no longer possible.
 
 The required history size can be estimated by counting the total number of
-prepared statements and session state modifying commands (e.g `SET NAMES`) that
-are used by a client. Note that connectors usually add some commands that aren't
-visible to the application developer which means a safety margin should be
-added. A good rule of thumb is to count the expected number of statements and
-double that number.
+session state modifying commands (e.g `SET NAMES`) that are used by a
+client. Note that connectors usually add some commands that aren't visible to
+the application developer which means a safety margin should be added. A good
+rule of thumb is to count the expected number of statements and double that
+number. The default value of 50 is a value that'll work for most applications
+that do not rely heavily on user variables.
+
+Starting with MaxScale versions 21.06.18, 22.08.15, 23.02.12, 23.08.8, 24.02.4
+and 24.08.1, binary protocol prepared statements do not count towards the
+`max_sescmd_history` limit. In practice this means that all binary protocol
+prepared statements opened by the client are also kept open by MaxScale and are
+restored whenever a reconnection to a server happens. The limits imposed by
+`max_sescmd_history` apply to other text protocol commands e.g. `SET NAMES`.
+Note that text protocol prepared statements count as text protocol commands and
+are thus potentially pruned when history pruning happens. If an application uses
+a lot of `PREPARE stmt FROM <sql>` commands, it is recommended that the value of
+`max_sescmd_history` is increased accordingly.
+
+In older versions of MaxScale, binary protocol prepared statements were limited
+by `max_sescmd_history` and were also pruned by `prune_sescmd_history` but this
+caused problems when the binary protocol prepared statment were pruned while
+they were still open from the client's point of view. In older versions, the
+recommended value of `max_sescmd_history` is the number of state modifying
+commands plus the maximum number of open prepared statments that any application
+may use.
 
 This parameter was moved into the MaxScale core in MaxScale 6.0. The parameter
 can be configured for all routers that support the session command

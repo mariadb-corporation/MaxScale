@@ -57,3 +57,9 @@ add_test(test_encryption test_encryption)
 add_executable(test_collector test_collector.cc)
 target_link_libraries(test_collector maxbase)
 add_test(test_collector test_collector)
+
+# For debug builds, some tests need a higher timeout on aarch64.
+string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
+if (BUILD_TYPE STREQUAL "debug")
+  set_tests_properties(test_mxb_string PROPERTIES TIMEOUT 300)
+endif()
