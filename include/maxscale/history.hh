@@ -25,7 +25,11 @@ namespace maxscale
 {
 
 /**
- * Class for storing a history of SQL commands that modify data
+ * Class for storing a history of SQL commands that modify data.
+ *
+ * If there are commands that should never be pruned from the history, a derived
+ * class should override the can_prune() function that by default allows all
+ * commands to be pruned.
  */
 class History
 {
@@ -106,6 +110,8 @@ public:
         // subscriber receive the response.
         std::map<uint32_t, bool> m_ids_to_check;
     };
+
+    virtual ~History() = default;
 
     /**
      * Construct a History
@@ -188,6 +194,18 @@ public:
     bool pruned() const
     {
         return m_history_pruned;
+    }
+
+    /**
+     * Check if a command can be pruned from the history
+     *
+     * @param buffer The buffer to check
+     *
+     * @return True if the command can be pruned
+     */
+    virtual bool can_prune(const GWBUF& buffer) const
+    {
+        return true;
     }
 
     /**
