@@ -19,6 +19,7 @@
 #include <maxscale/history.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/queryclassifier.hh>
 
 #include <deque>
@@ -73,6 +74,17 @@ struct AuthSwitchReqContents
 AuthSwitchReqContents   parse_auth_switch_request(const GWBUF& input);
 std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb);
 }
+
+class MariaDBHistory final : public mxs::History
+{
+public:
+    using mxs::History::History;
+
+    bool can_prune(const GWBUF& buffer) const override
+    {
+        return buffer[MYSQL_HEADER_LEN] != MXS_COM_STMT_PREPARE;
+    }
+};
 
 /*
  * Protocol-specific session data
@@ -146,12 +158,12 @@ public:
     // Metadata for COM_STMT_EXECUTE
     std::map<uint32_t, std::vector<uint8_t>> exec_metadata;
 
-    mxs::History& history()
+    MariaDBHistory& history()
     {
         return m_history;
     }
 
-    const mxs::History& history() const
+    const MariaDBHistory& history() const
     {
         return m_history;
     }
@@ -267,7 +279,7 @@ private:
     uint64_t m_client_protocol_capabilities {0};
 
     // The session command history
-    mxs::History m_history;
+    MariaDBHistory m_history;
 
     // Transaction state tracker
     mariadb::TrxTracker m_trx_tracker;

@@ -154,11 +154,20 @@ void History::add(GWBUF&& buffer, bool ok, bool deduplicate)
 
     if (m_history.size() > m_max_sescmd_history)
     {
-        // Too many commands, discard the oldest one to make more space. This loses information and the
-        // session state cannot be fully recovered anymore. As a result, some features (e.g. connection
-        // sharing) are disabled.
-        m_history.pop_front();
-        m_history_pruned = true;
+        // Too many commands, discard one to make more space. This loses information and the
+        // session state cannot be fully recovered anymore. As a result, some features
+        // (e.g. connection sharing) are disabled.
+        auto is_prunable = [this](const GWBUF& b){
+            return can_prune(b);
+        };
+        auto it = std::find_if(m_history.begin(), m_history.end(), is_prunable);
+        size_t num_prunable = std::count_if(it, m_history.end(), is_prunable);
+
+        if (it != m_history.end() && num_prunable > m_max_sescmd_history)
+        {
+            m_history.erase(it);
+            m_history_pruned = true;
+        }
     }
 
     prune_responses();

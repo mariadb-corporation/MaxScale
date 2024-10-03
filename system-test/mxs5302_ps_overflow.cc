@@ -19,7 +19,7 @@
 #include <maxtest/testconnections.hh>
 
 const std::string VALUE = "foobar";
-const std::string NO_VALUE = "";
+const std::string NO_VALUE = "NULL";
 
 void execute_statements(TestConnections& test, const std::vector<MYSQL_STMT*>& stmts)
 {
