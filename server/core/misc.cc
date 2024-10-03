@@ -107,7 +107,7 @@ void maxscale_log_info_blurb(LogBlurbAction action)
 
     const mxs::Config& cnf = mxs::Config::get();
     MXB_NOTICE("Host: '%s' OS: %s, %s@%s, %s, %s with %ld processor cores (%.2f available).",
-               cnf.nodename.c_str(),  cnf.os_name.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
+               cnf.nodename.c_str(),  cnf.release_string.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
                cnf.version.c_str(), cnf.machine.c_str(), get_processor_count(),
                get_vcpu_count());
 
