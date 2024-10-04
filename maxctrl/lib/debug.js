@@ -11,7 +11,9 @@
  * Public License.
  */
 const { maxctrl, _, doRequest, helpMsg } = require("./common.js");
-const { execSync } = require("child_process");
+const { exec } = require("child_process");
+const { promisify } = require("util");
+const async_exec = promisify(exec);
 
 var resolved = {};
 
@@ -32,7 +34,7 @@ async function toFunction(fn) {
       var result;
 
       try {
-        const { stdout } = execSync("addr2line -f -C -e " + lib + " " + symbol);
+        const { stdout } = await async_exec("addr2line -f -C -e " + lib + " " + symbol);
         result = stdout.split("\n")[0];
       } catch (err) {}
 
