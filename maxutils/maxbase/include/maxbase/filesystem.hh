@@ -59,7 +59,7 @@ std::pair<Container, std::string> load_file(std::string file)
 }
 
 /**
- * Atomically save a file ok disk
+ * Atomically save a file on disk
  *
  * The atomicity is achieved by writing out the data into a temporary file and then renaming it.
  *

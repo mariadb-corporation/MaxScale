@@ -39,6 +39,11 @@ std::string save_file(std::string file, const void* ptr, size_t size)
             err = mxb::string_printf("Write to file '%s' failed: %d, %s",
                                      tmp.c_str(), errno, mxb_strerror(errno));
         }
+        else if (fchmod(fd, 0644) == -1)
+        {
+            err = mxb::string_printf("Failed to set file permissions for file '%s': %d, %s",
+                                     tmp.c_str(), errno, mxb_strerror(errno));
+        }
         else if (rename(tmp.c_str(), file.c_str()) == -1)
         {
             err = mxb::string_printf("Failed to rename '%s' to '%s': %d, %s",
