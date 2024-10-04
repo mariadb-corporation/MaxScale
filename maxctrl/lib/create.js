@@ -11,7 +11,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-const { maxctrl, _, warning, parseValue, doRequest, getJson, OK, helpMsg } = require("./common.js");
+const {
+  maxctrl,
+  _,
+  warning,
+  parseValue,
+  doRequest,
+  getJson,
+  OK,
+  helpMsg,
+  paramToRelationship,
+  targetToRelationships,
+  setMonitorRelationship,
+} = require("./common.js");
 const fs = require("fs");
 const os = require("os");
 const tar = require("tar-stream");
@@ -280,7 +292,14 @@ argument is ignored.
         var err = false;
 
         err = validateParams(argv, argv.params);
-        monitor.data.attributes.parameters = argv.params.reduce(to_obj, {});
+        var params = argv.params.reduce(to_obj, {});
+
+        if (params.servers) {
+          paramToRelationship(monitor, params.servers.split(","), "servers");
+          delete params.servers;
+        }
+
+        monitor.data.attributes.parameters = params;
 
         if (argv.servers) {
           for (let i = 0; i < argv.servers.length; i++) {
@@ -341,7 +360,7 @@ argument is ignored.
           });
       },
       function (argv) {
-        maxctrl(argv, function (host) {
+        maxctrl(argv, async function (host) {
           checkName(argv.name);
 
           let err = validateParams(argv, argv.params);
@@ -354,10 +373,33 @@ argument is ignored.
               id: String(argv.name),
               attributes: {
                 router: argv.router,
-                parameters: argv.params.reduce(to_obj, {}),
               },
             },
           };
+
+          var params = argv.params.reduce(to_obj, {});
+
+          if (params.servers) {
+            await paramToRelationship(service, params.servers.split(","), "servers");
+            delete params.servers;
+          }
+
+          if (params.targets) {
+            await targetToRelationships(host, service, params.targets.split(","));
+            delete params.targets;
+          }
+
+          if (params.cluster) {
+            await setMonitorRelationship(service, params.cluster, "monitors");
+            delete params.cluster;
+          }
+
+          if (params.filters) {
+            await paramToRelationship(service, params.filters.split("|"), "filters");
+            delete params.filters;
+          }
+
+          service.data.attributes.parameters = params;
 
           if (argv.servers) {
             for (let i = 0; i < argv.servers.length; i++) {

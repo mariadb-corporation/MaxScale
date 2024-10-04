@@ -612,6 +612,40 @@ function dateToLocaleString(val) {
   return val ? new Date(val).toLocaleString() : "";
 }
 
+function paramToRelationship(body, values, relation_type) {
+  // Convert the list into relationships
+  const data = values.filter((v) => v).map((v) => ({ id: v, type: `${relation_type}` }));
+  _.set(body, `data.relationships.${relation_type}.data`, data);
+}
+
+function setMonitorRelationship(body, value) {
+  if (value) {
+    value = [{ id: value, type: "monitors" }];
+  } else {
+    value = [];
+  }
+
+  _.set(body, "data.relationships.monitors.data", value);
+}
+
+async function targetToRelationships(host, body, value) {
+  var res = await getJson(host, "servers");
+  var server_ids = res.data.map((v) => v.id);
+  var services = [];
+  var servers = [];
+
+  for (var v of value) {
+    if (server_ids.includes(v)) {
+      servers.push(v);
+    } else {
+      services.push(v);
+    }
+  }
+
+  paramToRelationship(body, servers, "servers");
+  paramToRelationship(body, services, "services");
+}
+
 module.exports = {
   _,
   helpMsg,
@@ -637,4 +671,7 @@ module.exports = {
   warning,
   fieldDescriptions,
   dateToLocaleString,
+  paramToRelationship,
+  setMonitorRelationship,
+  targetToRelationships,
 };

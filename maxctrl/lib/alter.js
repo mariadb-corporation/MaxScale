@@ -11,17 +11,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-const { maxctrl, error, _, helpMsg, parseValue, doRequest, getJson } = require("./common.js");
+const {
+  maxctrl,
+  error,
+  _,
+  helpMsg,
+  parseValue,
+  doRequest,
+  paramToRelationship,
+  setMonitorRelationship,
+  targetToRelationships,
+} = require("./common.js");
 
 const param_type_msg =
   "The parameters should be given in the `key=value` format. This command also supports the legacy method \n" +
   "of passing parameters as `key value` pairs but the use of this is not recommended.";
-
-function paramToRelationship(body, values, relation_type) {
-  // Convert the list into relationships
-  const data = values.filter((v) => v).map((v) => ({ id: v, type: `${relation_type}` }));
-  _.set(body, `data.relationships.${relation_type}.data`, data);
-}
 
 function setFilters(host, endpoint, argv) {
   var payload = {
@@ -34,34 +38,6 @@ function setFilters(host, endpoint, argv) {
   paramToRelationship(payload, argv.filters, "filters");
 
   return doRequest(host, endpoint, { method: "PATCH", data: payload });
-}
-
-function setMonitorRelationship(body, value) {
-  if (value) {
-    value = [{ id: value, type: "monitors" }];
-  } else {
-    value = [];
-  }
-
-  _.set(body, "data.relationships.monitors.data", value);
-}
-
-async function targetToRelationships(host, body, value) {
-  var res = await getJson(host, "servers");
-  var server_ids = res.data.map((v) => v.id);
-  var services = [];
-  var servers = [];
-
-  for (var v of value) {
-    if (server_ids.includes(v)) {
-      servers.push(v);
-    } else {
-      services.push(v);
-    }
-  }
-
-  paramToRelationship(body, servers, "servers");
-  paramToRelationship(body, services, "services");
 }
 
 // Converts a key=value string into an array of strings

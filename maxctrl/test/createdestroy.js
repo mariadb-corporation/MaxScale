@@ -91,6 +91,23 @@ describe("Create/Destroy Commands", function () {
     await doCommand("destroy server test_server1 --force");
   });
 
+  it("create monitor with servers in parameters", async function () {
+    await doCommand("create server test_server1 127.0.0.1 6789");
+    await doCommand("create server test_server2 127.0.0.1 6790");
+
+    var res = await verifyCommand(
+      "create monitor my-monitor mariadbmon user=maxuser password=maxpwd servers=test_server1,test_server2",
+      "monitors/my-monitor"
+    );
+
+    await doCommand("destroy monitor my-monitor --force");
+    await doCommand("destroy server test_server1 --force");
+    await doCommand("destroy server test_server2 --force");
+
+    const rels = res.data.relationships.servers.data.map((v) => v.id);
+    expect(rels).to.deep.equal(["test_server1", "test_server2"]);
+  });
+
   it("create monitor with options", function () {
     return doCommand("unlink monitor MariaDB-Monitor server4")
       .then(() =>
@@ -301,6 +318,69 @@ describe("Create/Destroy Commands", function () {
 
   it("destroy service", function () {
     return doCommand("destroy service test-service").should.be.fulfilled;
+  });
+
+  it("create service with servers in parameters", async function () {
+    await doCommand("create server test-server1 127.0.0.1 6789");
+    await doCommand("create server test-server2 127.0.0.1 6790");
+    var res = await verifyCommand(
+      "create service test-service readwritesplit user=maxuser password=maxpwd servers=test-server1,test-server2",
+      "services/test-service"
+    );
+
+    await doCommand("destroy service test-service --force");
+    await doCommand("destroy server test-server1 --force");
+    await doCommand("destroy server test-server2 --force");
+
+    const rels = res.data.relationships.servers.data.map((v) => v.id);
+    expect(rels).to.deep.equal(["test-server1", "test-server2"]);
+  });
+
+  it("create service with targets in parameters", async function () {
+    await doCommand("create server test-server1 127.0.0.1 6789");
+    await doCommand("create service test-service1 readconnroute user=maxuser password=maxpwd");
+    var res = await verifyCommand(
+      "create service test-service readwritesplit user=maxuser password=maxpwd targets=test-server1,test-service1",
+      "services/test-service"
+    );
+
+    await doCommand("destroy service test-service --force");
+    await doCommand("destroy server test-server1 --force");
+    await doCommand("destroy service test-service1 --force");
+
+    //console.log(res.data);
+    const rels_srv = res.data.relationships.servers.data.map((v) => v.id);
+    const rels_svc = res.data.relationships.services.data.map((v) => v.id);
+    expect(rels_srv).to.deep.equal(["test-server1"]);
+    expect(rels_svc).to.deep.equal(["test-service1"]);
+  });
+
+  it("create service with filters in parameters", async function () {
+    await doCommand("create filter test-filter1 hintfilter");
+    await doCommand("create filter test-filter2 hintfilter");
+    var res = await verifyCommand(
+      "create service test-service readwritesplit user=maxuser password=maxpwd filters=test-filter1|test-filter2",
+      "services/test-service"
+    );
+
+    await doCommand("destroy service test-service --force");
+    await doCommand("destroy filter test-filter1 --force");
+    await doCommand("destroy filter test-filter2 --force");
+
+    const rels = res.data.relationships.filters.data.map((v) => v.id);
+    expect(rels).to.deep.equal(["test-filter1", "test-filter2"]);
+  });
+
+  it("create service with cluster in parameters", async function () {
+    var res = await verifyCommand(
+      "create service test-service readwritesplit user=maxuser password=maxpwd cluster=MariaDB-Monitor",
+      "services/test-service"
+    );
+
+    await doCommand("destroy service test-service --force");
+
+    const rels = res.data.relationships.monitors.data.map((v) => v.id);
+    expect(rels).to.deep.equal(["MariaDB-Monitor"]);
   });
 
   it("create service with server relationship", function () {
