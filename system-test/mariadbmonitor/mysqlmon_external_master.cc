@@ -70,11 +70,40 @@ void test_main(TestConnections& test)
     };
 
     test.tprintf("Start by removing server4 from cluster, then have the current master replicate from it.");
-    auto ext_server = repl.backend(3)->admin_connection();
-    ext_server->cmd("stop slave;");
-    ext_server->cmd("reset slave all;");
+    auto ext_server = repl.backend(3);
+    ext_server->admin_connection()->cmd("stop slave;");
+    ext_server->admin_connection()->cmd("reset slave all;");
     repl.replicate_from(0, 3);
     mxs.wait_for_monitor(1);
+    mxs.check_print_servers_status({master | ext, slave, slave});
+
+    // MXS-5272: Slave of External Server (connecting)
+    test.tprintf("Stop server4, should be detected by monitor.");
+    ext_server->stop_database();
+    mxs.sleep_and_wait_for_monitor(1, 1);
+    mxs.check_print_servers_status({master | mxt::ServerInfo::EXT_MASTER_CONNECTING, slave, slave});
+
+    node0->cmd("stop slave io_thread;");
+    mxs.wait_for_monitor(1);
+    mxs.check_print_servers_status({master | mxt::ServerInfo::EXT_MASTER_IO_STOPPED, slave, slave});
+
+    node0->cmd("stop slave sql_thread;");
+    mxs.wait_for_monitor(1);
+    mxs.check_print_servers_status({master | mxt::ServerInfo::EXT_MASTER_STOPPED, slave, slave});
+
+    node0->cmd("start slave io_thread;");
+    mxs.wait_for_monitor(1);
+    mxs.check_print_servers_status({master | mxt::ServerInfo::EXT_MASTER_SQL_STOPPED, slave, slave});
+
+    node0->cmd("start slave sql_thread;");
+    mxs.wait_for_monitor(1);
+    mxs.check_print_servers_status({master | mxt::ServerInfo::EXT_MASTER_CONNECTING, slave, slave});
+
+    test.tprintf("Start server4 and restart external replication on server1.");
+    ext_server->start_database();
+    node0->cmd("stop slave;");
+    node0->cmd("start slave;");
+    mxs.wait_for_monitor();
     mxs.check_print_servers_status({master | ext, slave, slave});
 
     if (test.ok())
@@ -86,9 +115,9 @@ void test_main(TestConnections& test)
         repl.stop_node(0);
         mxs.wait_for_monitor(3);
         // Because the writer thread is doing writes to server1, and those updates are not yet replicated to
-        // server4, the server4->server1 slave connection will fail. Thus, server2 will not get
-        // "Slave of External Server".
-        mxs.check_print_servers_status({down, master, slave});
+        // server4, the server4->server1 replication will fail due to IO thread error. Thus, server2
+        // will also get "Slave of External Server (IO stopped)" once promoted.
+        mxs.check_print_servers_status({down, master | mxt::ServerInfo::EXT_MASTER_IO_STOPPED, slave});
 
         if (test.ok())
         {

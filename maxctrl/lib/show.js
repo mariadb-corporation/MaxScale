@@ -244,6 +244,37 @@ const monitor_fields = [
   },
 ];
 
+const show_replication_fields = [
+  {
+    name: "Replica",
+    description: "Replica server name",
+  },
+  {
+    name: "Primary",
+    description: "Primary server name or address",
+  },
+  {
+    name: "IO Running",
+    description: "Value of Slave_IO_Running",
+  },
+  {
+    name: "SQL Running",
+    description: "Value of Slave_SQL_Running",
+  },
+  {
+    name: "Gtid IO Pos",
+    description: "Gtid IO Position",
+  },
+  {
+    name: "Gtid mode",
+    description: "Value of Using_Gtid",
+  },
+  {
+    name: "Lag (s)",
+    description: "Value of Seconds_Behind_Master",
+  },
+];
+
 const session_fields = [
   {
     name: "Id",
@@ -1137,6 +1168,54 @@ exports.builder = function (yargs) {
           }
 
           return rawCollectionAsTable(table, show_dbusers_fields);
+        });
+      }
+    )
+    .command(
+      "replication",
+      "Show replication connections",
+      function (yargs) {
+        return yargs
+            .epilog("Show replication connection information." + fieldDescriptions(show_replication_fields))
+            .wrap(null)
+            .usage("Usage: show replication")
+            .option("monitor", {
+              describe: "Only show replication connections monitored by a specific monitor",
+              type: "string",
+            });
+      },
+      function (argv) {
+        maxctrl(argv, async function (host) {
+          var table = [];
+
+          var res = await getJson(host, "monitors/");
+          if (res.data) {
+            for (var monitor of res.data) {
+              if (!argv.monitor || argv.monitor == monitor.id) {
+                var attr = monitor.attributes
+                if (attr.module == "mariadbmon") {
+                  for (var srv_info of attr.monitor_diagnostics.server_info) {
+                    for (var slave_conn of srv_info.slave_connections) {
+                      var repl_source = slave_conn.master_server_name ? slave_conn.master_server_name :
+                          (slave_conn.master_host + ":" + slave_conn.master_port);
+
+                      table.push([
+                        srv_info.name,
+                        repl_source,
+                        slave_conn.slave_io_running,
+                        slave_conn.slave_sql_running,
+                        slave_conn.gtid_io_pos,
+                        slave_conn.using_gtid,
+                        slave_conn.seconds_behind_master
+                      ]);
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          return rawCollectionAsTable(table, show_replication_fields);
         });
       }
     )
