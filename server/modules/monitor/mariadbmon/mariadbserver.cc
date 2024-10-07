@@ -66,7 +66,7 @@ void NodeData::reset_results()
     parents_failed.clear();
     children.clear();
     children_failed.clear();
-    external_masters.clear();
+    external_repl_status = ExtReplStatus::NONE;
 }
 
 void NodeData::reset_indexes()
@@ -856,9 +856,38 @@ json_t* MariaDBServer::to_json() const
     json_object_set_new(result, "lock_held", (lock == ServerLock::Status::UNKNOWN) ? json_null() :
                         json_boolean(lock == ServerLock::Status::OWNED_SELF));
 
-    if (is_running() && !m_node.external_masters.empty())
+    if (is_running())
     {
-        json_object_set_new(result, "state_details", json_string("Slave of External Server"));
+        const char* ext_repl_str = nullptr;
+        switch (m_node.external_repl_status)
+        {
+        case NodeData::ExtReplStatus::NONE:
+            break;
+
+        case NodeData::ExtReplStatus::STOPPED:
+            ext_repl_str = "Slave of External Server (stopped)";
+            break;
+
+        case NodeData::ExtReplStatus::SQL_STOP:
+            ext_repl_str = "Slave of External Server (SQL stopped)";
+            break;
+
+        case NodeData::ExtReplStatus::IO_STOP:
+            ext_repl_str = "Slave of External Server (IO stopped)";
+            break;
+
+        case NodeData::ExtReplStatus::CONNECTING:
+            ext_repl_str = "Slave of External Server (connecting)";
+            break;
+
+        case NodeData::ExtReplStatus::RUNNING:
+            ext_repl_str = "Slave of External Server";
+            break;
+        }
+        if (ext_repl_str)
+        {
+            json_object_set_new(result, "state_details", json_string(ext_repl_str));
+        }
     }
 
     json_t* slave_connections = json_array();
