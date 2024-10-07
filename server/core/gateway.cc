@@ -1918,42 +1918,43 @@ int main(int argc, char** argv)
     MXB_NOTICE("syslog logging is %s.", cnf.syslog.get() ? "enabled" : "disabled");
     MXB_NOTICE("maxlog logging is %s.", cnf.maxlog.get() ? "enabled" : "disabled");
 
-    // Try to create the persisted configuration directory. This needs to be done before the path validation
-    // done by check_paths() to prevent it from failing. The directory wont' exist if it's the first time
-    // MaxScale is starting up with this configuration.
-    mxs_mkdir_all(mxs::config_persistdir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
-    // Also create the PID file directory. This will exist if started by SystemD but if run manually from the
-    // command line, it won't exist.
-    if (!mxs_mkdir_all(mxs::piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
+    if (!cnf.config_check)
     {
-        rc = MAXSCALE_INTERNALERROR;
-        return rc;
-    }
+        // Try to create the persisted configuration directory. This needs to be done
+        // before the path validation done by check_paths() to prevent it from failing.
+        // The directory wont' exist if it's the first time MaxScale is starting up
+        // with this configuration.
+        mxs_mkdir_all(mxs::config_persistdir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-    if (!check_paths())
-    {
-        rc = MAXSCALE_BADCONFIG;
-        return rc;
-    }
-
-    if (!cnf.debug.empty() && !handle_debug_args(&cnf.debug[0]))
-    {
-        rc = MAXSCALE_INTERNALERROR;
-        return rc;
-    }
-
-    if (!this_unit.redirect_output_to.empty())
-    {
-        if (!redirect_stdout_and_stderr(this_unit.redirect_output_to))
+        // Also create the PID file directory. This will exist if started by SystemD but
+        // if run manually from the command line, it won't exist.
+        if (!mxs_mkdir_all(mxs::piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
         {
             rc = MAXSCALE_INTERNALERROR;
             return rc;
         }
-    }
 
-    if (!cnf.config_check)
-    {
+        if (!check_paths())
+        {
+            rc = MAXSCALE_BADCONFIG;
+            return rc;
+        }
+
+        if (!cnf.debug.empty() && !handle_debug_args(&cnf.debug[0]))
+        {
+            rc = MAXSCALE_INTERNALERROR;
+            return rc;
+        }
+
+        if (!this_unit.redirect_output_to.empty())
+        {
+            if (!redirect_stdout_and_stderr(this_unit.redirect_output_to))
+            {
+                rc = MAXSCALE_INTERNALERROR;
+                return rc;
+            }
+        }
+
         if (is_maxscale_already_running())
         {
             rc = MAXSCALE_ALREADYRUNNING;
@@ -2000,9 +2001,9 @@ int main(int argc, char** argv)
         }
     }
 
-    cleanup_old_process_datadirs();
     if (!cnf.config_check)
     {
+        cleanup_old_process_datadirs();
         /*
          * Set the data directory. We use a unique directory name to avoid conflicts
          * if multiple instances of MaxScale are being run on the same machine.
