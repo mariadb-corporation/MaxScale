@@ -38,23 +38,24 @@ struct ServerStatusDesc
     string                    desc;
 };
 
+#define SLAVE_OF_EXT "Slave of External Server"
 using Status = mxt::ServerInfo;
 const ServerStatusDesc status_flag_to_str[] = {
-    {Status::MASTER,                 StatusType::STATUS, "Master"                                },
-    {Status::SLAVE,                  StatusType::STATUS, "Slave"                                 },
-    {Status::RUNNING,                StatusType::STATUS, "Running"                               },
-    {Status::DOWN,                   StatusType::STATUS, "Down"                                  },
-    {Status::MAINT,                  StatusType::STATUS, "Maintenance"                           },
-    {Status::DRAINING,               StatusType::STATUS, "Draining"                              },
-    {Status::DRAINED,                StatusType::STATUS, "Drained"                               },
-    {Status::RELAY,                  StatusType::STATUS, "Relay Master"                          },
-    {Status::BLR,                    StatusType::STATUS, "Binlog Relay"                          },
-    {Status::SYNCED,                 StatusType::STATUS, "Synced"                                },
-    {Status::EXT_MASTER,             StatusType::DETAIL, "Slave of External Server"              },
-    {Status::EXT_MASTER_STOPPED,     StatusType::DETAIL, "Slave of External Server (stopped)"    },
-    {Status::EXT_MASTER_IO_STOPPED,  StatusType::DETAIL, "Slave of External Server (IO stopped)" },
-    {Status::EXT_MASTER_SQL_STOPPED, StatusType::DETAIL, "Slave of External Server (SQL stopped)"},
-    {Status::EXT_MASTER_CONNECTING,  StatusType::DETAIL, "Slave of External Server (connecting)" }};
+    {Status::MASTER,                 StatusType::STATUS, "Master"                     },
+    {Status::SLAVE,                  StatusType::STATUS, "Slave"                      },
+    {Status::RUNNING,                StatusType::STATUS, "Running"                    },
+    {Status::DOWN,                   StatusType::STATUS, "Down"                       },
+    {Status::MAINT,                  StatusType::STATUS, "Maintenance"                },
+    {Status::DRAINING,               StatusType::STATUS, "Draining"                   },
+    {Status::DRAINED,                StatusType::STATUS, "Drained"                    },
+    {Status::RELAY,                  StatusType::STATUS, "Relay Master"               },
+    {Status::BLR,                    StatusType::STATUS, "Binlog Relay"               },
+    {Status::SYNCED,                 StatusType::STATUS, "Synced"                     },
+    {Status::EXT_MASTER,             StatusType::DETAIL, SLAVE_OF_EXT                 },
+    {Status::EXT_MASTER_STOPPED,     StatusType::DETAIL, SLAVE_OF_EXT " (stopped)"    },
+    {Status::EXT_MASTER_IO_STOPPED,  StatusType::DETAIL, SLAVE_OF_EXT " (IO stopped)" },
+    {Status::EXT_MASTER_SQL_STOPPED, StatusType::DETAIL, SLAVE_OF_EXT " (SQL stopped)"},
+    {Status::EXT_MASTER_CONNECTING,  StatusType::DETAIL, SLAVE_OF_EXT " (connecting)" }};
 }
 
 namespace maxtest

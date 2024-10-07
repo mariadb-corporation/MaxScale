@@ -23,6 +23,8 @@
 #include <maxsql/mariadb.hh>
 #include <maxscale/mysql_utils.hh>
 
+#define SLAVE_OF_EXT "Slave of External Server"
+
 using std::string;
 using maxbase::string_printf;
 using maxbase::Duration;
@@ -856,23 +858,23 @@ json_t* MariaDBServer::to_json() const
             break;
 
         case NodeData::ExtReplStatus::STOPPED:
-            ext_repl_str = "Slave of External Server (stopped)";
+            ext_repl_str = SLAVE_OF_EXT " (stopped)";
             break;
 
         case NodeData::ExtReplStatus::SQL_STOP:
-            ext_repl_str = "Slave of External Server (SQL stopped)";
+            ext_repl_str = SLAVE_OF_EXT " (SQL stopped)";
             break;
 
         case NodeData::ExtReplStatus::IO_STOP:
-            ext_repl_str = "Slave of External Server (IO stopped)";
+            ext_repl_str = SLAVE_OF_EXT " (IO stopped)";
             break;
 
         case NodeData::ExtReplStatus::CONNECTING:
-            ext_repl_str = "Slave of External Server (connecting)";
+            ext_repl_str = SLAVE_OF_EXT " (connecting)";
             break;
 
         case NodeData::ExtReplStatus::RUNNING:
-            ext_repl_str = "Slave of External Server";
+            ext_repl_str = SLAVE_OF_EXT;
             break;
         }
     }
