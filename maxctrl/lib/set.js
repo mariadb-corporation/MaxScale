@@ -26,7 +26,7 @@ exports.builder = function (yargs) {
       default: false,
     })
     .command(
-      "server <server> <state>",
+      "server <server> <state...>",
       "Set server state",
       function (yargs) {
         return yargs
@@ -46,15 +46,18 @@ exports.builder = function (yargs) {
               "\n" +
               "To forcefully close all connections to a server, use `set server <name> maintenance --force`\n"
           )
-          .usage("Usage: set server <server> <state>");
+          .usage("Usage: set server <server> <state...>");
       },
       function (argv) {
-        var target = "servers/" + argv.server + "/set?state=" + argv.state;
-        if (argv.force) {
-          target += "&force=yes";
-        }
         maxctrl(argv, function (host) {
-          return doRequest(host, target, { method: "PUT" });
+          var target = "servers/" + argv.server + "/set?";
+          if (argv.force) {
+            target += "force=yes&";
+          }
+
+          return Promise.all(
+            argv.state.map((state) => doRequest(host, target + "state=" + state, { method: "PUT" }))
+          );
         });
       }
     )
