@@ -48,6 +48,7 @@ public:
         std::string gtid;
         int64_t     server_id;
         bool        cooperative_replication;
+        bool        read_gtid_from_kafka;
 
         mxs::config::RegexValue match;
         mxs::config::RegexValue exclude;
