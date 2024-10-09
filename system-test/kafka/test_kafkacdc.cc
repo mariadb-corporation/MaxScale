@@ -25,8 +25,9 @@ mxb::Json get_json(TestConnections& test, Consumer& consumer)
 
     if (auto msg = consumer.consume_one_message())
     {
-        test.expect(js.load_string(std::string((const char*)msg->payload(), msg->len())),
-                    "Failed to read JSON from message: %s", js.error_msg().c_str());
+        std::string data((const char*)msg->payload(), msg->len());
+        test.expect(js.load_string(data),
+                    "Failed to read JSON from message (%s): %s", js.error_msg().c_str(), data.c_str());
     }
     else
     {
@@ -68,6 +69,23 @@ void read_messages(TestConnections& test, Consumer& consumer, int n_expected, in
     }
 }
 
+void test_read_gtid_from_kafka(TestConnections& test,
+                               const std::string& first_gtid,
+                               const std::string& gtid_end)
+{
+    test.log_printf("Test read_gtid_from_kafka=false");
+    test.log_printf("GTID: %s -> %s", first_gtid.c_str(), gtid_end.c_str());
+    test.maxscale->stop();
+    test.maxscale->ssh_output("rm /var/lib/maxscale/Kafka-CDC/current_gtid.txt");
+    test.maxscale->ssh_output("sed -i -e \"$ a read_gtid_from_kafka=false\" /etc/maxscale.cnf", true);
+    test.maxscale->start();
+
+    Consumer consumer(test, "kafkacdc");
+
+    sleep(5);
+    read_messages(test, consumer, 12, get_sequence(first_gtid), get_sequence(gtid_end));
+}
+
 int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
@@ -86,6 +104,7 @@ int main(int argc, char** argv)
 
     test.log_printf("Inserting data");
     auto gtid_start = conn.field("SELECT @@gtid_binlog_pos");
+    auto first_gtid = gtid_start;
     conn.query("CREATE TABLE t1(id INT)");
     conn.query("INSERT INTO t1 VALUES (1), (2), (3)");
     conn.query("UPDATE t1 SET id = 4 WHERE id = 2");
@@ -144,6 +163,9 @@ int main(int argc, char** argv)
                 "Expected data event: %s", js.to_string().c_str());
     test.expect(js.get_int("id") == 12,
                 "Expected data to be 12: %s", js.to_string().c_str());
+    test.maxscale->ssh_output("sed -i -e \"/match=/ d\" -e \"/exclude=/ d\" /etc/maxscale.cnf", true);
+
+    test_read_gtid_from_kafka(test, first_gtid, gtid_end);
 
     conn.query("DROP TABLE bob");
     conn.query("DROP TABLE bobcat");

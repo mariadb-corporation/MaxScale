@@ -81,6 +81,10 @@ cfg::ParamRegex s_exclude(
     &s_spec, "exclude", "Exclude data from tables that match this pattern",
     "", cfg::Param::AT_RUNTIME);
 
+cfg::ParamBool s_read_gtid_from_kafka(
+    &s_spec, "read_gtid_from_kafka", "Read oldest GTID from Kafka on startup",
+    true, cfg::Param::AT_RUNTIME);
+
 KafkaCommonConfig s_kafka(&s_spec);
 
 bool KafkaSpecification::post_validate(const cfg::Configuration* config,
@@ -153,6 +157,11 @@ public:
     gtid_pos_t load_latest_gtid() override
     {
         gtid_pos_t rval;
+
+        if (!m_config.read_gtid_from_kafka)
+        {
+            return rval;
+        }
 
         if (auto cnf = create_config(m_config))
         {
@@ -450,6 +459,7 @@ KafkaCDC::Config::Config(const std::string& name, KafkaCDC* router)
     add_native(&Config::send_schema, &s_send_schema);
     add_native(&Config::match, &s_match);
     add_native(&Config::exclude, &s_exclude);
+    add_native(&Config::read_gtid_from_kafka, &s_read_gtid_from_kafka);
     add_native(&Config::ssl, &s_kafka.kafka_ssl);
     add_native(&Config::ssl_ca, &s_kafka.kafka_ssl_ca);
     add_native(&Config::ssl_cert, &s_kafka.kafka_ssl_cert);
