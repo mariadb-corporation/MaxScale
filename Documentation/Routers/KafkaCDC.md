@@ -299,6 +299,19 @@ If this information in these schema change events is not needed or the code that
 processes the Kafka stream can't handle them, they can be disabled with this
 parameter.
 
+### `read_gtid_from_kafka`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `true`
+
+On startup, the latest GTID is by default read from the Kafka cluster. This
+makes it possible to recover the replication position stored by another
+MaxScale. Sometimes this is not desirable and the GTID should only be read from
+the local file or started anew. Examples of these are when the GTIDs are reset
+or the replication topology has changed.
+
 ### `kafka_ssl`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
