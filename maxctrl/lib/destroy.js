@@ -154,7 +154,7 @@ exports.builder = function (yargs) {
       }
     )
     .command(
-      "session <id>",
+      "session <id...>",
       "Close a session",
       function (yargs) {
         return yargs
@@ -165,15 +165,18 @@ exports.builder = function (yargs) {
             default: 0,
           })
           .epilog(
-            "This causes the client session with the given ID to be closed. If the --ttl " +
+            "This causes the client sessions with the given IDs to be closed. If the --ttl " +
               "option is used, the session is given that many seconds to gracefully stop. " +
               "If no TTL value is given, the session is closed immediately."
           )
-          .usage("Usage: destroy session <id>");
+          .usage("Usage: destroy session <id...>");
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "sessions/" + argv.id + "?ttl=" + argv.ttl, { method: "DELETE" });
+          let jobs = argv.id.map(function (id) {
+            return doRequest(host, "sessions/" + id + "?ttl=" + argv.ttl, { method: "DELETE" });
+          });
+          return Promise.all(jobs);
         });
       }
     )
