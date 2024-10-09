@@ -49,12 +49,24 @@ else
     test_vm_box=${test_vm_box:-"ubuntu_jammy_"$provider}
 fi
 
+if [ "$provider" == "ibm" ]
+then
+    test_vm_box=${test_vm_box:-"centos_9_ibm"}
+    maria_product="mdbe"
+else
+    maria_product="mariadb"
+fi
+
 me=`whoami`
 sed -i "s/###test_vm_box###/${test_vm_box}/"  $HOME/${mdbci_config_name}_vms/test_vm.json
 sed -i "s/###test_vm_user###/${me}/" $HOME/${mdbci_config_name}_vms/test_vm.json
 
 mdbci generate test_vm --template test_vm.json --override
 mdbci up test_vm
+
+mdbci install_product --product ${maria_product} --product-version 10.6 --include-unsupported test_vm/ubuntu_jammy
+mdbci install_product --product plugin_mariadb_test --product-version 10.6 --include-unsupported test_vm/ubuntu_jammy
+mdbci install_product --product plugin_gssapi_client --product-version 10.6 test_vm/ubuntu_jammy
 
 ip=`mdbci show network --silent test_vm`
 key=`mdbci show keyfile --silent test_vm`
