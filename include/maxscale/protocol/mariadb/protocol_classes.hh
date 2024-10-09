@@ -132,6 +132,9 @@ public:
     // History of all commands that modify the session state
     std::deque<mxs::Buffer> history;
 
+    // Maximum number of stored session commands
+    size_t max_sescmd_history;
+
     // The responses to the executed commands, contains the ID and the result
     std::map<uint32_t, bool> history_responses;
 
