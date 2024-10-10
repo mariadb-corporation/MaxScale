@@ -1,0 +1,13 @@
+[maxscale]
+threads=###threads###
+debug=allow-duplicate-servers
+
+###server###
+
+[MariaDB-Monitor]
+type=monitor
+module=mysqlmon
+servers=###server_line###
+user=maxskysql
+password=skysql
+monitor_interval=100ms

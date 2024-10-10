@@ -989,6 +989,9 @@ add_test_executable(mxs5231_stale_connections.cc mxs5231_stale_connections basic
 # MXS-5302: Executing more than max_sescmd_history prepared statements may lose some of them
 add_test_executable(mxs5302_ps_overflow.cc mxs5302_ps_overflow mxs5302_ps_overflow LABELS REPL_BACKEND readwritesplit)
 
+# Repeatedly restart MaxScale to catch any hangs on shutdown
+add_test_executable(rapid_restart.cc rapid_restart rapid_restart LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
