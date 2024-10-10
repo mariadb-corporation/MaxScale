@@ -351,6 +351,13 @@ public:
     virtual void stop() = 0;
 
     /**
+     * Check if the user account manager has been started
+     *
+     * @return True if the user account manager was started
+     */
+    virtual bool is_running() const = 0;
+
+    /**
      * Notify the manager that its data should be updated. The updating may happen
      * in a separate thread.
      */

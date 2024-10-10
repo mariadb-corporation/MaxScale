@@ -208,6 +208,8 @@ public:
      */
     void stop() override;
 
+    bool is_running() const override;
+
     void update_user_accounts() override;
     void set_credentials(const std::string& user, const std::string& pw) override;
     void set_backends(const std::vector<SERVER*>& backends) override;
