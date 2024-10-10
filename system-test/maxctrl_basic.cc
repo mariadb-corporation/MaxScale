@@ -19,6 +19,8 @@
 #include <maxtest/testconnections.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
+#include <fstream>
+#include <iostream>
 
 namespace
 {
@@ -90,28 +92,34 @@ void test_reload_tls(TestConnections& test)
         test.tprintf("TLS reload stress test");
         std::vector<std::thread> threads;
         std::atomic<bool> running {true};
+        std::atomic<int> total {0};
 
         for (int i = 0; i < 10; i++)
         {
             threads.emplace_back([&](){
-                int num = 0;
                 while (running)
                 {
-                    ++num;
+                    ++total;
                     auto res = test.maxscale->ssh_output("maxctrl -s -n false list servers", false);
                     test.expect(res.rc == 0, "`list servers` should not fail: %d, %s", res.rc,
                                 res.output.c_str());
                 }
-
-                test.tprintf("Executed %d commands", num);
             });
         }
 
-        for (int i = 0; i < 20; i++)
+        std::ofstream commands("commands.txt");
+
+        for (int i = 0; i < 100; i++)
         {
-            auto res = test.maxctrl("-s -n false reload tls");
-            test.expect(res.rc == 0, "`reload tls` should work: %d, %s", res.rc, res.output.c_str());
+            commands << "reload tls\n";
         }
+
+        commands.flush();
+        test.maxscale->copy_to_node("commands.txt", "/tmp/commands.txt");
+        total.store(0);
+        auto res = test.maxctrl("-s -n false < /tmp/commands.txt");
+        auto total_during_reload = total.load();
+        test.expect(res.rc == 0, "`reload tls` should work: %d, %s", res.rc, res.output.c_str());
 
         running = false;
 
@@ -119,6 +127,8 @@ void test_reload_tls(TestConnections& test)
         {
             t.join();
         }
+
+        test.tprintf("Executed %d commands", total_during_reload);
     }
 
     test.maxscale->ssh_node_f(true, "sed -i  -e '/admin_ssl/ d' /etc/maxscale.cnf");
@@ -227,79 +237,86 @@ int main(int argc, char** argv)
     test.expect(rc != 0, "`list servers` should have no rows with: Maintanance");
 
     test.tprintf("Execute all available commands");
-    test.maxscale->ssh_node_f(false,
-                              "maxctrl list servers;"
-                              "maxctrl list services;"
-                              "maxctrl list listeners RW-Split-Router;"
-                              "maxctrl list monitors;"
-                              "maxctrl list sessions;"
-                              "maxctrl list filters;"
-                              "maxctrl list modules;"
-                              "maxctrl list threads;"
-                              "maxctrl list users;"
-                              "maxctrl list commands;"
-                              "maxctrl show server server1;"
-                              "maxctrl show servers;"
-                              "maxctrl show service RW-Split-Router;"
-                              "maxctrl show services;"
-                              "maxctrl show monitor MySQL-Monitor;"
-                              "maxctrl show monitors;"
-                              "maxctrl show session 1;"
-                              "maxctrl show sessions;"
-                              "maxctrl show filter qla;"
-                              "maxctrl show filters;"
-                              "maxctrl show module readwritesplit;"
-                              "maxctrl show modules;"
-                              "maxctrl show maxscale;"
-                              "maxctrl show thread 1;"
-                              "maxctrl show threads;"
-                              "maxctrl show logging;"
-                              "maxctrl show commands mariadbmon;"
-                              "maxctrl clear server server1 maintenance;"
-                              "maxctrl enable log-priority info;"
-                              "maxctrl disable log-priority info;"
-                              "maxctrl create server server5 127.0.0.1 3306;"
-                              "maxctrl create monitor mon1 mariadbmon user=skysql password=skysql;"
-                              "maxctrl create service svc1 readwritesplit user=skysql password=skysql;"
-                              "maxctrl create filter qla2 qlafilter filebase=/tmp/qla2.log;"
-                              "maxctrl create listener svc1 listener1 9999;"
-                              "maxctrl create user maxuser maxpwd;"
-                              "maxctrl link service svc1 server5;"
-                              "maxctrl link monitor mon1 server5;"
-                              "maxctrl alter service-filters svc1 qla2;"
-                              "maxctrl unlink service svc1 server5;"
-                              "maxctrl unlink monitor mon1 server5;"
-                              "maxctrl alter service-filters svc1"
-                              "maxctrl destroy server server5;"
-                              "maxctrl destroy listener svc1 listener1;"
-                              "maxctrl destroy monitor mon1;"
-                              "maxctrl destroy filter qla2;"
-                              "maxctrl destroy service svc1;"
-                              "maxctrl destroy user maxuser;"
-                              "maxctrl stop service RW-Split-Router;"
-                              "maxctrl stop monitor MySQL-Monitor;"
-                              "maxctrl stop maxscale;"
-                              "maxctrl start service RW-Split-Router;"
-                              "maxctrl start monitor MySQL-Monitor;"
-                              "maxctrl start maxscale;"
-                              "maxctrl alter server server1 port=3307;"
-                              "maxctrl alter server server1 port=3306;"
-                              "maxctrl alter monitor MySQL-Monitor auto_failover=true;"
-                              "maxctrl alter service RW-Split-Router max_slave_connections=3;"
-                              "maxctrl alter service RW-Split-Router slave_selection_criteria=adaptive_routing;"
-                              "maxctrl alter logging ms_timestamp true;"
-                              "maxctrl alter maxscale passive true;"
-                              "maxctrl rotate logs;"
-                              "maxctrl call command mariadbmon reset-replication MySQL-Monitor;"
-                              "maxctrl api get servers;"
-                              "maxctrl classify 'select 1';"
-                              "maxctrl debug stacktrace;"
-                              "maxctrl debug stacktrace --raw;"
-                              "maxctrl debug stacktrace --fold;"
-                              "maxctrl debug stacktrace --duration=1;"
-                              "maxctrl debug stacktrace --duration=1 --interval=100;"
-                              "maxctrl --timeout 30s create report test-report.txt"
-                              );
+
+    // Collecting the commands into a file and feeding that into maxctrl speeds up
+    // the testing by quite a bit.
+    std::ofstream commands("commands.txt");
+    commands
+        << "list servers\n"
+        << "list services\n"
+        << "list listeners RW-Split-Router\n"
+        << "list monitors\n"
+        << "list sessions\n"
+        << "list filters\n"
+        << "list modules\n"
+        << "list threads\n"
+        << "list users\n"
+        << "list commands\n"
+        << "show server server1\n"
+        << "show servers\n"
+        << "show service RW-Split-Router\n"
+        << "show services\n"
+        << "show monitor MySQL-Monitor\n"
+        << "show monitors\n"
+        << "show session 1\n"
+        << "show sessions\n"
+        << "show filter qla\n"
+        << "show filters\n"
+        << "show module readwritesplit\n"
+        << "show modules\n"
+        << "show maxscale\n"
+        << "show thread 1\n"
+        << "show threads\n"
+        << "show logging\n"
+        << "show commands mariadbmon\n"
+        << "clear server server1 maintenance\n"
+        << "enable log-priority info\n"
+        << "disable log-priority info\n"
+        << "create server server5 127.0.0.1 3306\n"
+        << "create monitor mon1 mariadbmon user=skysql password=skysql\n"
+        << "create service svc1 readwritesplit user=skysql password=skysql\n"
+        << "create filter qla2 qlafilter filebase=/tmp/qla2.log\n"
+        << "create listener svc1 listener1 9999\n"
+        << "create user maxuser maxpwd\n"
+        << "link service svc1 server5\n"
+        << "link monitor mon1 server5\n"
+        << "alter service-filters svc1 qla2\n"
+        << "unlink service svc1 server5\n"
+        << "unlink monitor mon1 server5\n"
+        << "alter service-filters svc1"
+        << "destroy server server5\n"
+        << "destroy listener svc1 listener1\n"
+        << "destroy monitor mon1\n"
+        << "destroy filter qla2\n"
+        << "destroy service svc1\n"
+        << "destroy user maxuser\n"
+        << "stop service RW-Split-Router\n"
+        << "stop monitor MySQL-Monitor\n"
+        << "stop maxscale\n"
+        << "start service RW-Split-Router\n"
+        << "start monitor MySQL-Monitor\n"
+        << "start maxscale\n"
+        << "alter server server1 port=3307\n"
+        << "alter server server1 port=3306\n"
+        << "alter monitor MySQL-Monitor auto_failover=true\n"
+        << "alter service RW-Split-Router max_slave_connections=3\n"
+        << "alter service RW-Split-Router slave_selection_criteria=adaptive_routing\n"
+        << "alter logging ms_timestamp true\n"
+        << "alter maxscale passive true\n"
+        << "rotate logs\n"
+        << "call command mariadbmon reset-replication MySQL-Monitor\n"
+        << "api get servers\n"
+        << "classify 'select 1'\n"
+        << "debug stacktrace\n"
+        << "debug stacktrace --raw\n"
+        << "debug stacktrace --fold\n"
+        << "debug stacktrace --duration=1\n"
+        << "debug stacktrace --duration=1 --interval=100\n"
+        << "create report test-report.txt\n";
+
+    commands.flush();
+    test.maxscale->copy_to_node("commands.txt", "/tmp/commands.txt");
+    test.maxscale->ssh_node_f(false, "maxctrl --timeout 30s < /tmp/commands.txt");
 
     test.tprintf("MXS-3697: MaxCtrl fails with \"ENOENT: no such file or directory, stat '/~/.maxctrl.cnf'\" "
                  "when running commands from the root directory.");
