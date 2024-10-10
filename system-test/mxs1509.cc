@@ -51,6 +51,10 @@ void test_main(TestConnections& test)
     auto ext_master = {mxt::ServerInfo::master_st | mxt::ServerInfo::EXT_MASTER, mxt::ServerInfo::slave_st};
     auto ext_both = {mxt::ServerInfo::master_st | mxt::ServerInfo::EXT_MASTER,
                      mxt::ServerInfo::slave_st | mxt::ServerInfo::EXT_MASTER};
+    auto ext_master_stopped_slave = {mxt::ServerInfo::master_st | mxt::ServerInfo::EXT_MASTER,
+                                     mxt::ServerInfo::slave_st | mxt::ServerInfo::EXT_MASTER_STOPPED};
+    auto stopped_both = {mxt::ServerInfo::master_st | mxt::ServerInfo::EXT_MASTER_STOPPED,
+                         mxt::ServerInfo::slave_st | mxt::ServerInfo::EXT_MASTER_STOPPED};
     test.maxscale->check_print_servers_status(basic_status);
 
     test.tprintf("Stop replication on nodes three and four");
@@ -74,11 +78,11 @@ void test_main(TestConnections& test)
     test.tprintf("Stopping multi-source replication on slave should "
                  "remove the Slave of External Server status");
     execute_query(test.repl->nodes[1], "STOP SLAVE 'extra-slave'; RESET SLAVE 'extra-slave';");
-    test.maxscale->check_print_servers_status(ext_master);
+    test.maxscale->check_print_servers_status(ext_master_stopped_slave);
 
     test.tprintf("Doing the same on the master should remove status");
     execute_query(test.repl->nodes[0], "STOP ALL SLAVES; RESET SLAVE ALL;");
-    test.maxscale->check_print_servers_status(basic_status);
+    test.maxscale->check_print_servers_status(stopped_both);
 
     test.tprintf("Cleanup");
     test.repl->execute_query_all_nodes("STOP ALL SLAVES; RESET SLAVE ALL;");
