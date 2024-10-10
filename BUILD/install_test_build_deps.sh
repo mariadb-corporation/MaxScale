@@ -119,6 +119,7 @@ else
     sudo yum install -y --nogpgcheck ${enable_power_tools} ${enable_crb} centos-release-scl
     sudo yum install -y --nogpgcheck ${enable_power_tools} ${enable_crb} devtoolset-7-gcc*
     sudo yum install -y --nogpgcheck ${enable_power_tools} ${enable_crb} php-mysql
+    sudo yum install -y --nogpgcheck ${enable_power_tools} ${enable_crb} php-mysqlnd
     echo "please run 'scl enable devtoolset-7 bash' to enable new gcc!!"
   fi
 fi
