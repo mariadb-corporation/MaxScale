@@ -186,7 +186,7 @@ the server will use a local UNIX domain socket connection. In this case the thir
 argument is ignored.
 `
           )
-          .usage("Usage: create server [params...]")
+          .usage("Usage: create server <name> [params...]")
           .group(["services", "monitors"], "Create server options:")
           .option("services", {
             describe: "Link the created server to these services",
