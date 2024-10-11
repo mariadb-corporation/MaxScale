@@ -37,7 +37,9 @@ var tests = [
   "show commands readwritesplit",
   "show qc_cache",
   "show dbusers RW-Split-Router",
-  "show modules --load-all"
+  "show modules --load-all",
+  "show replication",
+  "show replication --monitor MariaDB-Monitor"
 ];
 
 var rdns_tests = ["list sessions", "show sessions"];

@@ -198,7 +198,6 @@ void MariaDBMonitor::build_replication_graph()
              * such a server being emergency promoted if master goes down (MXS-4798, case 4 in
              * master_is_valid()). Emergency promotion is still possible if both threads are shut down,
              * i.e. STOP SLAVE */
-            bool slave_io_on = slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO;
 
             MariaDBServer* found_master = nullptr;
             bool is_external = false;
@@ -244,6 +243,7 @@ void MariaDBMonitor::build_replication_graph()
                 }
             };
 
+            bool slave_io_on = slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO;
             if (slave_io_on || slave_conn.slave_sql_running)
             {
                 // Valid slave connection, find the MariaDBServer with this id.
