@@ -102,8 +102,7 @@ bool Table::prepare(MYSQL* mysql)
     std::string create = "CREATE TABLE IF NOT EXISTS " + m_table + " ("
         + "data LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, "
         + "id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY, "
-        + "CONSTRAINT data_is_json CHECK(JSON_VALID(data)), "
-        + "CONSTRAINT id_is_not_null CHECK(JSON_EXTRACT(data, '$._id') IS NOT NULL) "
+        + "CONSTRAINT data_is_json CHECK(JSON_VALID(data)) "
         + ")";
 
     if (mysql_query(mysql, create.c_str()) == 0)
