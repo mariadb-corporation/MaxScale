@@ -1213,11 +1213,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
             }
             else
             {
-                MXB_INFO("Storing %s while in state '%s': %s",
-                         mariadb::cmd_to_string(queue),
-                         to_string(m_state).c_str(),
-                         string(mariadb::get_sql(queue)).c_str());
-                m_delayed_packets.emplace_back(std::move(queue));
+                store_delayed_packet(std::move(queue));
                 rc = 1;
             }
         }
@@ -1225,11 +1221,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
 
     default:
         {
-            MXB_INFO("Storing %s while in state '%s': %s",
-                     mariadb::cmd_to_string(queue),
-                     to_string(m_state).c_str(),
-                     string(mariadb::get_sql(queue)).c_str());
-            m_delayed_packets.emplace_back(std::move(queue));
+            store_delayed_packet(std::move(queue));
             rc = 1;
         }
         break;
@@ -2641,6 +2633,45 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
     }
 
     return rval;
+}
+
+void MariaDBBackendConnection::store_delayed_packet(GWBUF&& buffer)
+{
+    uint8_t cmd = mariadb::get_command(buffer);
+
+    if (cmd == MXS_COM_STMT_CLOSE && !m_delayed_packets.empty())
+    {
+        // This'll ignore MARIADB_PS_DIRECT_EXEC_ID which could also be handled by popping
+        // the last command if it's a COM_STMT_PREPARE. This is unlikely to happen as no
+        // connector is known to behave like this.
+        uint32_t ps_id = mxs_mysql_extract_ps_id(buffer);
+        auto it = std::find_if(m_delayed_packets.begin(), m_delayed_packets.end(), [&](const auto& buf){
+            return buf.id() == ps_id;
+        });
+
+        if (it != m_delayed_packets.end())
+        {
+            MXB_INFO("COM_STMT_CLOSE refers to COM_STMT_PREPARE with ID %u that is "
+                     "queued for execution, removing both from the queue.", ps_id);
+            m_delayed_packets.erase(it);
+            return;
+        }
+    }
+
+    m_delayed_packets.emplace_back(std::move(buffer));
+
+    MXB_INFO("Storing %s while in state '%s', %lu packet(s) queued: %s",
+             mariadb::cmd_to_string(cmd), to_string(m_state).c_str(), m_delayed_packets.size(),
+             string(mariadb::get_sql(m_delayed_packets.back())).c_str());
+
+    size_t too_many_packets = std::max(mysql_session()->history().max_size(), 5UL);
+
+    if (m_delayed_packets.size() > too_many_packets)
+    {
+        MXB_WARNING("Server '%s' is too much behind (%lu queued packets), closing connection.",
+                    m_server.name(), m_delayed_packets.size());
+        m_dcb->trigger_hangup_event();
+    }
 }
 
 bool MariaDBBackendConnection::send_delayed_packets()
