@@ -3068,7 +3068,7 @@ void MariaDBBackendConnection::store_delayed_packet(mxs::Buffer buffer)
 
     MXB_INFO("Storing %s while in state '%s', %lu packet(s) queued: %s",
              STRPACKETTYPE(cmd), to_string(m_state).c_str(), m_delayed_packets.size(),
-             buffer.get_sql().c_str());
+             m_delayed_packets.back().get_sql().c_str());
 
     size_t too_many_packets = std::max(mysql_session()->max_sescmd_history, 5UL);
 
