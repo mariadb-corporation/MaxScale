@@ -1220,7 +1220,16 @@ The following operations are routed to primary:
 * All statements within an open read-write transaction
 * Stored procedure calls
 * User-defined function calls
-* Statements that use `LAST_INSERT_ID()`
+* Queries that use sequences (`NEXT VALUE FOR seq`, `NEXTVAL(seq)` or `seq.nextval`)
+* Statements that use any of the following functions:
+  * `LAST_INSERT_ID()`
+  * `GET_LOCK()`
+  * `RELEASE_LOCK()`
+  * `IS_USED_LOCK()`
+  * `IS_FREE_LOCK()`
+* Statements that use any of the following variables:
+  * `@@last_insert_id`
+  * `@@identity`
 
 In addition to these, if the **readwritesplit** service is configured with the
 `max_replication_lag` parameter, and if all replicas suffer from too much

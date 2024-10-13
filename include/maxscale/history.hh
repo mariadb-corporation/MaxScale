@@ -225,6 +225,14 @@ public:
         return m_history.size();
     }
 
+    /**
+     * Maximum size of the history
+     */
+    size_t max_size() const
+    {
+        return m_max_sescmd_history;
+    }
+
     size_t runtime_size() const;
 
     /**
