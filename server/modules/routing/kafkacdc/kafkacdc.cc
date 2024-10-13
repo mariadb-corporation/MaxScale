@@ -389,6 +389,7 @@ private:
 
             if (err == RdKafka::ERR__QUEUE_FULL)
             {
+                MXB_DEBUG("Polling producer");
                 m_producer->poll(1000);
             }
             else if (err != RdKafka::ERR_NO_ERROR)
@@ -396,6 +397,10 @@ private:
                 MXB_ERROR("%s", RdKafka::err2str(err).c_str());
                 MXB_FREE(json);
                 break;
+            }
+            else
+            {
+                MXB_DEBUG("Sent: %s", mxb::json_dump(obj).c_str());
             }
         }
         while (err == RdKafka::ERR__QUEUE_FULL);

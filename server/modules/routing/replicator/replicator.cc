@@ -88,7 +88,7 @@ private:
     bool process_one_event(SQL::Event& event);
     bool load_gtid_state();
     void save_gtid_state() const;
-    void wait();
+    void wait(int multiplier);
 
     static GtidList    parse_gtid_list(const std::string& gtid_list_str);
     static std::string gtid_list_to_string(const GtidList& gtid_list);
@@ -287,10 +287,11 @@ void Replicator::Imp::update_gtid()
     }
 }
 
-void Replicator::Imp::wait()
+void Replicator::Imp::wait(int multiplier)
 {
+    multiplier = std::min(multiplier, 12);
     std::unique_lock<std::mutex> guard(m_lock);
-    m_cv.wait_for(guard, seconds(5));
+    m_cv.wait_for(guard, seconds(5 * multiplier));
 }
 
 void Replicator::Imp::process_events()
@@ -325,6 +326,8 @@ void Replicator::Imp::process_events()
         });
     }, mxb::Worker::EXECUTE_AUTO);
 
+    int errors = 0;
+
     while (m_running)
     {
         if (!m_is_owner)
@@ -341,7 +344,7 @@ void Replicator::Imp::process_events()
             }
 
             m_sql.reset();
-            wait();
+            wait(1);
             continue;
         }
 
@@ -362,7 +365,7 @@ void Replicator::Imp::process_events()
             }
 
             // We failed to connect to any of the servers, try again in a few seconds
-            wait();
+            wait(++errors);
             continue;
         }
 
@@ -377,6 +380,10 @@ void Replicator::Imp::process_events()
                  * the safest thing to do is to stop processing data.
                  */
                 m_running = false;
+            }
+            else
+            {
+                errors = 0;
             }
         }
         else if (m_sql->errnum() == CR_SERVER_LOST)
@@ -408,10 +415,14 @@ void Replicator::Imp::process_events()
             {
                 MXB_ERROR("Failed to read replicated event: %d, %s", m_sql->errnum(), m_sql->error().c_str());
             }
+            else
+            {
+                MXB_ERROR("Replication stopped, EOF from %s", m_sql->server().host.c_str());
+            }
 
             // Close the connection and reconnect after waiting for a while.
             m_sql.reset();
-            wait();
+            wait(++errors);
         }
 
         if (m_should_stop && m_safe_to_stop)

@@ -1410,7 +1410,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
         m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
         m_session_data->history.emplace_back(move(m_pending_cmd));
 
-        if (m_session_data->history.size() > m_max_sescmd_history)
+        if (m_session_data->history.size() > m_session_data->max_sescmd_history)
         {
             prune_history();
         }
@@ -1439,7 +1439,7 @@ void MariaDBClientConnection::prune_history()
         return cmd.data()[MYSQL_HEADER_LEN] != MXS_COM_STMT_PREPARE;
     });
 
-    if (num_sescmd <= m_max_sescmd_history)
+    if (num_sescmd <= m_session_data->max_sescmd_history)
     {
         // The total number of non-COM_STMT_PREPARE commands is below max_sescmd_history, no need to prune
         // anything.
@@ -1813,7 +1813,7 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
 {
     m_qc.set_verbose(false);
     const auto& svc_config = *m_session->service->config();
-    m_max_sescmd_history = svc_config.disable_sescmd_history ? 0 : svc_config.max_sescmd_history;
+    m_session_data->max_sescmd_history = svc_config.disable_sescmd_history ? 0 : svc_config.max_sescmd_history;
     m_track_pooling_status = session->idle_pooling_enabled();
 }
 
@@ -3184,7 +3184,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         {
             // TODO: Configurable? Also, must be many other situations where backend conns should not be
             // runtime-pooled.
-            if (m_session_data->history.size() > m_max_sescmd_history)
+            if (m_session_data->history.size() > m_session_data->max_sescmd_history)
             {
                 m_pooling_permanent_disable = true;
                 m_session->set_can_pool_backends(false);
