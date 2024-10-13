@@ -2578,6 +2578,14 @@ This parameter was moved into the MaxScale core in MaxScale 6.0. The parameter
 can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
 
+In addition to limiting the number of commands to store, it also acts as a hard
+limit on the number of packets that may be queued up on a backend before it is
+closed. Packets are queued while the TCP socket is being opened and when
+prepared statements are being prepared. In certain rare cases, a slow server may
+fall behind and not catch up to the rest of the cluster and a backlog of packets
+forms. In these cases, if more than `max_sescmd_history` packets are queued, the
+connection to the server is closed.
+
 ### `prune_sescmd_history`
 
 - **Type**: [boolean](#booleans)

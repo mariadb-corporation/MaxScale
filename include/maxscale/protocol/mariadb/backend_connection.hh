@@ -143,6 +143,7 @@ private:
     StateMachineRes handshake();
     StateMachineRes authenticate();
     StateMachineRes send_connection_init_queries();
+    void            store_delayed_packet(mxs::Buffer buffer);
     bool            send_delayed_packets();
     void            normal_read();
 
