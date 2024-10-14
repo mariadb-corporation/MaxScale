@@ -523,7 +523,7 @@ later.
       4. Run the commands in `promotion_sql_file`.
       5. Start replication from external primary if one existed.
 4. Redirect all other replicas to replicate from the new primary:
-      1. STOP SLAVE and RESET SLAVE
+      1. STOP SLAVE
       2. CHANGE MASTER TO
       3. START SLAVE
 5. Check that all replicas are replicating.
