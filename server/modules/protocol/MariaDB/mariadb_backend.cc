@@ -2410,8 +2410,11 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
 void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
 {
     ++it;                   // Skip the command byte
-    skip_encoded_int(it);   // Affected rows
-    skip_encoded_int(it);   // Last insert ID
+
+    uint64_t affected_rows = get_encoded_int(it);
+    m_reply.set_affected_rows(affected_rows);
+    uint64_t last_insert_id = get_encoded_int(it);
+    m_reply.set_last_insert_id(last_insert_id);
     uint16_t status = mariadb::get_byte2(it);
     it += 2;
 
