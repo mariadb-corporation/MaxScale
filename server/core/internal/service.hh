@@ -114,6 +114,13 @@ public:
      */
     static void destroy(Service* service);
 
+    /**
+     * Shut down all services
+     *
+     * Shutting down the services will stop the user account managers from doing updates.
+     */
+    static void shutdown();
+
     ~Service();
 
     /**
@@ -452,14 +459,6 @@ private:
  *
  * These functions should only be called by the MaxScale core.
  */
-
-/**
- * @brief Shut all services down
- *
- * Turns on the shutdown flag in each service. This should be done as
- * part of the MaxScale shutdown.
- */
-void service_shutdown(void);
 
 /**
  * @brief Destroy all service router and filter instances
