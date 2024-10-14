@@ -364,7 +364,12 @@ std::string Reply::describe() const
         }
         else if (is_ok())
         {
-            ss << "OK: " << num_warnings() << " warnings";
+            ss << "OK: " << affected_rows() << " rows affected, " << num_warnings() << " warnings";
+
+            if (uint64_t id = last_insert_id())
+            {
+                ss << ", last insert ID " << id;
+            }
         }
         else if (is_resultset())
         {
@@ -458,6 +463,16 @@ uint64_t Reply::rows_read() const
     return m_row_count;
 }
 
+uint64_t Reply::affected_rows() const
+{
+    return m_affected_rows;
+}
+
+uint64_t Reply::last_insert_id() const
+{
+    return m_last_insert_id;
+}
+
 uint16_t Reply::num_warnings() const
 {
     return m_num_warnings;
@@ -537,6 +552,16 @@ void Reply::set_is_ok(bool is_ok)
 void Reply::set_variable(const std::string& key, const std::string& value)
 {
     m_variables.insert(std::make_pair(key, value));
+}
+
+void Reply::set_affected_rows(uint64_t affected_rows)
+{
+    m_affected_rows = affected_rows;
+}
+
+void Reply::set_last_insert_id(uint64_t last_insert_id)
+{
+    m_last_insert_id = last_insert_id;
 }
 
 void Reply::set_num_warnings(uint16_t warnings)
