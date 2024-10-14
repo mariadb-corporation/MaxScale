@@ -150,6 +150,11 @@ void MariaDBUserManager::stop()
     m_updater_thread.join();
 }
 
+bool MariaDBUserManager::is_running() const
+{
+    return m_keep_running.load(relaxed);
+}
+
 void MariaDBUserManager::update_user_accounts()
 {
     {
