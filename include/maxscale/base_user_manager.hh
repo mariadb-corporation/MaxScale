@@ -40,6 +40,7 @@ public:
 
     void start() override;
     void stop() override;
+    bool is_running() const override;
 
 protected:
     BaseUserManager();

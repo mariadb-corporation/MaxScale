@@ -302,6 +302,7 @@ void MainWorker::start_shutdown()
             }
 
             Listener::stop_all();
+            Service::shutdown();
 
             // If there was a problem with the config, the routing workers were never started
             // in which case they need not be shutdown.

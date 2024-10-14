@@ -70,6 +70,11 @@ void BaseUserManager::stop()
     m_updater_thread.join();
 }
 
+bool BaseUserManager::is_running() const
+{
+    return m_keep_running.load(relaxed);
+}
+
 void BaseUserManager::update_user_accounts()
 {
     {
