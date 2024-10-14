@@ -96,3 +96,29 @@ functionality.
 
 [The administration tutorial](../Tutorials/Administration-Tutorial.md)
 covers the common administration tasks that need to be done with MariaDB MaxScale.
+
+## Copying or Backing Up MaxScale
+
+The main configuration file for MaxScale is in `/etc/maxscale.cnf` and
+additional user-created configuration files are in
+`/etc/maxscale.cnf.d/`. Objects created or modified at runtime are stored in
+`/var/lib/maxscale/maxscale.cnf.d/`. Some modules also store internal data in
+`/var/lib/maxscale/` named after the module or the configuration object.
+
+The simplest way to back up the configuration and runtime data of a MaxScale
+installation is to create an archive from the following files and directories:
+
+* `/etc/maxscale.cnf`
+
+* `/etc/maxscale.cnf.d/`
+
+* `/var/lib/maxscale/`
+
+This can be done with the following command:
+
+```
+tar -caf maxscale-backup.tar.gz /etc/maxscale.cnf /etc/maxscale.cnf.d/ /var/lib/maxscale/
+```
+
+If MaxScale is configured to store data in custom locations, these should be
+included in the backup as well.
