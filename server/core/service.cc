@@ -613,12 +613,7 @@ Service::Service(const std::string& name, const std::string& router_name)
 Service::~Service()
 {
     mxb_assert((m_refcount == 0 && !active()) || maxscale_teardown_in_progress() || state == State::FAILED);
-
-    auto manager = user_account_manager();
-    if (manager)
-    {
-        manager->stop();
-    }
+    mxb_assert(!user_account_manager() || !user_account_manager()->is_running());
 
     if (state != State::FAILED)
     {
@@ -635,8 +630,34 @@ void Service::destroy(Service* service)
 {
     mxb_assert(service->active());
     mxb_assert(mxs::MainWorker::is_current());
+    auto manager = service->user_account_manager();
+
+    if (manager && manager->is_running())
+    {
+        manager->stop();
+    }
+
     service->m_active = false;
     service->decref();
+}
+
+// static
+void Service::shutdown()
+{
+    LockGuard guard(this_unit.lock);
+
+    for (Service* service : this_unit.services)
+    {
+        if (auto* manager = service->user_account_manager())
+        {
+            // The user account managers must be stopped before the shutdown has proceeded to
+            // the point where RoutingWorkers no longer respond to messages. The Service::shutdown()
+            // function is called after The REST-API and listeners have been stopped which means
+            // that no new clients will try to connect to MaxScale and existing ones will not
+            // do user account updates.
+            manager->stop();
+        }
+    }
 }
 
 /**
