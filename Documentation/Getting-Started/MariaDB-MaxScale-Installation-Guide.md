@@ -1,24 +1,30 @@
 # MariaDB MaxScale Installation Guide
 
-## Normal Installation
+## Install MariaDB MaxScale From MariaDB Repositories
 
-Download the MaxScale package from the MariaDB Downloads page:
+The recommended approach is to use [the MariaDB package
+repository](https://mariadb.com/kb/en/library/mariadb-package-repository-setup-and-usage/)
+to install MaxScale. After enabling the repository by following the
+instructions, MaxScale can be installed with the following commands.
 
-* [https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale](https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale)
+* For RHEL/Rocky Linux/Alma Linux, use `dnf install maxscale`.
 
-Select your operating system and download either the RPM or the DEB package.
+* For Debian and Ubuntu, run `apt update` followed by `apt install maxscale`.
 
-* For RHEL/CentOS variants, use `yum` to install the downloaded RPM
+* For SLES, use `zypper install maxscale`.
 
-* For SLES, use `zypper`
+## Install MariaDB MaxScale From a RPM/DEB Package
 
-* For Debian/Ubuntu systems, install the package with `dpkg -i` and run `apt-get install`
-  after it to install the dependencies
+Download the correct MaxScale package for your CPU architecture and operating
+system from [the MariaDB Downloads
+page](https://mariadb.com/downloads/community/maxscale/). MaxScale can be
+installed with the following commands.
 
-You can also use
-[the MariaDB package repository](https://mariadb.com/kb/en/library/mariadb-package-repository-setup-and-usage/)
-to install MaxScale by first configuring the repository and then
-installing the `maxscale` package via your package manager.
+* For RHEL/Rocky Linux/Alma Linux, use `dnf install /path/to/maxscale-*.rpm`
+
+* For Debian and Ubuntu, use `apt install /path/to/maxscale-*.deb`.
+
+* For SLES, use `zypper install /path/to/maxscale-*.rpm`.
 
 ## Install MariaDB MaxScale Using a Tarball
 
