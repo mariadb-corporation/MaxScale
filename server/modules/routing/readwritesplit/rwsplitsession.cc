@@ -101,7 +101,7 @@ bool RWSplitSession::routeQuery(GWBUF* querybuf)
 
     mxs::Buffer buffer(querybuf);
 
-    if (m_state == TRX_REPLAY || m_pending_retries > 0 || !m_query_queue.empty())
+    if (m_state == TRX_REPLAY || !m_pending_retries.empty() || !m_query_queue.empty())
     {
         MXB_INFO("New %s received while %s is active: %s",
                  STRPACKETTYPE(buffer.data()[4]),
@@ -762,6 +762,15 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
+            // If there are pending retries while the state is TRX_REPLAY, the transaction replay
+            // was started again before the previous queries were routed. In this case the currently
+            // queued up delay_routing() calls would have to be canceled but this is not currently
+            // possible. As a workaround, a second counter of "discarded" queries must be used to
+            // indicate the number of queries to discard. This effectively cancels out the pending
+            // delay_routing() calls.
+            mxb_assert(m_canceled_retries <= m_pending_retries.size());
+            m_canceled_retries = m_pending_retries.size();
+
             // Not the first time, copy the original
             m_replayed_trx.close();
             m_trx.close();
