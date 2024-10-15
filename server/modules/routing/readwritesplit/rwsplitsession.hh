@@ -492,9 +492,14 @@ private:
 
     mxb::StopWatch m_trx_replay_timer;      /**< When the last transaction replay started */
 
-    // Number of queries being replayed. If this is larger than zero, the normal routeQuery method is "corked"
-    // until the retried queries have been processed. In practice this should always be either 1 or 0.
-    int m_pending_retries {0};
+    // Queries being replayed. If this is non-empty, the normal routeQuery method is "corked"
+    // until the retried queries have been processed. In practice this nearly always has
+    // only one query in it. The exception to this is a few edge cases in transaction replay.
+    std::vector<mxs::Buffer> m_pending_retries;
+
+    // Number of queries being replayed that were canceled. This counter is used to "discard"
+    // queries that are queued up via the delay_routing() mechanism.
+    size_t m_canceled_retries {0};
 
     // Map of COM_STMT_PREPARE responses mapped to their SQL
     std::unordered_map<std::string, mxs::Buffer> m_ps_cache;

@@ -76,17 +76,31 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 
     // Route the query again later
     m_pSession->delay_routing(
-        this, querybuf, delay, [this](GWBUF* buffer){
-        mxb_assert(m_pending_retries > 0);
-        --m_pending_retries;
+        this, gwbuf_alloc(1), delay, [this](GWBUF* dummy){
+        // TODO: Remove the GWBUF from delay_routing() and store it as a captured argument.
+        gwbuf_free(dummy);
+
+        mxb_assert(!m_pending_retries.empty());
+        GWBUF* buffer = m_pending_retries.front().release();
+        m_pending_retries.erase(m_pending_retries.begin());
+
+        if (m_canceled_retries > 0)
+        {
+            --m_canceled_retries;
+            MXB_INFO("Discarding retried query: %s", buffer->get_sql().c_str());
+            gwbuf_free(buffer);
+
+            mxb_assert_message(m_state == State::TRX_REPLAY,
+                               "Only transaction replay should cause retried queries to be discarded");
+            return true;
+        }
 
         return route_query(buffer);
     });
 
     ++m_retry_duration;
 
-    mxb_assert(m_pending_retries >= 0);
-    ++m_pending_retries;
+    m_pending_retries.push_back(querybuf);
 }
 
 bool RWSplitSession::have_connected_slaves() const
