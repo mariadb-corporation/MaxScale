@@ -166,6 +166,7 @@ private:
     bool trx_target_still_valid() const;
     bool should_migrate_trx() const;
     bool start_trx_migration(GWBUF* querybuf);
+    bool restart_trx_replay();
     void log_master_routing_failure(bool found,
                                     mxs::RWBackend* old_master,
                                     mxs::RWBackend* curr_master);
@@ -263,12 +264,6 @@ private:
                && m_expected_responses == 0
                && m_retry_duration < m_config.delayed_retry_timeout.count()
                && !trx_is_open();
-    }
-
-    // Whether a transaction replay can remain active
-    inline bool can_continue_trx_replay() const
-    {
-        return m_state == TRX_REPLAY && m_retry_duration < m_config.delayed_retry_timeout.count();
     }
 
     // Whether a new transaction replay can be started, limited by transaction_replay_max_attempts and

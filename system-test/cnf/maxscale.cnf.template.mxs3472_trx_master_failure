@@ -21,6 +21,7 @@ password=skysql
 delayed_retry_timeout=60s
 transaction_replay=true
 transaction_replay_attempts=5
+transaction_replay_timeout=10s
 
 [RW-Split-Listener]
 type=listener
