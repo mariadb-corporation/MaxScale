@@ -201,6 +201,10 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
                   buffer.get_sql().c_str(), get_verbose_status().c_str());
         ok = false;
     }
+    else if (m_state == TRX_REPLAY)
+    {
+        ok = restart_trx_replay();
+    }
     else if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
     {
         // If the connection to the previous transaction target is still open, we must close it to prevent the
@@ -209,7 +213,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
 
         ok = start_trx_migration(buffer.get());
     }
-    else if (can_retry_query() || can_continue_trx_replay())
+    else if (can_retry_query())
     {
         MXB_INFO("Delaying routing: %s", buffer.get_sql().c_str());
         retry_query(buffer.release());
@@ -682,8 +686,13 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 
     if (!ok)
     {
-        if (can_retry_query() || can_continue_trx_replay())
+        if (m_state == TRX_REPLAY)
         {
+            ok = restart_trx_replay();
+        }
+        else if (can_retry_query())
+        {
+            // TODO: This unnecessarily requires delayed_retry when it should work without it
             MXB_INFO("Delaying routing: %s", buffer.get_sql().c_str());
             retry_query(buffer.release());
             ok = true;
@@ -1100,6 +1109,31 @@ bool RWSplitSession::start_trx_migration(GWBUF* querybuf)
      * the error logging done when no valid target is found for a query
      * as well as to prevent retrying of queries in the wrong order.
      */
+    return start_trx_replay();
+}
+
+bool RWSplitSession::restart_trx_replay()
+{
+    mxb_assert(m_config.transaction_replay);
+    MXB_INFO("Restarting transaction replay, no valid targets found. Last target was: %s",
+             m_trx.target() ? m_trx.target()->name() : "<none>");
+
+    // During transaction replay, whenever the routing of a query fails due to
+    // a lack of valid targets, close the connection to the transaction target
+    // and replay the whole transaction from the beginning. This will make sure
+    // that any partially replayed transactions are closed as soon as possible.
+    // Leaving the connection open causes any transactions that it has to also remain
+    // open on the replay target which may prevent other operations from proceeding.
+    //
+    // In particular, this would happen if mariadbmon did a switchover while readwritesplit
+    // was replaying a transaction on the server being demoted. As the switchover removes
+    // the Master label from the demotion target before putting it into read-only mode,
+    // a deadlock occurs where the monitor waits for the `SET GLOBAL read_only=1` to
+    // complete which is blocked by the earlier transaction that readwritesplit has open
+    // that in turn is waiting for a server with a Master label to appear. This cycle is
+    // currently broken by the discard_connect() call that closes the connection which
+    // rolls back all transactions.
+    discard_connection(m_trx.target(), "Closed due to restart of transaction replay");
     return start_trx_replay();
 }
 
