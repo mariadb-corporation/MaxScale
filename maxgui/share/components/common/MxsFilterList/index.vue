@@ -58,29 +58,25 @@
                 />
             </v-list-item>
             <v-divider />
-            <v-list-item
-                v-for="(item, index) in itemsList"
-                :key="`${index}`"
-                class="px-2"
-                dense
-                link
-            >
-                <v-checkbox
-                    dense
-                    color="primary"
-                    class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
-                    :input-value="!untickedItems.includes(returnIndex ? index : item)"
-                    hide-details
-                    @change="toggleItem($event, item, index)"
-                >
-                    <template v-slot:label>
-                        <mxs-truncate-str
-                            v-mxs-highlighter="{ keyword: filterTxt, txt: item }"
-                            :tooltipItem="{ txt: `${item}` }"
-                        />
-                    </template>
-                </v-checkbox>
-            </v-list-item>
+            <template v-for="(item, index) in itemsList">
+                <v-list-item v-if="!item.hidden" :key="`${index}`" class="px-2" dense link>
+                    <v-checkbox
+                        dense
+                        color="primary"
+                        class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
+                        :input-value="!untickedItems.includes(returnIndex ? index : item.value)"
+                        hide-details
+                        @change="toggleItem($event, item.value, index)"
+                    >
+                        <template v-slot:label>
+                            <mxs-truncate-str
+                                v-mxs-highlighter="{ keyword: filterTxt, txt: item.value }"
+                                :tooltipItem="{ txt: `${item.value}` }"
+                            />
+                        </template>
+                    </v-checkbox>
+                </v-list-item>
+            </template>
         </v-list>
     </v-menu>
 </template>
@@ -127,7 +123,10 @@ export default {
             },
         },
         itemsList() {
-            return this.items.filter(str => this.$helpers.ciStrIncludes(`${str}`, this.filterTxt))
+            return this.items.map(str => ({
+                value: str,
+                hidden: !this.$helpers.ciStrIncludes(`${str}`, this.filterTxt),
+            }))
         },
         isAllTicked() {
             return this.untickedItems.length === 0
