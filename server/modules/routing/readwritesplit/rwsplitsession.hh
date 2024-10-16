@@ -234,6 +234,7 @@ private:
     bool lock_to_master() override;
     bool is_locked_to_master() const override;
     bool supports_hint(Hint::Type hint_type) const override;
+    bool is_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error) const;
     bool handle_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error);
 
     std::string get_delayed_retry_failure_reason() const;
