@@ -4,21 +4,27 @@
 
 set -x
 
+function is_ppc64() {
+    [ "$(arch)" == "ppc64le" ]
+}
+
+
 cd ./MaxScale || exit 1
 git submodule update --init
 cd ..
 
 NCPU=$(grep -c processor /proc/cpuinfo)
+NCPUSTR="-j${NCPU}"
 
-if [ "$PARALLEL_BUILD" == "no" ]
+if [ "$PARALLEL_BUILD" == "no" ] || [ is_ppc64 ]
 then
-    NCPU=1
+    NCPUSTR=""
 fi
 
 mkdir _build
 cd _build || exit 1
 cmake ../MaxScale -DCMAKE_COLOR_MAKEFILE=N $cmake_flags
-make "-j${NCPU}" || exit 1
+make ${NCPUSTR} || exit 1
 
 if [[ "$cmake_flags" =~ "BUILD_TESTS=Y" ]]
 then
@@ -29,7 +35,7 @@ then
     ctest --timeout 120 --output-on-failure "-j${NCPU}" || exit 1
 fi
 
-sudo make "-j${NCPU}" package
+sudo make ${NCPUSTR} package
 res=$?
 if [ $res != 0 ] ; then
 	echo "Make package failed"
@@ -40,4 +46,4 @@ sudo rm CMakeCache.txt
 
 echo "Building tarball..."
 cmake ../MaxScale $cmake_flags -DTARBALL=Y
-sudo make "-j${NCPU}" package
+sudo make ${NCPUSTR} package
