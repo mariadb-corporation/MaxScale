@@ -1,24 +1,30 @@
 # MariaDB MaxScale Installation Guide
 
-## Normal Installation
+## Install MariaDB MaxScale From MariaDB Repositories
 
-Download the MaxScale package from the MariaDB Downloads page:
+The recommended approach is to use [the MariaDB package
+repository](https://mariadb.com/kb/en/library/mariadb-package-repository-setup-and-usage/)
+to install MaxScale. After enabling the repository by following the
+instructions, MaxScale can be installed with the following commands.
 
-* [https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale](https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale)
+* For RHEL/Rocky Linux/Alma Linux, use `dnf install maxscale`.
 
-Select your operating system and download either the RPM or the DEB package.
+* For Debian and Ubuntu, run `apt update` followed by `apt install maxscale`.
 
-* For RHEL/CentOS variants, use `yum` to install the downloaded RPM
+* For SLES, use `zypper install maxscale`.
 
-* For SLES, use `zypper`
+## Install MariaDB MaxScale From a RPM/DEB Package
 
-* For Debian/Ubuntu systems, install the package with `dpkg -i` and run `apt-get install`
-  after it to install the dependencies
+Download the correct MaxScale package for your CPU architecture and operating
+system from [the MariaDB Downloads
+page](https://mariadb.com/downloads/community/maxscale/). MaxScale can be
+installed with the following commands.
 
-You can also use
-[the MariaDB package repository](https://mariadb.com/kb/en/library/mariadb-package-repository-setup-and-usage/)
-to install MaxScale by first configuring the repository and then
-installing the `maxscale` package via your package manager.
+* For RHEL/Rocky Linux/Alma Linux, use `dnf install /path/to/maxscale-*.rpm`
+
+* For Debian and Ubuntu, use `apt install /path/to/maxscale-*.deb`.
+
+* For SLES, use `zypper install /path/to/maxscale-*.rpm`.
 
 ## Install MariaDB MaxScale Using a Tarball
 
@@ -90,3 +96,29 @@ functionality.
 
 [The administration tutorial](../Tutorials/Administration-Tutorial.md)
 covers the common administration tasks that need to be done with MariaDB MaxScale.
+
+## Copying or Backing Up MaxScale
+
+The main configuration file for MaxScale is in `/etc/maxscale.cnf` and
+additional user-created configuration files are in
+`/etc/maxscale.cnf.d/`. Objects created or modified at runtime are stored in
+`/var/lib/maxscale/maxscale.cnf.d/`. Some modules also store internal data in
+`/var/lib/maxscale/` named after the module or the configuration object.
+
+The simplest way to back up the configuration and runtime data of a MaxScale
+installation is to create an archive from the following files and directories:
+
+* `/etc/maxscale.cnf`
+
+* `/etc/maxscale.cnf.d/`
+
+* `/var/lib/maxscale/`
+
+This can be done with the following command:
+
+```
+tar -caf maxscale-backup.tar.gz /etc/maxscale.cnf /etc/maxscale.cnf.d/ /var/lib/maxscale/
+```
+
+If MaxScale is configured to store data in custom locations, these should be
+included in the backup as well.

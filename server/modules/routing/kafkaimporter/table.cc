@@ -107,8 +107,7 @@ bool Table::prepare(MYSQL* mysql, std::string engine)
     {
         create += "("
                   "data JSON NOT NULL, "
-                  "id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY, "
-                  "CONSTRAINT id_is_not_null CHECK(JSON_EXTRACT(data, '$._id') IS NOT NULL) "
+                  "id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY "
                   ") ENGINE=INNODB";
     }
     else

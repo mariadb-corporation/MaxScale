@@ -992,6 +992,10 @@ add_test_executable(mxs5302_ps_overflow.cc mxs5302_ps_overflow mxs5302_ps_overfl
 # Repeatedly restart MaxScale to catch any hangs on shutdown
 add_test_executable(rapid_restart.cc rapid_restart rapid_restart LABELS REPL_BACKEND)
 
+# MXS-5268: transaction_replay doesn't replay all transactions during switchover
+add_test_executable(mxs5268_trx_replay_switchover.cc mxs5268_trx_replay_switchover mxs5268_trx_replay_switchover
+  LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
