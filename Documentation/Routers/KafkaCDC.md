@@ -115,14 +115,19 @@ seconds if the network is slow or there are network problems.
 
 ## Configuration
 
-The `servers` parameter defines the set of servers where the data is replicated
-from. The replication will be done from the first primary server that is found.
+* In order for `kafkacdc` to work, the binary logging on the source server must
+  be configured to use row-based replication and the row image must be set to
+  full by configuring `binlog_format=ROW` and `binlog_row_image=FULL`.
 
-The `user` and `password` of the service will be used to connect to the
-primary. This user requires the REPLICATION SLAVE grant.
+* The `servers` parameter defines the set of servers where the data is
+  replicated from. The replication will be done from the first primary server
+  that is found.
 
-The KafkaCDC service must not be configured to use listeners. If a listener is
-configured, all attempts to start a session will fail.
+* The `user` and `password` of the service will be used to connect to the
+  primary. This user requires the `REPLICATION SLAVE` grant.
+
+* The KafkaCDC service must not be configured to use listeners. If a listener is
+  configured, all attempts to start a session will fail.
 
 ## Parameters
 

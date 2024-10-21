@@ -101,7 +101,7 @@ bool RWSplitSession::routeQuery(GWBUF* querybuf)
 
     mxs::Buffer buffer(querybuf);
 
-    if (m_state == TRX_REPLAY || m_pending_retries > 0 || !m_query_queue.empty())
+    if (m_state == TRX_REPLAY || !m_pending_retries.empty() || !m_query_queue.empty())
     {
         MXB_INFO("New %s received while %s is active: %s",
                  STRPACKETTYPE(buffer.data()[4]),
@@ -431,6 +431,50 @@ bool is_wsrep_error(const mxs::Error& error)
            && error.message() == "WSREP has not yet prepared node for application use";
 }
 
+bool RWSplitSession::is_ignorable_error(RWBackend* backend, const mxs::Error& error) const
+{
+    if (m_config.trx_retry_on_deadlock && error.is_rollback())
+    {
+        // Rollback error and retrying on deadlocks is enabled
+        MXB_INFO("Got transaction rollback error: [%s] %u %s",
+                 error.sql_state().c_str(), error.code(), error.message().c_str());
+        return true;
+    }
+
+    if (is_wsrep_error(error))
+    {
+        // WSREP error from Galera. This means that the server in question is not yet up and
+        // is in the process of starting up. This is a transient error that can be ignored
+        // and which should trigger a replay.
+        MXB_INFO("Got WSREP error: [%s] %u %s",
+                 error.sql_state().c_str(), error.code(), error.message().c_str());
+        return true;
+    }
+
+    if (error.code() == ER_OPTION_PREVENTS_STATEMENT
+        && backend == m_current_master  // This is the current master
+        && trx_is_open()                // There's an open transaction
+        && !trx_is_read_only()          // The transaction isn't read-only
+        && m_config.transaction_replay  // Transaction replay is enabled
+        && m_state != TRX_REPLAY)       // Not replaying a transaction
+    {
+        // TODO: This could be handled inside a replayed transaction but the use of restart_trx_replay() is
+        //       not totally safe inside clientReply.
+        mxb_assert_message(error.message().find("--read-only") != std::string::npos,
+                           "Expected --read-only in error: %s", error.message().c_str());
+
+        // The query was routed to m_current_master while a transaction was open and transaction_replay is
+        // enabled. In these situations, the most likely cause of this is that a switchover is taking place
+        // and the server was set into read-only mode. To recover from a switchover gracefully, treat this as
+        // an ignorable error that can trigger transaction replay.
+        MXB_INFO("Got read-only error: [%s] %u %s",
+                 error.sql_state().c_str(), error.code(), error.message().c_str());
+        return true;
+    }
+
+    return false;
+}
+
 bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error& error)
 {
     if (backend->should_ignore_response())
@@ -537,8 +581,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         }
     }
 
-    if (((m_config.trx_retry_on_deadlock && error.is_rollback()) || is_wsrep_error(error))
-        && handle_ignorable_error(backend, error))
+    if (is_ignorable_error(backend, error) && handle_ignorable_error(backend, error))
     {
         // We can ignore this error and treat it as if the connection to the server was broken.
         gwbuf_free(writebuf);
@@ -761,6 +804,15 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
+            // If there are pending retries while the state is TRX_REPLAY, the transaction replay
+            // was started again before the previous queries were routed. In this case the currently
+            // queued up delay_routing() calls would have to be canceled but this is not currently
+            // possible. As a workaround, a second counter of "discarded" queries must be used to
+            // indicate the number of queries to discard. This effectively cancels out the pending
+            // delay_routing() calls.
+            mxb_assert(m_canceled_retries <= m_pending_retries.size());
+            m_canceled_retries = m_pending_retries.size();
+
             // Not the first time, copy the original
             m_replayed_trx.close();
             m_trx.close();
