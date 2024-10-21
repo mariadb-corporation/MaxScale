@@ -284,7 +284,12 @@ std::string Reply::describe() const
         }
         else if (is_ok())
         {
-            ss << "OK: " << num_warnings() << " warnings";
+            ss << "OK: " << affected_rows() << " rows affected, " << num_warnings() << " warnings";
+
+            if (uint64_t id = last_insert_id())
+            {
+                ss << ", last insert ID " << id;
+            }
         }
         else if (is_resultset())
         {
@@ -354,6 +359,8 @@ void Reply::clear()
     m_num_warnings = 0;
     m_size = 0;
     m_upload_size = 0;
+    m_affected_rows = 0;
+    m_last_insert_id = 0;
     m_generated_id = 0;
     m_param_count = 0;
     m_server_status = NO_SERVER_STATUS;

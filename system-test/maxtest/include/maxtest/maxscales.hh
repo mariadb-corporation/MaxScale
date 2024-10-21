@@ -67,6 +67,16 @@ struct ServerInfo
     bool               status_from_string(const std::string& source, const std::string& details);
     std::string        to_string_short() const;
 
+    bool is_master() const
+    {
+        return status == master_st;
+    }
+
+    bool is_slave() const
+    {
+        return status == slave_st;
+    }
+
     std::string name {"<unknown>"}; /**< Server name */
     bitfield    status {UNKNOWN};   /**< Status bitfield */
     int64_t     server_id {SRV_ID_NONE};
