@@ -13,15 +13,15 @@ SQL:
 ```sql
 CREATE TABLE IF NOT EXISTS my_table (
   data JSON NOT NULL,
-  id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY,
-  CONSTRAINT id_is_not_null CHECK(JSON_EXTRACT(data, '$._id') IS NOT NULL)
+  id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY
 );
 ```
 
 The payload of the message is inserted into the `data` field from which the `id`
-field is calculated. The payload must be a valid JSON object and it must contain
-the `_id` field. This is similar to the MongoDB document format where the `_id`
-field is the primary key of the document collection.
+field is calculated. The payload must be a valid JSON object and it must either
+contain a unique `_id` field or it must not exist or the value must be a JSON
+null. This is similar to the MongoDB document format where the `_id` field is
+the primary key of the document collection.
 
 If a message is read from Kafka and the insertion into the table fails due to a
 violation of one of the constraints, the message is ignored. Similarly, messages
@@ -39,6 +39,19 @@ The database server where the data is inserted is chosen from the set of servers
 available to the service. The first server labeled as the Master with the best
 rank will be chosen. This means that a monitor must be configured for the
 MariaDB server where the data is to be inserted.
+
+In MaxScale versions 21.06.18, 22.08.15, 23.02.12, 23.08.8, 24.02.4 and 24.08.2
+the `_id` field is not required to be present. Older versions of MaxScale used
+the following SQL where the `_id` field was mandatory:
+
+```sql
+CREATE TABLE IF NOT EXISTS my_table (
+  data LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY,
+  CONSTRAINT data_is_json CHECK(JSON_VALID(data)),
+  CONSTRAINT id_is_not_null CHECK(JSON_EXTRACT(data, '$._id') IS NOT NULL)
+);
+```
 
 ### Required Grants
 
