@@ -578,6 +578,7 @@ bool RWSplitSession::discard_partial_result(GWBUF& buffer, const mxs::Reply& rep
         buffer.consume(bytes_to_discard);
         m_current_query.bytes = m_interrupted_query.bytes;
         m_state = ROUTING;
+        m_num_trx_replays = 0;
 
         if (include_in_checksum(reply))
         {
