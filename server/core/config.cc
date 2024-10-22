@@ -104,6 +104,7 @@ constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
 constexpr char CN_ADMIN_SSL_VERSION[] = "admin_ssl_version";
 constexpr char CN_AUTO[] = "auto";
 constexpr char CN_AUTO_TUNE[] = "auto_tune";
+constexpr char CN_CORE_FILE[] = "core_file";
 constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
 constexpr char CN_LOCAL_ADDRESS[] = "local_address";
@@ -1163,6 +1164,13 @@ config::ParamEnumList<maxbase::http::Method> Config::s_admin_audit_exclude_metho
     {},
     mxs::config::Param::AT_RUNTIME);
 
+config::ParamBool Config::s_core_file(
+    &Config::s_specification,
+    CN_CORE_FILE,
+    "Write a core-file if MaxScale crashes.",
+    true,
+    config::Param::Modifiable::AT_STARTUP);
+
 config::ParamString Config::s_local_address(
     &Config::s_specification,
     CN_LOCAL_ADDRESS,
@@ -1472,6 +1480,7 @@ Config::Config()
     add_native(&Config::debug, &s_debug);
     add_native(&Config::max_read_amount, &s_max_read_amount);
     add_native(&Config::key_manager, &s_key_manager);
+    add_native(&Config::core_file, &s_core_file),
 
     /* get release string */
     this->release_string = mxb::get_release_string();

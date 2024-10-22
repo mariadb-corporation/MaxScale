@@ -168,6 +168,7 @@ runtime and can only be defined in a configuration file:
 * `auto_tune`
 * `cachedir`
 * `connector_plugindir`
+* `core_file`
 * `datadir`
 * `debug`
 * `execdir`
@@ -433,6 +434,17 @@ path_list_parameter=/tmp/something.log:/var/log/maxscale/maxscale.log
 The global settings, in a section named `[MaxScale]`, allow various parameters
 that affect MariaDB MaxScale as a whole to be tuned. This section must be
 defined in the root configuration file which by default is `/etc/maxscale.cnf`.
+
+### `core_file`
+
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: No
+
+This parameter specifies whether a core file should be generated if MaxScale
+crashes. The default is `false` because usually a core file is not needed,
+as MaxScale is capable of logging the full strack trace of all threads
+when it crashes.
 
 ### `auto_tune`
 
