@@ -74,7 +74,7 @@ void RWSplitSession::retry_query(GWBUF&& querybuf, int delay)
             --m_canceled_retries;
             MXB_INFO("Discarding retried query: %s", get_sql_string(buffer).c_str());
 
-            mxb_assert_message(m_state == State::TRX_REPLAY,
+            mxb_assert_message(replaying_trx(),
                                "Only transaction replay should cause retried queries to be discarded");
             return true;
         }
@@ -184,7 +184,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
                   get_sql_string(buffer).c_str(), get_verbose_status().c_str());
         ok = false;
     }
-    else if (m_state == TRX_REPLAY)
+    else if (replaying_trx())
     {
         ok = restart_trx_replay();
     }
@@ -683,7 +683,7 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
 
     if (!ok)
     {
-        if (m_state == TRX_REPLAY)
+        if (replaying_trx())
         {
             ok = restart_trx_replay();
         }

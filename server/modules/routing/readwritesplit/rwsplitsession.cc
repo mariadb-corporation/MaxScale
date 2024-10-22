@@ -837,7 +837,7 @@ bool RWSplitSession::start_trx_replay()
     {
         ++m_num_trx_replays;
 
-        if (m_state != TRX_REPLAY)
+        if (!replaying_trx())
         {
             // This is the first time we're retrying this transaction, store it and the interrupted query
             m_orig_trx = m_trx;
