@@ -101,32 +101,6 @@ static void run_addr2line(char* output, size_t size, const char* filename, intpt
     }
 }
 
-static void get_command_output_cb(void (* cb)(const char*), const char* format, ...)
-{
-    va_list valist;
-    va_start(valist, format);
-    int cmd_len = vsnprintf(NULL, 0, format, valist);
-    va_end(valist);
-
-    va_start(valist, format);
-    char cmd[cmd_len + 1];
-    vsnprintf(cmd, cmd_len + 1, format, valist);
-    va_end(valist);
-
-    if (FILE* file = popen(cmd, "r"))
-    {
-        char buf[512];
-
-        while (size_t n = fread(buf, 1, sizeof(buf) - 1, file))
-        {
-            buf[n] = '\0';
-            cb(buf);
-        }
-
-        pclose(file);
-    }
-}
-
 static void extract_file_and_line(void* symbol, char* cmd, size_t size)
 {
     Dl_info info;
@@ -281,12 +255,39 @@ void emergency_stacktrace(void (* handler)(const char*))
 
 void dump_gdb_stacktrace(void (* handler)(const char*))
 {
+    char path[] = "/tmp/maxscale-stacktrace-XXXXXX";
+    int fd = mkstemp(path);
+
+    if (fd == -1)
+    {
+        return;
+    }
+
+    char cmd[512];
+    sprintf(cmd,
+            "gdb --pid=%d -batch -nx "
+            "-iex 'set logging file %s' "
+            "-iex 'set logging redirect on' "
+            "-iex 'set logging enabled on' "
+            "-iex 'set auto-load off' "
+            "-iex 'set print thread-events off' "
+            "-ex 'info threads' -ex 'thr a a bt'",
+            getpid(), path);
+
     prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
-    get_command_output_cb(
-        handler,
-        "gdb --pid=%d -batch -nx -iex 'set auto-load off' -iex 'set print thread-events off' -ex 'info threads' -ex 'thr a a bt'",
-        getpid());
+    system(cmd);
     prctl(PR_SET_PTRACER, 0);
+
+    int rc;
+    // Reuse the command buffer for reading GDB output
+    while ((rc = read(fd, cmd, sizeof(cmd) - 1)) > 0)
+    {
+        cmd[rc] = 0;
+        handler(cmd);
+    }
+
+    close(fd);
+    unlink(path);
 }
 
 bool have_gdb()
