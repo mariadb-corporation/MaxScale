@@ -438,11 +438,11 @@ defined in the root configuration file which by default is `/etc/maxscale.cnf`.
 ### `core_file`
 
 - **Type**: [boolean](#booleans)
-- **Default**: false
+- **Default**: true
 - **Dynamic**: No
 
 This parameter specifies whether a core file should be generated if MaxScale
-crashes. The default is `false` because usually a core file is not needed,
+crashes. The default is `true` although usually a core file is not needed,
 as MaxScale is capable of logging the full strack trace of all threads
 when it crashes.
 
