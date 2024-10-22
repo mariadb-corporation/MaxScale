@@ -1,0 +1,13 @@
+[maxscale]
+threads=###threads###
+log_info=1
+
+###mariadb_monitor###
+
+###rwsplit_service###
+master_reconnection=true
+master_failure_mode=fail_on_write
+
+###rwsplit_listener###
+
+###server###

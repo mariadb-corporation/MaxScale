@@ -336,6 +336,14 @@ public:
         virtual bool is_locked_to_master() const = 0;
 
         virtual bool supports_hint(Hint::Type hint_type) const = 0;
+
+        /**
+         * Called whenever the query classifier finds SQL that makes it unsafe to do a reconnection
+         * that the client is unaware of.
+         *
+         * @param why The reason why the reconnection is unsafe.
+         */
+        virtual void unsafe_to_reconnect(std::string_view why) = 0;
     };
 
     // NOTE: For the time being these must be exactly like the ones in readwritesplit.hh

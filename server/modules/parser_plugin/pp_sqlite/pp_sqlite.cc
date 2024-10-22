@@ -1536,6 +1536,11 @@ public:
             m_function_infos.reserve(m_function_infos.size() + 1);
             m_function_field_usage.reserve(m_function_field_usage.size() + 1);
 
+            if (mxb::sv_case_eq(item.name, "GET_LOCK"))
+            {
+                m_unsafe_to_reconnect = "Query uses GET_LOCK()";
+            }
+
             m_relates_to_previous |= mxb::sv_case_eq(item.name, "FOUND_ROWS");
             m_function_infos.push_back(item);
             m_function_field_usage.resize(m_function_field_usage.size() + 1);
@@ -3348,6 +3353,7 @@ public:
         , m_pPreparable_stmt(NULL)
         , m_multi_stmt(false)
         , m_relates_to_previous(false)
+        , m_unsafe_to_reconnect(nullptr)
     {
     }
 
@@ -3585,6 +3591,7 @@ public:
     vector<vector<char>>              m_scratch_buffers;         // Buffers if string not found from canonical.
     bool                              m_multi_stmt;
     bool                              m_relates_to_previous;
+    const char*                       m_unsafe_to_reconnect;
 };
 
 extern "C"
@@ -5223,6 +5230,7 @@ public:
                 rval.type_mask = pInfo->m_type_mask;
                 rval.op = pInfo->m_operation;
                 rval.relates_to_previous = pInfo->m_relates_to_previous;
+                rval.unsafe_to_reconnect = pInfo->m_unsafe_to_reconnect;
             }
         }
 

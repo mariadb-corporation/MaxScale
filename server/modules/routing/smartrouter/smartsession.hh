@@ -116,6 +116,7 @@ private:
     bool lock_to_master() override;
     bool is_locked_to_master() const override;
     bool supports_hint(Hint::Type hint_type) const override;
+    void unsafe_to_reconnect(std::string_view why) override;
 
     SmartRouter& m_router;
 

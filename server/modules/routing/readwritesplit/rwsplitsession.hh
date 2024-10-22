@@ -256,6 +256,8 @@ private:
     bool lock_to_master() override;
     bool is_locked_to_master() const override;
     bool supports_hint(Hint::Type hint_type) const override;
+    void unsafe_to_reconnect(std::string_view why) override;
+
     bool is_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error) const;
     bool handle_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error);
 
@@ -467,6 +469,10 @@ private:
     RoutingPlan      m_prev_plan;               /**< The previous routing plan */
 
     std::shared_ptr<const RWSConfig::Values> m_config;      /**< Configuration for this session */
+
+    // If set, contains the reason why a reconnection is unsafe to do. If empty,
+    // reconnections can be done safely.
+    std::string m_unsafe_reconnect_reason;
 
     int  m_expected_responses;          /**< Number of expected responses to the current query */
     bool m_locked_to_master {false};    /**< Whether session is permanently locked to the master */

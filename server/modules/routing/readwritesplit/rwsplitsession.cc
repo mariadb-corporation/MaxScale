@@ -1069,6 +1069,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             }
         }
 
+        if (!m_unsafe_reconnect_reason.empty())
+        {
+            can_continue = false;
+            errmsg += " Unsafe to reconnect: " + m_unsafe_reconnect_reason + ".";
+        }
+
         if (!can_continue)
         {
             auto diff = maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write();
@@ -1276,6 +1282,13 @@ bool RWSplitSession::supports_hint(Hint::Type hint_type) const
     }
 
     return rv;
+}
+
+void RWSplitSession::unsafe_to_reconnect(std::string_view why)
+{
+    m_unsafe_reconnect_reason.assign(why);
+    MXB_INFO("Unsafe SQL (%s), disabling reconnection.",
+             m_unsafe_reconnect_reason.c_str());
 }
 
 bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)

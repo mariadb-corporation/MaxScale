@@ -41,6 +41,10 @@ struct DummyHandler final : public mariadb::QueryClassifier::Handler
     {
         return false;
     }
+
+    virtual void unsafe_to_reconnect(std::string_view why) override
+    {
+    }
 };
 
 static DummyHandler dummy_handler;
@@ -709,6 +713,11 @@ QueryClassifier::update_route_info(GWBUF& buffer)
 
     // Reset for every classification
     m_route_info.set_ps_continuation(false);
+
+    if (query_info.unsafe_to_reconnect)
+    {
+        m_pHandler->unsafe_to_reconnect(query_info.unsafe_to_reconnect);
+    }
 
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
