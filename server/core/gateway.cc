@@ -31,6 +31,8 @@
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
+#include <linux/prctl.h>
+#include <sys/prctl.h>
 
 #include <set>
 #include <map>
@@ -122,6 +124,7 @@ static struct ThisUnit
     pthread_mutex_t* ssl_locks = nullptr;
 #endif
     const mxb::WatchdogNotifier* watchdog = nullptr;
+    bool                         core_file = true; // Start with core-file enabled, change later.
 } this_unit;
 }
 
@@ -605,7 +608,18 @@ static void sigfatal_handler(int i)
     __lsan_do_leak_check();
 #endif
 
-    cerr << "Writing core dump." << endl;
+    if (this_unit.core_file)
+    {
+        cerr << "Writing core dump." << endl;
+    }
+    else
+    {
+        // This must be done here. Otherwise it will not be possible to
+        // generate the stack trace.
+        prctl(PR_SET_DUMPABLE, 0);
+        cerr << "Not writing core dump." << endl;
+    }
+
     /* re-raise signal to enforce core dump */
     signal_set(i, SIG_DFL);
     raise(i);
@@ -2021,6 +2035,8 @@ int main(int argc, char** argv)
             return rc;
         }
     }
+
+    this_unit.core_file = cnf.core_file;
 
     if (cnf.qc_cache_properties.max_size)
     {
