@@ -225,7 +225,7 @@ void dump_gdb_stacktrace(void (* handler)(const char*))
             "gdb --pid=%d -batch -nx "
             "-iex 'set logging file %s' "
             "-iex 'set logging redirect on' "
-            "-iex 'set logging enabled on' "
+            "-iex 'set logging on' "
             "-iex 'set auto-load off' "
             "-iex 'set print thread-events off' "
             "-ex 'info threads' -ex 'thr a a bt'",
