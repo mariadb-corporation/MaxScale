@@ -996,6 +996,9 @@ add_test_executable(rapid_restart.cc rapid_restart rapid_restart LABELS REPL_BAC
 add_test_executable(mxs5268_trx_replay_switchover.cc mxs5268_trx_replay_switchover mxs5268_trx_replay_switchover
   LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5356: Using GET_LOCK() should prevent reconnections
+add_test_executable(mxs5356_get_lock.cc mxs5356_get_lock mxs5356_get_lock LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

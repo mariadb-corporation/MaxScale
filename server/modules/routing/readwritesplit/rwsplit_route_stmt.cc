@@ -81,7 +81,7 @@ void RWSplitSession::retry_query(GWBUF&& querybuf, int delay)
             --m_canceled_retries;
             MXB_INFO("Discarding retried query: %s", get_sql_string(buffer).c_str());
 
-            mxb_assert_message(m_state == State::TRX_REPLAY,
+            mxb_assert_message(replaying_trx(),
                                "Only transaction replay should cause retried queries to be discarded");
             return true;
         }

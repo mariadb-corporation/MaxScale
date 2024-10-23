@@ -433,3 +433,6 @@ bool SmartRouterSession::supports_hint(Hint::Type hint_type) const
 {
     return false;
 }
+void SmartRouterSession::unsafe_to_reconnect(std::string_view why)
+{
+}

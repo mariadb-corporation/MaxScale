@@ -90,6 +90,10 @@ public:
 
     struct QueryInfo
     {
+        // If set, contains the explanation of why the SQL is unsafe to use
+        // with transparent reconnections.
+        const char* unsafe_to_reconnect = nullptr;
+
         TypeMaskStatus   type_mask_status = TypeMaskStatus::FINAL;
         uint32_t         command = 0;
         uint32_t         ps_id = 0;

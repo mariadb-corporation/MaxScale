@@ -78,6 +78,7 @@ void wait_for_progress(TestConnections& test, const std::vector<uint64_t>& old)
 void print_status(TestConnections& test, const std::string& current)
 {
     std::string symbols;
+    test.maxscale->wait_for_monitor();
     auto servers = test.maxscale->get_servers();
 
     for (size_t i = 0; i < servers.size(); i++)

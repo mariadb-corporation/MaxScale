@@ -577,6 +577,7 @@ bool RWSplitSession::discard_partial_result(GWBUF& buffer, const mxs::Reply& rep
         buffer.consume(bytes_to_discard);
         m_current_query.bytes = m_interrupted_query.bytes;
         m_state = ROUTING;
+        m_num_trx_replays = 0;
 
         if (include_in_checksum(reply))
         {
@@ -843,7 +844,7 @@ void RWSplitSession::start_trx_replay()
 
     ++m_num_trx_replays;
 
-    if (m_state != TRX_REPLAY)
+    if (!replaying_trx())
     {
         // This is the first time we're retrying this transaction, store it and the interrupted query
         m_orig_trx = m_trx;
@@ -1140,6 +1141,11 @@ void RWSplitSession::handle_master_error(const mxs::Reply& reply, const std::str
         throw RWSException("Temporary tables were lost when the connection was lost, closing session.");
     }
 
+    if (!m_unsafe_reconnect_reason.empty())
+    {
+        throw RWSException("Unsafe to reconnect: ", m_unsafe_reconnect_reason, ".");
+    }
+
     if (expected_response)
     {
         // We were expecting a response but we aren't going to get one
@@ -1176,6 +1182,13 @@ void RWSplitSession::handle_master_error(const mxs::Reply& reply, const std::str
             throw master_exception(message, reply);
         }
     }
+}
+
+void RWSplitSession::unsafe_to_reconnect(std::string_view why)
+{
+    m_unsafe_reconnect_reason.assign(why);
+    MXB_INFO("Unsafe SQL (%s), disabling reconnection.",
+             m_unsafe_reconnect_reason.c_str());
 }
 
 bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)

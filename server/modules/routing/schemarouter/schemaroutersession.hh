@@ -157,6 +157,10 @@ public:
         return hint_type == Hint::Type::ROUTE_TO_NAMED_SERVER;
     }
 
+    void unsafe_to_reconnect(std::string_view why) override
+    {
+    }
+
 private:
     /**
      * Internal functions
