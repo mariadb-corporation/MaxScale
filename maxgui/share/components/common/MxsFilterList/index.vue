@@ -18,9 +18,7 @@
                     v-bind="{ ...attrs, ...btnProps }"
                     v-on="on"
                 >
-                    <v-icon size="12" class="mr-1">
-                        $vuetify.icons.mxs_filter
-                    </v-icon>
+                    <v-icon size="12" class="mr-1"> $vuetify.icons.mxs_filter </v-icon>
                     {{ label }}
                     <v-icon size="24" :class="[value ? 'rotate-up' : 'rotate-down']">
                         mdi-menu-down
@@ -71,16 +69,16 @@
                     class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
                     :input-value="
                         reverse
-                            ? !valueModel.includes(returnIndex ? index : item)
-                            : valueModel.includes(returnIndex ? index : item)
+                            ? !valueModel.includes(returnIndex ? index : item.value)
+                            : valueModel.includes(returnIndex ? index : item.value)
                     "
                     hide-details
                     @change="toggleItem({ v: $event, item, index })"
                 >
                     <template v-slot:label>
                         <mxs-truncate-str
-                            v-mxs-highlighter="{ keyword: filterTxt, txt: item }"
-                            :tooltipItem="{ txt: `${item}` }"
+                            v-mxs-highlighter="{ keyword: filterTxt, txt: item.value }"
+                            :tooltipItem="{ txt: `${item.value}` }"
                         />
                     </template>
                 </v-checkbox>
@@ -139,7 +137,10 @@ export default {
             },
         },
         itemsList() {
-            return this.items.filter(str => this.$helpers.ciStrIncludes(`${str}`, this.filterTxt))
+            return this.items.map((str) => ({
+                value: str,
+                hidden: !this.$helpers.ciStrIncludes(`${str}`, this.filterTxt),
+            }))
         },
         isAllSelected() {
             return this.reverse
@@ -180,10 +181,13 @@ export default {
             this.reverse === v ? this.deselectAll() : this.selectAll()
         },
         deselectItem({ item, index }) {
-            this.valueModel.splice(this.valueModel.indexOf(this.returnIndex ? index : item), 1)
+            this.valueModel.splice(
+                this.valueModel.indexOf(this.returnIndex ? index : item.value),
+                1
+            )
         },
         selectItem({ item, index }) {
-            this.valueModel.push(this.returnIndex ? index : item)
+            this.valueModel.push(this.returnIndex ? index : item.value)
         },
         toggleItem({ v, item, index }) {
             this.reverse === v
