@@ -54,6 +54,11 @@
 # $maxscale_product - use CI or production version of Maxscale
 # 'maxscale_ci' or 'maxscale'
 
+function is_ppc64() {
+    [ "$(arch)" == "ppc64le" ]
+}
+
+
 export vm_memory=${vm_memory:-"2048"}
 export dir=`pwd`
 
@@ -86,7 +91,14 @@ mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DCMAKE_COLOR_MAKEFILE=N -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
 cd system-test
 NCPU=$(grep -c processor /proc/cpuinfo)
-make -j $NCPU
+
+if [ is_ppc64 ]
+then
+    make
+else
+    make -j $NCPU
+fi
+
 if [ $? != 0 ] ; then
     echo "Test code build FAILED! exiting"
     exit 1
