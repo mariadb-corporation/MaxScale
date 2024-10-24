@@ -696,7 +696,7 @@ static bool rule_get_common_values(json_t* pRule,
     json_t* pTable = json_object_get(pRule, KEY_TABLE);
     json_t* pColumn = json_object_get(pRule, KEY_COLUMN);
 
-    // Check column/table/dataase
+    // Check column/table/database
     if (!rule_check_database_options(pColumn,
                                      pTable,
                                      pDatabase,
@@ -801,7 +801,7 @@ bool rule_get_match_value_fill(json_t* pRule,
     json_t* pTheFill = rule_get_fill(pWith);
     // Get value from 'with' object
     json_t* pTheValue = json_object_get(pWith, KEY_VALUE);
-    // Get 'match' from 'replace' ojbect
+    // Get 'match' from 'replace' object
     json_t* pTheMatch = json_object_get(pKeyObj, KEY_MATCH);
 
     // Check values: 'match' and 'fill' are mandatory (if not provided, there will be
@@ -1159,7 +1159,7 @@ bool MaskingRules::Rule::matches_account(const char* zUser,
 /**
  * Fills a buffer with a fill string
  *
- * @param f_first    The iterator pointing to first fill byt
+ * @param f_first    The iterator pointing to first fill byte
  * @param f_last     The iterator pointing to last fill byte
  * @param o_first    The iterator pointing to first buffer byte
  * @param o_last     The iterator pointing to last buffer byte
@@ -1237,7 +1237,7 @@ void MaskingRules::MatchRule::rewrite(mxq::LEncString& s) const
 
         pcre2_match_data_free(pData);
 
-        // Log errors, exclding NO_MATCH or PARTIAL
+        // Log errors, excluding NO_MATCH or PARTIAL
         if (rv < 0 && (rv != PCRE2_ERROR_NOMATCH || PCRE2_ERROR_PARTIAL))
         {
             MXS_PCRE2_PRINT_ERROR(rv);

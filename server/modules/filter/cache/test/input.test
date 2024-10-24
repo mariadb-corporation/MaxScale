@@ -297,7 +297,7 @@ insert into t2 values(10),(20);
 create table t3 like t1;
 show create table t3;
 select * from t3;
-# Disable PS becasue of @@warning_count
+# Disable PS because of @@warning_count
 create table if not exists t3 like t1;
 --disable_ps_protocol
 select @@warning_count;
@@ -720,7 +720,7 @@ drop table t1;
 # Error during open_and_lock_tables() of tables
 --error ER_NO_SUCH_TABLE
 create table t1 select * from t2;
-# A special case which is also caught during open tables pahse
+# A special case which is also caught during open tables phase
 --error ER_NO_SUCH_TABLE
 create table t1 select * from t1;
 # Error which happens before select_create::prepare()
@@ -751,12 +751,12 @@ drop table t1;
 create table t1 select coalesce('a' collate latin1_swedish_ci,'b' collate latin1_bin);
 
 
-# Base vs temporary tables dillema (a.k.a. bug#24508 "Inconsistent
+# Base vs temporary tables dilemma (a.k.a. bug#24508 "Inconsistent
 # results of CREATE TABLE ... SELECT when temporary table exists").
 # In this situation we either have to create non-temporary table and
 # insert data in it or insert data in temporary table without creation of
 # permanent table. After patch for Bug#47418, we create the base table and
-# instert data into it, even though a temporary table exists with the same
+# insert data into it, even though a temporary table exists with the same
 # name.
 create temporary table t1 (j int);
 create table if not exists t1 select 1;
@@ -817,7 +817,7 @@ drop table t1, t2;
 
 
 #
-# Bug#21772: can not name a column 'upgrade' when create a table
+# Bug#21772: cannot name a column 'upgrade' when create a table
 #
 create table t1 (upgrade int);
 drop table t1;
@@ -826,7 +826,7 @@ drop table t1;
 --echo
 --echo Bug #26104 Bug on foreign key class constructor
 --echo
---echo Check that ref_columns is initalized correctly in the constructor
+--echo Check that ref_columns is initialized correctly in the constructor
 --echo and semantic checks in mysql_prepare_table work.
 --echo
 --echo We do not need a storage engine that supports foreign keys
@@ -1433,7 +1433,7 @@ DROP TEMPORARY TABLE t2;
 --echo # Bug #22909 "Using CREATE ... LIKE is possible to create field
 --echo #             with invalid default value"
 --echo #
---echo # Altough original bug report suggests to use older version of MySQL
+--echo # Although original bug report suggests to use older version of MySQL
 --echo # for producing .FRM with invalid defaults we use sql_mode to achieve
 --echo # the same effect.
 --disable_warnings
@@ -2108,7 +2108,7 @@ DROP TABLE t1;
 
 #
 # Bug#27525: table not found when using multi-table-deletes with aliases over
-#            several databas
+#            several databases
 # Bug#21148: MULTI-DELETE fails to resolve a table by alias if it's from a
 #            different database
 #
@@ -2379,7 +2379,7 @@ DELETE v2 FROM v2;
 DROP VIEW v2, v1;
 DROP TABLE t1, t2;
 #
-# Test of refering to old values
+# Test of referring to old values
 #
 
 --disable_warnings
@@ -2473,7 +2473,7 @@ use test;
 # Test of wrong values for float data (bug #2082)
 #
 
-# PS gives sligthly different numbers for max-float/max-double
+# PS gives slightly different numbers for max-float/max-double
 --disable_ps_protocol
 create table t1(number int auto_increment primary key, original_value varchar(50), f_double double, f_float float, f_double_7_2 double(7,2), f_float_4_3 float (4,3), f_double_u double unsigned, f_float_u float unsigned, f_double_15_1_u double(15,1) unsigned, f_float_3_1_u float (3,1) unsigned);
 
@@ -3295,7 +3295,7 @@ select t1.i,t2.i,t3.i from t2 right join t3 on (t2.i=t3.i),t1 order by t1.i,t2.i
 drop table t1,t2,t3;
 
 #
-# Bug #27531: Query performance degredation in 4.1.22 and greater
+# Bug #27531: Query performance degradation in 4.1.22 and greater
 #
 CREATE TABLE t1 (a int, b int default 0, c int default 1);
 
@@ -3426,7 +3426,7 @@ select * from (t1, t2) join (t3, t4) on (a < y and t2.b < t3.c);
 select * from (t1 natural join t2) join (t3 natural join t4) on a = y;
 select * from ((t3 join (t1 join t2 on c > a) on t3.b < t2.a) join t4 on y > t1.c) join t5 on z = t1.b + 3;
 
-# MySQL extension - refererence qualified coalesced columns
+# MySQL extension - reference qualified coalesced columns
 select * from t1 natural join t2 where t1.b > 0;
 select * from t1 natural join (t4 natural join t5) where t4.y > 7;
 select * from (t4 natural join t5) natural join t1 where t4.y > 7;
@@ -3507,7 +3507,7 @@ select * from v1a join v1b on t1.b = t2.b;
 #
 # Bug #17523 natural join and information_schema
 #
-# Omit columns.PRIVILIGES as it may vary with embedded server.
+# Omit columns.PRIVILEGES as it may vary with embedded server.
 # Omit columns.ORDINAL_POSITION and statistics.CARDINALITY as it may vary with hostname='localhost'.
 select 
  statistics.TABLE_NAME, statistics.COLUMN_NAME, statistics.TABLE_CATALOG, statistics.TABLE_SCHEMA, statistics.NON_UNIQUE, statistics.INDEX_SCHEMA, statistics.INDEX_NAME, statistics.SEQ_IN_INDEX, statistics.COLLATION, statistics.SUB_PART, statistics.PACKED, statistics.NULLABLE, statistics.INDEX_TYPE, statistics.COMMENT, 
@@ -5748,7 +5748,7 @@ select distinct t2.companynr,t4.companynr from t2,t4 where t2.companynr=t4.compa
 explain select distinct t2.companynr,t4.companynr from t2,t4 where t2.companynr=t4.companynr+1;
 
 #
-# Search using 'or' with the same referens group.
+# Search using 'or' with the same reference group.
 # An interval search will be done first with the first table and after that
 # the other table is referenced with a key with a 'test if key in use' for
 # each record
@@ -5852,7 +5852,7 @@ select t2.companynr,count(*),min(fld3),max(fld3),sum(price),avg(price) from t2,t
 
 #
 # group with many tables and long group on many tables. group on formula
-# optimizer: create tmp table with neaded fields
+# optimizer: create tmp table with needed fields
 #           sort tmp table by group and calculate sums to new table
 #	    if different order by than group, sort tmp table
 #	    send rows
@@ -5982,7 +5982,7 @@ CREATE TABLE t1 (gvid int(10) unsigned default NULL,  hmid int(10) unsigned defa
 INSERT INTO t1 VALUES (200001,2,1,1,100,1,1,1,0,0,0,1,0,1,20020425060057,'\\\\ARKIVIO-TESTPDC\\E$',''),(200002,2,2,1,101,1,1,1,0,0,0,1,0,1,20020425060057,'\\\\ARKIVIO-TESTPDC\\C$',''),(200003,1,3,2,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,0,1,20020425060427,'c:',NULL);
 CREATE TABLE t2 (  hmid int(10) unsigned default NULL,  volid int(10) unsigned default NULL,  sampletid smallint(5) unsigned default NULL,  sampletime datetime default NULL,  samplevalue bigint(20) unsigned default NULL,  KEY idx1 (hmid,volid,sampletid,sampletime)) ENGINE=MyISAM;
 INSERT INTO t2 VALUES (1,3,10,'2002-06-01 08:00:00',35),(1,3,1010,'2002-06-01 12:00:01',35);
-# Disable PS becasue we get more warnings from PS than from normal execution
+# Disable PS because we get more warnings from PS than from normal execution
 --disable_ps_protocol
 SELECT a.gvid, (SUM(CASE b.sampletid WHEN 140 THEN b.samplevalue ELSE 0 END)) as the_success,(SUM(CASE b.sampletid WHEN 141 THEN b.samplevalue ELSE 0 END)) as the_fail,(SUM(CASE b.sampletid WHEN 142 THEN b.samplevalue ELSE 0 END)) as the_size,(SUM(CASE b.sampletid WHEN 143 THEN b.samplevalue ELSE 0 END)) as the_time FROM t1 a, t2 b WHERE a.hmid = b.hmid AND a.volid = b.volid AND b.sampletime >= 'wrong-date-value' AND b.sampletime < 'wrong-date-value' AND b.sampletid IN (140, 141, 142, 143) GROUP BY a.gvid;
 --enable_ps_protocol
@@ -5991,7 +5991,7 @@ SELECT a.gvid, (SUM(CASE b.sampletid WHEN 140 THEN b.samplevalue ELSE 0 END)) as
 DROP TABLE t1,t2;
 
 #
-# Test of bigint comparision
+# Test of bigint comparison
 #
 
 create table  t1 (  A_Id bigint(20) NOT NULL default '0',  A_UpdateBy char(10) NOT NULL default '',  A_UpdateDate bigint(20) NOT NULL default '0',  A_UpdateSerial int(11) NOT NULL default '0',  other_types bigint(20) NOT NULL default '0',  wss_type bigint(20) NOT NULL default '0');
@@ -6045,7 +6045,7 @@ select * from t1 natural left join (t1 as t2 left join t1 as t3 using (a));
 select * from (t1 as t2 left join t1 as t3 using (a)) right join t1 on t1.a>1;
 --sorted_result
 select * from t1 right join (t1 as t2 left join t1 as t3 using (a)) on t1.a>1;
-# right [outer] joing using
+# right [outer] join using
 select * from (t1 as t2 left join t1 as t3 using (a)) right outer join t1 using ( a );
 select * from t1 right outer join (t1 as t2 left join t1 as t3 using (a)) using ( a );
 # natural right join
@@ -6491,7 +6491,7 @@ SELECT STRAIGHT_JOIN SQL_NO_CACHE * FROM t2, t1 WHERE t1.b = t2.b OR t2.b IS NUL
 DROP TABLE IF EXISTS t1,t2;
 
 #
-# Bug #20954 "avg(keyval) retuns 0.38 but max(keyval) returns an empty set"
+# Bug #20954 "avg(keyval) returns 0.38 but max(keyval) returns an empty set"
 #
 --disable_ps_protocol
 CREATE TABLE t1 (key1 float default NULL, UNIQUE KEY key1 (key1));
@@ -6691,7 +6691,7 @@ drop table t1,t2;
 drop view v1;
 
 #
-# Bug #10646 Columns included in the join between two tables are ambigious
+# Bug #10646 Columns included in the join between two tables are ambiguous
 # in the select
 #
 
@@ -6738,7 +6738,7 @@ drop view v2;
 
 
 #
-# Bug #4789 Incosistent results of more than 2-way natural joins due to
+# Bug #4789 Inconsistent results of more than 2-way natural joins due to
 #           incorrect transformation to join ... on.
 #
 
@@ -6837,7 +6837,7 @@ SELECT id,t3.id FROM (t1 JOIN t2 ON (t2.id=t1.id)) LEFT JOIN t3 USING (id);
 drop table t1, t2, t3;
 
 #
-# Bug #13067 JOIN xxx USING is case sensitive
+# Bug #13067 JOIN xxx USING is case-sensitive
 #
 
 create table t1 (a int(10),b int(10));
@@ -7074,7 +7074,7 @@ select * from t1 left join t2 on f1=t2.f2 where t1.f2='a';
 drop table t1,t2;
 
 #
-# Bug#15538 unchecked table absense caused server crash.
+# Bug#15538 unchecked table absence caused server crash.
 #
 --error 1064
 select * from (select * left join t on f1=f2) tt;
@@ -8774,7 +8774,7 @@ SELECT * FROM t1, t2 WHERE c=b AND (1=2 OR ((b='h' OR a=136) AND d=b));
 DROP TABLE t1,t2;
 
 --echo #
---echo # Bug mdev-4944: range conditition in OR formula with fields
+--echo # Bug mdev-4944: range condition in OR formula with fields
 --echo #                belonging to multiple equalities 
 --echo #
 
@@ -8856,7 +8856,7 @@ drop table t1;
 #
 # followed by some fixes.
 #
-# Lot's of duplicates, but that does not relly matter.
+# Lot's of duplicates, but that does not really matter.
 #
 set global myisam_data_pointer_size=2;
 set global myisam_data_pointer_size=default;
@@ -9249,7 +9249,7 @@ SET collation_connection=gb2312_chinese_ci;
 set names gb2312;
 set collation_connection=gb2312_bin;
 SET NAMES gbk;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO SET @`tcontent`:=_binary 0x50434B000900000000000000E9000000 COLLATE `binary`/*!*/;
 SET @test_character_set= 'gbk';
 SET @test_collation= 'gbk_chinese_ci';
@@ -10857,7 +10857,7 @@ set sql_quote_show_create=1;
 set sql_mode="";
 SET NAMES koi8r;
 SET NAMES latin1;
-set @user123="non-existent";
+set @user123="nonexistent";
 set names koi8r;
 set names latin1;
 set password for mysqltest_7@ = password('systpass');
@@ -15018,14 +15018,14 @@ SET optimizer_switch = 'semijoin=on,materialization=on,join_cache_hashed=on';
 SET join_cache_level = 3;
 set @@optimizer_switch= @os_912513;
 set @@join_cache_level= @jcl_912513;
-set @tmp_otimizer_switch= @@optimizer_switch;
+set @tmp_optimizer_switch= @@optimizer_switch;
 set @tmp_join_cache_level=@@join_cache_level;
 set optimizer_switch = 'materialization=on,semijoin=on,join_cache_hashed=on';
 set join_cache_level=0;
 set join_cache_level=6;
 set optimizer_switch=@tmp_optimizer_switch;
 set join_cache_level=@tmp_join_cache_level;
-set @tmp_otimizer_switch= @@optimizer_switch;
+set @tmp_optimizer_switch= @@optimizer_switch;
 set @tmp_join_cache_level=@@join_cache_level;
 set optimizer_switch = 'materialization=on,semijoin=on,join_cache_hashed=on';
 set join_cache_level=0;
@@ -15223,20 +15223,20 @@ set optimizer_switch=@tmp_877288;
 set @tmp878753= @@optimizer_switch;
 set optimizer_switch= 'semijoin=on,derived_merge=on';
 set optimizer_switch=@tmp878753;
-set @tmp_otimizer_switch= @@optimizer_switch;
+set @tmp_optimizer_switch= @@optimizer_switch;
 set optimizer_switch='semijoin=on';
 set optimizer_switch='firstmatch=off';
 set optimizer_switch='semijoin_with_cache=on';
 set optimizer_switch='semijoin_with_cache=off';
-set optimizer_switch= @tmp_otimizer_switch;
-set @tmp_otimizer_switch= @@optimizer_switch;
+set optimizer_switch= @tmp_optimizer_switch;
+set @tmp_optimizer_switch= @@optimizer_switch;
 SET SESSION optimizer_switch='semijoin=on,firstmatch=on';
 SET SESSION optimizer_switch='loosescan=off';
 SET SESSION optimizer_switch='loosescan=on';
-set optimizer_switch= @tmp_otimizer_switch;
-set @tmp_otimizer_switch= @@optimizer_switch;
+set optimizer_switch= @tmp_optimizer_switch;
+set @tmp_optimizer_switch= @@optimizer_switch;
 SET SESSION optimizer_switch='semijoin=on,materialization=on';
-set optimizer_switch= @tmp_otimizer_switch;
+set optimizer_switch= @tmp_optimizer_switch;
 SET @tmp_optimizer_switch=@@optimizer_switch;
 SET @@optimizer_switch='semijoin=on';
 SET @@optimizer_switch='materialization=on';
@@ -15759,7 +15759,7 @@ set @@autocommit=0;
 set @@autocommit=1;
 set @@global.general_log=@save_general_log;
 SET TIMESTAMP=10000;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO SET @`a b`='hello';
 set @var1= "';aaa";
 SET @var2=char(ascii('a'));
@@ -15863,12 +15863,12 @@ set @my_max_allowed_packet        =@@global.max_allowed_packet;
 set @my_delay_key_write           =@@global.delay_key_write;
 set @my_join_buffer_size          =@@global.join_buffer_size;
 set @my_log_warnings               =@@global.log_warnings;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO set @`test`=1;
 set @TEST=2;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO set @"tEST"=3;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO set @`TeST`=4;
 set @select=2,@t5=1.23456;
 set @test_int=10,@test_double=1e-10,@test_string="abcdeghi",@test_string2="abcdefghij",@select=NULL;

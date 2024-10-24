@@ -503,7 +503,7 @@ std::shared_ptr<mxs::FilterSession> RegexHintFilter::newSession(MXS_SESSION* ses
  * Find the first server list with a matching regular expression.
  *
  * @param sql   SQL-query string, not null-terminated
- * @paran sql_len   length of SQL-query
+ * @param sql_len   length of SQL-query
  * @return A set of servers from the main mapping container
  */
 const RegexToServers* RegexHintFSession::find_servers(const char* sql, int sql_len)

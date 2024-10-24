@@ -39,7 +39,7 @@
 # inserted as '\n'. Whitespace does not matter as long as
 # ignore_whitespace = true.
 # However, note that "id=42" is not the same as "id = 42"
-# in the match tamplate even with ignore_whitespace = true.
+# in the match template even with ignore_whitespace = true.
 # The parser cannot know that id=42 should be prepped for
 # ignoring space, so it is best to always use space where
 # space is allowed.

@@ -46,7 +46,7 @@ bool RegexRewriter::replace(const std::string& sql, std::string* pSql) const
     {
         // This is inefficient, regex_replace() does not indicate if a match
         // happened but instead returns the original sql when there is no
-        // match (what was the standards comittee thinking?).
+        // match (what was the standards committee thinking?).
         std::smatch match;
         matched = std::regex_search(sql, match, m_match_regex);
 

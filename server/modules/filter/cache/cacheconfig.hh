@@ -89,7 +89,7 @@ private:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
     bool is_config_valid(const std::map<std::string, mxs::ConfigParameters>& nested_params);
-    void make_config_adjustements();
+    void make_config_adjustments();
 
 private:
     CacheFilter* m_pFilter;

@@ -32,7 +32,7 @@ class NativeReplacer;
  * replace_template: "select count(*) from (select distinct @{1} from @{2}) as t"
  *
  * TODO: There are very few examples of rewrites, but it is relatively certain that
- *       the distinction between an indentifier and a number will be needed:
+ *       the distinction between an identifier and a number will be needed:
  *       @{1:s} and @{1:d}. Or 'i' and 'n' if that is clearer to users.
  */
 class NativeRewriter : public SqlRewriter
