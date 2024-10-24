@@ -53,7 +53,7 @@
         "style-resources-loader": "~1.5.0",
         "typy": "~3.3.0",
         "uuid": "~8.3.2",
-        "vue": "~2.6.14",
+        "vue": "~3.0.0",
         "vue-chartjs": "~4.1.2",
         "vue-cli-plugin-vuetify": "~2.5.8",
         "vue-i18n": "~8.28.2",
