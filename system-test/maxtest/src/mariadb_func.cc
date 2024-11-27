@@ -203,13 +203,14 @@ int execute_query_silent(MYSQL* conn, const char* sql, bool silent)
         }
         else
         {
+            int rc = 0;
             do
             {
                 res = mysql_store_result(conn);
                 mysql_free_result(res);
             }
-            while (mysql_next_result(conn) == 0);
-            return 0;
+            while (mysql_more_results(conn) && (rc = mysql_next_result(conn)) == 0);
+            return rc;
         }
     }
     else
