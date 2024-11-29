@@ -29,8 +29,7 @@ ExternalProject_Add(mongo-cxx-driver
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=${MONGO_CXX_DRIVER_INSTALL} -DCMAKE_PREFIX_PATH=${MONGO_C_DRIVER_INSTALL} -DCMAKE_C_FLAGS=-fPIC  -DCMAKE_CXX_FLAGS=-fPIC -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_AND_STATIC_LIBS=OFF
   BINARY_DIR ${MONGO_CXX_DRIVER_BINARY}
   PATCH_COMMAND sed -i s/add_subdirectory\(test\)/\#add_subdirectory\(test\)/ src/bsoncxx/CMakeLists.txt && sed -i s/add_subdirectory\(test\)/\#add_subdirectory\(test\)/ src/mongocxx/CMakeLists.txt
-  BUILD_COMMAND make
-  INSTALL_COMMAND make install
+  INSTALL_BYPRODUCTS ${MONGO_CXX_DRIVER_BINARY}/src/bsoncxx/libbsoncxx-static.a ${MONGO_CXX_DRIVER_BINARY}/src/mongocxx/libmongocxx-static.a
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
