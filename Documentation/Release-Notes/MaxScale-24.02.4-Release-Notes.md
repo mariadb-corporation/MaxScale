@@ -1,4 +1,4 @@
-# MariaDB MaxScale 24.02.4 Release Notes
+# MariaDB MaxScale 24.02.4 Release Notes -- 2024-12-09
 
 Release 24.02.4 is a GA release.
 
