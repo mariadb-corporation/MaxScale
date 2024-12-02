@@ -350,8 +350,13 @@ public:
 
         if (mysql_read_query_result(m_conn) == 0)
         {
-            mysql_free_result(mysql_use_result(m_conn));
             ok = true;
+
+            do
+            {
+                mysql_free_result(mysql_use_result(m_conn));
+            }
+            while (mysql_more_results(m_conn) && (ok = mysql_next_result(m_conn) == 0));
         }
 
         return ok;
