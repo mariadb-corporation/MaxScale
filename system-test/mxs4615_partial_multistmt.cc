@@ -23,7 +23,7 @@ void test_mxs4615(TestConnections& test)
     test.expect(c.connect(), "Failed to connect: %s", c.error());
 
     std::thread thr([&](){
-        test.expect(c.query("BEGIN NOT ATOMIC SELECT 1; SELECT SLEEP(5); SELECT 2; END"),
+        test.expect(!c.query("BEGIN NOT ATOMIC SELECT 1; SELECT SLEEP(5); SELECT 2; END"),
                     "Query should fail: %s", c.error());
     });
 
