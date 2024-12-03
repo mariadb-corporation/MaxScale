@@ -345,6 +345,14 @@ public:
         return mysql_send_query(m_conn, q.c_str(), q.size()) == 0;
     }
 
+    /**
+     * Reads all results for the query
+     *
+     * For a multi-statement query like "SELECT 1; SELECT 2", this will read both results.
+     * To read only one result, use read_one_query_result().
+     *
+     * @return True if all queries succeeded
+     */
     bool read_query_result()
     {
         bool ok = false;
@@ -358,6 +366,28 @@ public:
                 mysql_free_result(mysql_use_result(m_conn));
             }
             while (mysql_more_results(m_conn) && (ok = mysql_next_result(m_conn) == 0));
+        }
+
+        return ok;
+    }
+
+    /**
+     * Reads one result for a query
+     *
+     * For a multi-statement query like "SELECT 1; SELECT 2", this will read the next result.
+     * This can be used to make sure that a multi-statement query has started executing without
+     * having to rely on hard-coded sleeps.
+     *
+     * @return True if the result was a success
+     */
+    bool read_one_query_result()
+    {
+        bool ok = false;
+
+        if (mysql_read_query_result(m_conn) == 0)
+        {
+            mysql_free_result(mysql_use_result(m_conn));
+            ok = true;
         }
 
         return ok;
