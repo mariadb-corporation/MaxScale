@@ -619,7 +619,7 @@ bool is_builtin_readonly_function(const char* key,
         }
     }
 
-    if (!value && check_oracle)
+    if (!value && (check_oracle || major > 10 || (major == 10 && minor > 2)))
     {
         value = bsearch(key, ORACLE_FUNCTIONS, N_ORACLE_FUNCTIONS, sizeof(char*), search_compare);
     }
