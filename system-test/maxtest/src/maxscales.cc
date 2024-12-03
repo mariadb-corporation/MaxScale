@@ -56,7 +56,9 @@ const ServerStatusDesc status_flag_to_str[] = {
     {Status::EXT_MASTER_STOPPED,     StatusType::DETAIL, SLAVE_OF_EXT " (stopped)"    },
     {Status::EXT_MASTER_IO_STOPPED,  StatusType::DETAIL, SLAVE_OF_EXT " (IO stopped)" },
     {Status::EXT_MASTER_SQL_STOPPED, StatusType::DETAIL, SLAVE_OF_EXT " (SQL stopped)"},
-    {Status::EXT_MASTER_CONNECTING,  StatusType::DETAIL, SLAVE_OF_EXT " (connecting)" }};
+    {Status::EXT_MASTER_CONNECTING,  StatusType::DETAIL, SLAVE_OF_EXT " (connecting)" },
+    {Status::NEED_DNS_LOOKUP,        StatusType::DETAIL, "Need DNS lookup"            }
+};
 }
 
 namespace maxtest
