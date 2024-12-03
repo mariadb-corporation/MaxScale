@@ -54,6 +54,7 @@ struct ServerInfo
     static constexpr bitfield EXT_MASTER_IO_STOPPED = (1 << 22);
     static constexpr bitfield EXT_MASTER_SQL_STOPPED = (1 << 23);
     static constexpr bitfield EXT_MASTER_CONNECTING = (1 << 24);
+    static constexpr bitfield NEED_DNS_LOOKUP = (1 << 25);
 
     static constexpr bitfield master_st = MASTER | RUNNING;
     static constexpr bitfield slave_st = SLAVE | RUNNING;
