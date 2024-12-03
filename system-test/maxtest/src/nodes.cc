@@ -835,7 +835,7 @@ mxt::CmdResult Node::run_cmd_output_sudo(const string& cmd)
 
 mxt::CmdResult Node::run_sql_query(const std::string& sql)
 {
-    string cmd = mxb::string_printf("%s -N -s -e \"%s\"", m_mariadb_executable.c_str(), sql.c_str());
+    string cmd = mxb::string_printf("%s --ssl=false -N -s -e \"%s\"", m_mariadb_executable.c_str(), sql.c_str());
     return run_cmd_output_sudo(cmd);
 }
 

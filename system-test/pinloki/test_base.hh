@@ -18,7 +18,8 @@ std::string change_master_sql(const char* host, int port,
 
     ss << "CHANGE MASTER TO MASTER_HOST='" << host << "', MASTER_PORT=" << port
        << ", MASTER_USER='" << user << "', MASTER_PASSWORD='" << password
-       << "', MASTER_USE_GTID=" << (type == GtidPos::SLAVE ? "SLAVE_POS" : "CURRENT_POS");
+       << "', MASTER_USE_GTID=" << (type == GtidPos::SLAVE ? "SLAVE_POS" : "CURRENT_POS")
+       << ", MASTER_SSL_VERIFY_SERVER_CERT=0";
 
     return ss.str();
 }
