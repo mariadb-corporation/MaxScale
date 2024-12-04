@@ -17,6 +17,7 @@ ExternalProject_Add(avro-c
   BINARY_DIR ${CMAKE_BINARY_DIR}/avro-c/
   INSTALL_DIR ${CMAKE_BINARY_DIR}/avro-c/install
   UPDATE_COMMAND ""
+  INSTALL_BYPRODUCTS ${CMAKE_BINARY_DIR}/avro-c/src/libavro.a
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
