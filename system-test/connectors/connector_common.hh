@@ -4,6 +4,16 @@
 #include <fstream>
 #include <iostream>
 #include <maxbase/string.hh>
+#include <maxscale/version.hh>
+
+constexpr int VERSION_NUMBER =
+    MAXSCALE_VERSION_MAJOR * 10000
+    + MAXSCALE_VERSION_MINOR * 100
+    + MAXSCALE_VERSION_PATCH;
+
+std::string CREATE_VERSION_FUNC =
+    "CREATE OR REPLACE FUNCTION test.maxscale_version() "
+    "RETURNS INT DETERMINISTIC RETURN " + std::to_string(VERSION_NUMBER);
 
 static inline mxt::ScopedUser create_user(TestConnections& test)
 {
@@ -31,6 +41,10 @@ static inline int run_maven_test(TestConnections& test, int argc, char** argv,
                                  std::string repo, std::string branch, std::string repo_dir)
 {
     auto maven_test_main = [&repo, &branch, &repo_dir](TestConnections& test){
+        auto r = test.repl->get_connection(0);
+        r.connect();
+        test.expect(r.query(CREATE_VERSION_FUNC), "Query failed: %s", r.error());
+
         if (clone_repo(test, repo, branch, repo_dir))
         {
             auto user = create_user(test);
