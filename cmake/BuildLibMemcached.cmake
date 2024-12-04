@@ -30,8 +30,7 @@ ExternalProject_Add(libmemcached
   CONFIGURE_COMMAND ${LIBMEMCACHED_SOURCE}/configure --prefix=${LIBMEMCACHED_INSTALL} --enable-shared --with-pic --libdir=${LIBMEMCACHED_INSTALL}/lib/
   PATCH_COMMAND sed -i "s/opt_servers == false/opt_servers == 0/" ${LIBMEMCACHED_SOURCE}/clients/memflush.cc
   BINARY_DIR ${LIBMEMCACHED_BINARY}
-  BUILD_COMMAND make
-  INSTALL_COMMAND make install
+  INSTALL_BYPRODUCTS ${LIBMEMCACHED_INSTALL}/lib/libmemcached.a
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
