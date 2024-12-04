@@ -40,6 +40,8 @@ static const char* BUILTIN_FUNCTIONS[] =
     "if",
     "ifnull",
     "nullif",
+    "nvl",
+    "nvl2",
 
     /*
      * Date and Time Functions

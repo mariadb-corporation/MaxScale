@@ -10,6 +10,7 @@ ExternalProject_Add(connector-c
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/connector-c/install -DWITH_UNIT_TESTS=N -DWITH_CURL=N -DWITH_EXTERNAL_ZLIB=Y
   BINARY_DIR ${CMAKE_BINARY_DIR}/connector-c
   INSTALL_DIR ${CMAKE_BINARY_DIR}/connector-c/install
+  INSTALL_BYPRODUCTS ${CMAKE_BINARY_DIR}/connector-c/install/lib/mariadb/libmariadbclient.a
   UPDATE_COMMAND ""
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
