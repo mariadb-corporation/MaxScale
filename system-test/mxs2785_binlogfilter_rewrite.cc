@@ -24,7 +24,8 @@ int main(int argc, char** argv)
     slave.query("STOP SLAVE");
     std::ostringstream ss;
     ss << "CHANGE MASTER TO MASTER_HOST='" << test.maxscale->ip()
-       << "', MASTER_PORT=4008, MASTER_USE_GTID=slave_pos";
+       << "', MASTER_PORT=4008, MASTER_USE_GTID=slave_pos"
+       << ", MASTER_SSL_VERIFY_SERVER_CERT=0";
     slave.query(ss.str());
 
     auto master = test.repl->get_connection(0);

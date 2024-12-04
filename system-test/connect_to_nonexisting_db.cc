@@ -64,6 +64,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Creating and selecting 'test_db' DB");
     test.try_query(conn, "CREATE DATABASE test_db");
+    test.repl->sync_slaves();
     test.try_query(conn, "USE test_db");
     test.tprintf("Creating 't1' table");
     test.add_result(create_t1(conn), "Error creation 't1'");
@@ -81,6 +82,7 @@ int main(int argc, char* argv[])
                            test.maxscale_ssl);
     test.try_query(conn, "USE test_db");
     test.try_query(conn, "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
+    test.repl->sync_slaves();
     test.add_result(execute_select_query_and_check(conn, "SELECT * FROM t1", 1),
                     "Error execution SELECT * FROM t1;");
     test.try_query(conn, "DROP DATABASE test_db");
