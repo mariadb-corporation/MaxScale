@@ -1,4 +1,15 @@
 require("../utils.js")();
+const _ = require("lodash");
+
+async function test_filtering(filter, expected) {
+  var res = await request.get(base_url + `/servers?filter=id=${filter}`);
+  expect(_.map(res.data, (a) => a.id)).to.deep.equal(expected);
+}
+
+async function test_path_filtering(filter, expected) {
+  var res = await request.get(base_url + `/servers?${filter}`);
+  expect(_.map(res.data, (a) => a.id)).to.deep.equal(expected);
+}
 
 describe("HTTP", function () {
   describe("Headers", function () {
@@ -247,5 +258,103 @@ describe("HTTP", function () {
       expect(res.data.length).to.equal(4);
       expect(res.links.last).to.equal(res.links.first);
     });
+
+    const filter_test_cases = {
+      eq: ["server2"],
+      ne: ["server1", "server3", "server4"],
+      lt: ["server1"],
+      le: ["server1", "server2"],
+      gt: ["server3", "server4"],
+      ge: ["server2", "server3", "server4"],
+    };
+
+    Object.keys(filter_test_cases).forEach(function (fn) {
+      it("Filters with " + fn, async function () {
+        const res = filter_test_cases[fn];
+        await test_filtering(`${fn}("server2")`, res);
+      });
+    });
+
+    it("not(eq) == ne", async function () {
+      return test_filtering(`not(eq("server2"))`, filter_test_cases.ne);
+    });
+
+    it("not(ne) == eq", async function () {
+      return test_filtering(`not(ne("server2"))`, filter_test_cases.eq);
+    });
+
+    it("not(lt) == ge", async function () {
+      return test_filtering(`not(lt("server2"))`, filter_test_cases.ge);
+    });
+
+    it("not(le) == gt", async function () {
+      return test_filtering(`not(le("server2"))`, filter_test_cases.gt);
+    });
+
+    it("not(gt) == le", async function () {
+      return test_filtering(`not(gt("server2"))`, filter_test_cases.le);
+    });
+
+    it("not(ge) == lt", async function () {
+      return test_filtering(`not(ge("server2"))`, filter_test_cases.lt);
+    });
+
+    it("not with two subexpressions works", async function () {
+      return test_filtering(`not(eq("server2"),eq("server3"))`, ["server1", "server4"]);
+    });
+
+    it("not with three subexpressions works", async function () {
+      return test_filtering(`not(eq("server2"),eq("server3"),eq("server4"))`, ["server1"]);
+    });
+
+    it("and with one subexpression works", async function () {
+      return test_filtering(`and(eq("server1"))`, ["server1"]);
+    });
+
+    it("and with two subexpressions works", async function () {
+      return test_filtering(`and(gt("server1"),lt("server4"))`, ["server2", "server3"]);
+    });
+
+    it("and with three subexpressions works", async function () {
+      return test_filtering(`and(gt("server1"),lt("server4"),ne("server3"))`, ["server2"]);
+    });
+
+    it("or with one subexpressions works", async function () {
+      return test_filtering(`or(eq("server1"))`, ["server1"]);
+    });
+
+    it("or with two subexpressions works", async function () {
+      return test_filtering(`or(eq("server1"),eq("server4"))`, ["server1", "server4"]);
+    });
+
+    it("or with three subexpressions works", async function () {
+      return test_filtering(`or(eq("server1"),eq("server4"),lt("server3"))`, [
+        "server1",
+        "server2",
+        "server4",
+      ]);
+    });
+
+    it("Rejects unknown filter expressions", async function () {
+      return request.get(base_url + `/servers?filter=id=magic("server2")`).should.be.rejected;
+    });
+
+    it("Rejects invalid filter expressions", async function () {
+      return request.get(base_url + `/servers?filter=id=magic`).should.be.rejected;
+    });
+
+    const path_filter_test_cases = [
+      [`filter[id]=eq("server1")`, ["server1"]],
+      [`filter[attributes.parameters.port]=eq(3001)`, ["server2"]],
+      [`filter[attributes.parameters.port]=le(3001)&filter[id]=eq("server1")`, ["server1"]],
+      [`filter[attributes.parameters.port]=or(eq(3001),eq(3003))&filter[id]=eq("server1")`, []],
+    ];
+
+    for (var i = 0; i < path_filter_test_cases.length; i++) {
+      const t = path_filter_test_cases[i];
+      it("JSONPath filter: " + t[0], async function () {
+        await test_path_filtering(t[0], t[1]);
+      });
+    }
   });
 });

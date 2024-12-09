@@ -932,6 +932,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                 },
                 {
                     "default_value": false,
+                    "deprecated": true,
                     "description": "Retrieve users from all backend servers instead of only one",
                     "mandatory": false,
                     "modifiable": true,
@@ -1342,6 +1343,22 @@ one to see the parameters of a module before the object is created.
                         "type": "int"
                     },
                     {
+                        "default_value": "*",
+                        "description": "Allowed hosts for read-only rest-api users.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "admin_readonly_hosts",
+                        "type": "host pattern list"
+                    },
+                    {
+                        "default_value": "*",
+                        "description": "Allowed hosts for read-only rest-api users.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "admin_readwrite_hosts",
+                        "type": "host pattern list"
+                    },
+                    {
                         "default_value": true,
                         "description": "Only serve GUI over HTTPS.",
                         "mandatory": false,
@@ -1367,14 +1384,14 @@ one to see the parameters of a module before the object is created.
                     {
                         "description": "Admin SSL cert",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "admin_ssl_cert",
                         "type": "path"
                     },
                     {
                         "description": "Admin SSL key",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "admin_ssl_key",
                         "type": "path"
                     },
@@ -2454,6 +2471,11 @@ one to see the parameters of a module before the object is created.
                                     "description": "Primary server (optional)",
                                     "required": false,
                                     "type": "[SERVER]"
+                                },
+                                {
+                                    "description": "Target data directory (optional)",
+                                    "required": false,
+                                    "type": "[STRING]"
                                 }
                             ]
                         },
@@ -2780,6 +2802,22 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "maintenance_on_low_disk_space",
                         "type": "bool"
+                    },
+                    {
+                        "default_value": 1,
+                        "description": "Mariabackup thread count.",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "mariabackup_parallel",
+                        "type": "int"
+                    },
+                    {
+                        "default_value": "1G",
+                        "description": "Mariabackup buffer pool size.",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "mariabackup_use_memory",
+                        "type": "string"
                     },
                     {
                         "default_value": "primary_monitor_master",
@@ -3389,7 +3427,8 @@ one to see the parameters of a module before the object is created.
                             "transaction_time",
                             "num_warnings",
                             "error_msg",
-                            "server"
+                            "server",
+                            "command"
                         ],
                         "mandatory": false,
                         "modifiable": true,
@@ -3545,6 +3584,7 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": false,
+                        "deprecated": true,
                         "description": "Retrieve users from all backend servers instead of only one",
                         "mandatory": false,
                         "modifiable": true,
@@ -4026,6 +4066,7 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": false,
+                        "deprecated": true,
                         "description": "Retrieve users from all backend servers instead of only one",
                         "mandatory": false,
                         "modifiable": true,

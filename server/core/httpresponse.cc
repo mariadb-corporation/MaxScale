@@ -28,10 +28,323 @@ using std::stringstream;
 
 namespace
 {
-bool json_ptr_matches(const std::string& json_ptr, json_t* obj, json_t* rhs)
+
+using ParseError = std::runtime_error;
+
+class Matcher
 {
-    auto lhs = mxb::json_ptr(obj, json_ptr.c_str());
-    return lhs && json_equal(lhs, rhs);
+public:
+    virtual ~Matcher() = default;
+    virtual bool match(const mxb::Json& js) const = 0;
+};
+
+template<auto func>
+class ComparisonMatcher : public Matcher
+{
+public:
+    ComparisonMatcher(mxb::Json json)
+        : m_json(std::move(json))
+    {
+    }
+
+    bool match(const mxb::Json& js) const override
+    {
+        return func(js, m_json);
+    }
+
+private:
+    mxb::Json m_json;
+};
+
+class LogicMatcher : public Matcher
+{
+public:
+    using Expressions = std::vector<std::unique_ptr<Matcher>>;
+
+    LogicMatcher(Expressions expr)
+        : m_expr(std::move(expr))
+    {
+    }
+
+protected:
+    Expressions m_expr;
+};
+
+class AndMatcher : public LogicMatcher
+{
+public:
+    using LogicMatcher::LogicMatcher;
+
+    bool match(const mxb::Json& js) const override
+    {
+        return std::all_of(m_expr.begin(), m_expr.end(), [&](const auto& e){
+            return e->match(js);
+        });
+    }
+};
+
+class OrMatcher : public LogicMatcher
+{
+public:
+    using LogicMatcher::LogicMatcher;
+
+    bool match(const mxb::Json& js) const override
+    {
+        return std::any_of(m_expr.begin(), m_expr.end(), [&](const auto& e){
+            return e->match(js);
+        });
+    }
+};
+
+class NotMatcher : public LogicMatcher
+{
+public:
+    using LogicMatcher::LogicMatcher;
+
+    bool match(const mxb::Json& js) const override
+    {
+        return std::none_of(m_expr.begin(), m_expr.end(), [&](const auto& e){
+            return e->match(js);
+        });
+    }
+};
+
+bool eq_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lhs == rhs;
+}
+
+bool ne_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return !eq_json(lhs, rhs);
+}
+
+bool lt_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    if (lhs.type() == rhs.type())
+    {
+        switch (lhs.type())
+        {
+        case mxb::Json::Type::STRING:
+            return lhs.get_string() < rhs.get_string();
+
+        case mxb::Json::Type::INTEGER:
+            return lhs.get_int() < rhs.get_int();
+
+        case mxb::Json::Type::REAL:
+            return lhs.get_real() < rhs.get_real();
+
+        default:
+            return false;
+        }
+    }
+
+    return false;
+}
+
+bool le_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lt_json(lhs, rhs) || !lt_json(rhs, lhs);
+}
+
+bool gt_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lt_json(rhs, lhs);
+}
+
+bool ge_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lt_json(rhs, lhs) || !lt_json(lhs, rhs);
+}
+
+class MatcherParser
+{
+public:
+    MatcherParser(const std::string& str)
+        : m_str(str)
+    {
+    }
+
+    std::unique_ptr<Matcher> parse()
+    {
+        try
+        {
+            return do_parse();
+        }
+        catch (const ParseError& e)
+        {
+            MXB_ERROR("%s", e.what());
+            return nullptr;
+        }
+    }
+
+private:
+    std::unique_ptr<Matcher> do_parse()
+    {
+        if (m_str.empty())
+        {
+            throw ParseError("Empty filter expression");
+        }
+
+        if (!isalpha(m_str.front()))
+        {
+            try
+            {
+                // Non-alphanumeric, high likelihood that this is JSON.
+                auto json = consume_json();
+                return std::make_unique<ComparisonMatcher<eq_json>>(std::move(json));
+            }
+            catch (const ParseError& e)
+            {
+                // Ignore it if it's not JSON
+            }
+        }
+
+        if (try_consume("eq"))
+        {
+            return make_comparison<eq_json>();
+        }
+        else if (try_consume("ne"))
+        {
+            return make_comparison<ne_json>();
+        }
+        else if (try_consume("lt"))
+        {
+            return make_comparison<lt_json>();
+        }
+        else if (try_consume("gt"))
+        {
+            return make_comparison<gt_json>();
+        }
+        else if (try_consume("le"))
+        {
+            return make_comparison<le_json>();
+        }
+        else if (try_consume("ge"))
+        {
+            return make_comparison<ge_json>();
+        }
+        else if (try_consume("and"))
+        {
+            return make_logic<AndMatcher>();
+        }
+        else if (try_consume("or"))
+        {
+            return make_logic<OrMatcher>();
+        }
+        else if (try_consume("not"))
+        {
+            return make_logic<NotMatcher>();
+        }
+
+        throw ParseError(MAKE_STR("Not a valid filter expression: " << m_str));
+    }
+
+    /**
+     * Constructs a comparison element in the parsed match expression
+     *
+     * @tparam func The filtering function
+     *
+     * @return A new Matcher that uses the given function for matching to the JSON element passed to it
+     */
+    template<auto func>
+    std::unique_ptr<Matcher> make_comparison()
+    {
+        consume("(");
+        auto json = consume_json();
+        consume(")");
+        return std::make_unique<ComparisonMatcher<func>>(std::move(json));
+    }
+
+    /**
+     * Constructs a logical operator element in the parsed match expression
+     *
+     * The expression must be a non-empty comma separated list of sub-expressions.
+     *
+     * @tparam func The LogicMatcher type
+     *
+     * @return A new conjunction Matcher
+     */
+    template<class Type>
+    std::unique_ptr<Matcher> make_logic()
+    {
+        std::vector<std::unique_ptr<Matcher>> expr;
+        consume("(");
+
+        do
+        {
+            expr.push_back(parse());
+        }
+        while (try_consume(","));
+
+        consume(")");
+        return std::make_unique<Type>(std::move(expr));
+    }
+
+    mxb::Json consume_json()
+    {
+        json_error_t err;
+        json_t* js = json_loadb(m_str.data(), m_str.size(), JSON_DECODE_ANY | JSON_DISABLE_EOF_CHECK, &err);
+
+        if (!js)
+        {
+            throw ParseError(MAKE_STR("Invalid JSON: " << m_str));
+        }
+
+        m_str = m_str.substr(err.position);
+        return mxb::Json(js, mxb::Json::RefType::STEAL);
+    }
+
+
+    bool try_consume(std::string_view expected)
+    {
+        bool consumed = m_str.substr(0, expected.size()) == expected;
+
+        if (consumed)
+        {
+            m_str.remove_prefix(expected.size());
+        }
+
+        return consumed;
+    }
+
+    void consume(std::string_view expected)
+    {
+        auto tok = m_str.substr(0, expected.size());
+
+        if (tok != expected)
+        {
+            throw ParseError(MAKE_STR("Expected '" << expected << "', got '" << tok << "'"));
+        }
+
+        m_str.remove_prefix(tok.size());
+    }
+
+    std::string_view m_str;
+};
+
+template<class Compare>
+void filter_body(json_t* body, const std::string& json_ptr, Compare comp)
+{
+    if (auto data = json_object_get(body, CN_DATA))
+    {
+        if (json_is_array(data))
+        {
+            json_t* val;
+            size_t i;
+            json_t* new_arr = json_array();
+
+            json_array_foreach(data, i, val)
+            {
+                if (auto lhs = mxb::json_ptr(val, json_ptr.c_str()); lhs && comp(lhs))
+                {
+                    json_array_append_new(new_arr, json_copy(val));
+                }
+            }
+
+            json_object_set_new(body, CN_DATA, new_arr);
+        }
+    }
 }
 }
 
@@ -271,27 +584,61 @@ void HttpResponse::remove_fields(const std::string& type, const std::unordered_s
     }
 }
 
-void HttpResponse::remove_rows(const std::string& json_ptr, json_t* json)
+bool HttpResponse::remove_rows(const std::string& json_ptr, const std::string& value)
 {
-    if (auto data = json_object_get(m_body, CN_DATA))
+    bool ok = true;
+    json_error_t err;
+
+    if (auto matcher = MatcherParser(value).parse())
     {
-        if (json_is_array(data))
-        {
-            json_t* val;
-            size_t i;
-            json_t* new_arr = json_array();
-
-            json_array_foreach(data, i, val)
-            {
-                if (json_ptr_matches(json_ptr, val, json))
-                {
-                    json_array_append_new(new_arr, json_copy(val));
-                }
-            }
-
-            json_object_set_new(m_body, CN_DATA, new_arr);
-        }
+        // Filtering expression
+        filter_body(m_body, json_ptr, [&](json_t* lhs){
+            return matcher->match(mxb::Json(lhs, mxb::Json::RefType::COPY));
+        });
     }
+    else
+    {
+        ok = false;
+    }
+
+    return ok;
+}
+
+bool HttpResponse::remove_rows_json_path(const std::string& json_path, const std::string& value)
+{
+    bool ok = false;
+    json_error_t err;
+    json_t* data = json_object_get(m_body, CN_DATA);
+    auto matcher = MatcherParser(value).parse();
+
+    if (matcher && json_is_array(data))
+    {
+        ok = true;
+        json_t* val;
+        size_t i;
+        json_t* new_arr = json_array();
+
+        json_array_foreach(data, i, val)
+        {
+            bool matched = false;
+
+            // The expression is ORed so that if any value in the JSON Path matches, the result is considered
+            // to match. Each filter expression gets the output of the previous filter expression as its
+            // result which results in the filter expressions being ANDed together.
+            mxb::json_path(val, json_path, [&](json_t* json){
+                matched |= matcher->match(mxb::Json(json, mxb::Json::RefType::COPY));
+            });
+
+            if (matched)
+            {
+                json_array_append_new(new_arr, json_copy(val));
+            }
+        }
+
+        json_object_set_new(m_body, CN_DATA, new_arr);
+    }
+
+    return ok;
 }
 
 void HttpResponse::paginate(int64_t limit, int64_t offset)

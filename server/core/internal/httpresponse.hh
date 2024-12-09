@@ -175,10 +175,15 @@ public:
      *
      * Any values to do not compare equal to the given JSON value are discarded.
      *
-     * @param json_ptr The JSON pointer to use
-     * @param value    The value to compare to
+     * @param json_ptr The JSON pointer that is used to extract the JSON object to be compared.
+     * @param value    The string value that is used to build the filtering expression. If it's valid JSON, it
+     *                 is used to match for equality.
+     *
+     * @return True if the filter expression was valid
      */
-    void remove_rows(const std::string& json_ptr, json_t* value);
+    bool remove_rows(const std::string& json_ptr, const std::string& value);
+    // A version that uses JSON paths for the objects
+    bool remove_rows_json_path(const std::string& json_path, const std::string& value);
 
     /**
      * Paginates the result

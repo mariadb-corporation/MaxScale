@@ -1875,26 +1875,45 @@ static void remove_unwanted_fields(const HttpRequest& request, HttpResponse& res
     }
 }
 
-static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& response)
+static bool remove_unwanted_rows(const HttpRequest& request, HttpResponse& response)
 {
-    auto filter = request.get_option("filter");
+    bool ok = true;
+    const std::string FILTER = "filter";
+    const std::string FILTER_PATH = "filter[";
+    const auto& options = request.get_options();
 
-    if (!filter.empty())
+    if (auto it = options.find(FILTER); it != options.end())
     {
+        const auto& filter = it->second;
         auto pos = filter.find('=');
         if (pos != std::string::npos)
         {
             auto json_ptr = filter.substr(0, pos);
             auto value = filter.substr(pos + 1);
-            json_error_t err;
+            ok = response.remove_rows(json_ptr, value);
+        }
+        else
+        {
+            MXB_ERROR("Invalid filter expression: %s", filter.c_str());
+        }
+    }
 
-            if (json_t* js = json_loads(value.c_str(), JSON_DECODE_ANY, &err))
+    // Handle the filtering that uses JSON Path values of the form filter[PATH]=EXPR
+    for (const auto& [key, value] : options)
+    {
+        if (key.find(FILTER_PATH) == 0 && key.back() == ']')
+        {
+            auto path = key.substr(FILTER_PATH.size(), key.size() - FILTER_PATH.size() - 1);
+            ok = response.remove_rows_json_path(path, value);
+
+            if (!ok)
             {
-                response.remove_rows(json_ptr, js);
-                json_decref(js);
+                break;
             }
         }
     }
+
+    return ok;
 }
 
 static void paginate_result(const HttpRequest& request, HttpResponse& response)
@@ -2018,7 +2037,11 @@ static HttpResponse handle_request(const HttpRequest& request)
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
 
-        remove_unwanted_rows(request, rval);
+        if (!remove_unwanted_rows(request, rval))
+        {
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+        }
+
         paginate_result(request, rval);
         remove_unwanted_fields(request, rval);
     }

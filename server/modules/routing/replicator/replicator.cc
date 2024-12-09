@@ -25,6 +25,7 @@
 #include <condition_variable>
 
 #include <mariadb_rpl.h>
+#include <mysqld_error.h>
 #include <errmsg.h>
 #include <fcntl.h>
 
@@ -413,7 +414,19 @@ void Replicator::Imp::process_events()
             // If we don't have an error, the server stopped the replication stream with an EOF packet.
             if (m_sql->errnum())
             {
-                MXB_ERROR("Failed to read replicated event: %d, %s", m_sql->errnum(), m_sql->error().c_str());
+                if (m_sql->errnum() == ER_MASTER_FATAL_ERROR_READING_BINLOG)
+                {
+                    MXB_ERROR("Failed to read replicated event, GTID is not in the server's binlogs. "
+                              "The starting GTID position may be wrong, try adjusting the starting "
+                              "GTID position or discarding the stored GTID value in '%s'. "
+                              "Server error: %d, %s", (m_cnf.statedir + "/" + STATEFILE_NAME).c_str(),
+                              m_sql->errnum(), m_sql->error().c_str());
+                }
+                else
+                {
+                    MXB_ERROR("Failed to read replicated event: %d, %s",
+                              m_sql->errnum(), m_sql->error().c_str());
+                }
             }
             else
             {
