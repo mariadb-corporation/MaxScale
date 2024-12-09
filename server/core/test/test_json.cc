@@ -16,9 +16,11 @@
 
 #include <cstring>
 #include <string>
+#include <iostream>
 
 #include <maxbase/alloc.hh>
 #include <maxbase/jansson.hh>
+#include <maxbase/string.hh>
 #include <maxscale/json_api.hh>
 
 using std::string;
@@ -326,10 +328,168 @@ int test2()
     return 0;
 }
 
+int compare(std::vector<mxb::Json> result, std::vector<mxb::Json> expected)
+{
+    auto to_str = [](const mxb::Json& json) {
+        return json.to_string(mxb::Json::Format::COMPACT);
+    };
+
+    int errors = 0;
+    auto str_result = mxb::transform_join(result, to_str);
+    auto str_expected = mxb::transform_join(expected, to_str);
+
+    if (str_expected != str_result)
+    {
+        std::cout << "Error: " << str_result << " != " << str_expected << std::endl;
+        ++errors;
+    }
+
+    return errors;
+}
+
+int test_json_path()
+{
+    // From the author of JsonPath: https://goessner.net/articles/JsonPath/
+    std::string raw_json =
+        R"(
+{ "store": {
+    "book": [
+      { "category": "reference",
+        "author": "Nigel Rees",
+        "title": "Sayings of the Century",
+        "price": 8.95
+      },
+      { "category": "fiction",
+        "author": "Evelyn Waugh",
+        "title": "Sword of Honour",
+        "price": 12.99
+      },
+      { "category": "fiction",
+        "author": "Herman Melville",
+        "title": "Moby Dick",
+        "isbn": "0-553-21311-3",
+        "price": 8.99
+      },
+      { "category": "fiction",
+        "author": "J. R. R. Tolkien",
+        "title": "The Lord of the Rings",
+        "isbn": "0-395-19395-8",
+        "price": 22.99
+      }
+    ],
+    "bicycle": {
+      "color": "red",
+      "price": 19.95
+    }
+  }
+})";
+
+    mxb::Json js;
+    js.load_string(raw_json);
+
+    // Used to store JSON results
+    std::vector<mxb::Json> result;
+    auto store_objects = [&](json_t* json){
+        result.push_back(mxb::Json(json, mxb::Json::RefType::COPY));
+    };
+
+    int errors = 0;
+    auto test_one = [&](const char* path, std::vector<mxb::Json> expected) {
+        result.clear();
+        mxb::json_path(js.get_json(), path, store_objects);
+        int err = compare(result, expected);
+
+        // Test without the root object as well.
+        if (path[0] == '$' && path[1] == '.' && path[2] != '\0')
+        {
+            result.clear();
+            mxb::json_path(js.get_json(), path + 2, store_objects);
+            err += compare(result, expected);
+        }
+
+        errors += err;
+
+        if (err)
+        {
+            std::cout << "Path: " << path << std::endl;
+        }
+    };
+
+    // Root object
+    test_one("$", {js});
+
+    // Object
+    test_one("$.store", {js.at("store")});
+
+    // Sub-object
+    test_one("$.store.bicycle", {js.at("store/bicycle")});
+
+    // Field of a sub-object
+    test_one("$.store.bicycle.color", {js.at("store/bicycle/color")});
+
+    // Bracket notation
+    test_one("$['store']['bicycle']['color']", {js.at("store/bicycle/color")});
+
+    // Bracket and dot notation
+    test_one("$['store'].bicycle['color']", {js.at("store/bicycle/color")});
+
+    // Array
+    test_one("$.store.book", {js.at("store/book")});
+
+    // Array value
+    test_one("$.store.book[1]", {js.at("store/book/1")});
+
+    // Wildcard that matches multiple array values
+    test_one("$.store.book[*].author", {
+        js.at("store/book/0/author"),
+        js.at("store/book/1/author"),
+        js.at("store/book/2/author"),
+        js.at("store/book/3/author")
+    });
+
+    // Wildcard that matches multiple array values
+    test_one("$.store.bicycle.*", {
+        js.at("store/bicycle/color"),
+        js.at("store/bicycle/price")
+    });
+
+    // Wildcard that matches multiple array values
+    test_one("$.store.*.color", {
+        js.at("store/bicycle/color")
+    });
+
+    // Multiple array values
+    test_one("$.store.book[1,2].author", {
+        js.at("store/book/1/author"),
+        js.at("store/book/2/author")
+    });
+
+    // Array values in specified order
+    test_one("$.store.book[2,0,3,1].price", {
+        js.at("store/book/2/price"),
+        js.at("store/book/0/price"),
+        js.at("store/book/3/price"),
+        js.at("store/book/1/price"),
+    });
+
+    // Wrong paths do not generate output
+    test_one("", {});
+    test_one("store.", {});
+    test_one(".", {});
+    test_one("$.", {});
+    test_one("store/book", {});
+    test_one("sto.re", {});
+    test_one("ಠ_ಠ", {});
+    test_one("🍣🍺", {});
+
+    return errors;
+}
+
 int main(int argc, char** argv)
 {
     int errors = 0;
     errors += test1();
     errors += test2();
+    errors += test_json_path();
     return errors;
 }
