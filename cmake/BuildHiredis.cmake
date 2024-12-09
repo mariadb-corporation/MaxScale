@@ -20,7 +20,6 @@ ExternalProject_add(hiredis
   SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hiredis
   CONFIGURE_COMMAND ""
   BUILD_IN_SOURCE 1
-  CMAKE_GENERATOR "Unix Makefiles"
   BUILD_COMMAND make
 # The install command is intentionally left out: for some strange and
 # unknown reason it causes the library to be installed as a part of the
@@ -29,7 +28,6 @@ ExternalProject_add(hiredis
 # package by changing the ownership of home directories to root.
   INSTALL_COMMAND ""
   UPDATE_COMMAND ""
-  INSTALL_BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/hiredis/libhiredis.a
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
