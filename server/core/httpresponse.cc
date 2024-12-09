@@ -237,7 +237,7 @@ private:
             return make_logic<NotMatcher>();
         }
 
-        throw ParseError(mxb::cat("Not a valid filter expression: ", m_str));
+        throw ParseError(MAKE_STR("Not a valid filter expression: " << m_str));
     }
 
     /**
@@ -288,7 +288,7 @@ private:
 
         if (!js)
         {
-            throw ParseError(mxb::cat("Invalid JSON: ", m_str));
+            throw ParseError(MAKE_STR("Invalid JSON: " << m_str));
         }
 
         m_str = m_str.substr(err.position);
@@ -314,7 +314,7 @@ private:
 
         if (tok != expected)
         {
-            throw ParseError(mxb::cat("Expected '", expected, "', got '", tok, "'"));
+            throw ParseError(MAKE_STR("Expected '" << expected << "', got '" << tok << "'"));
         }
 
         m_str.remove_prefix(tok.size());

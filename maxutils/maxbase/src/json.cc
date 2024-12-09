@@ -18,6 +18,7 @@
 #include <utility>
 #include <sstream>
 #include <charconv>
+#include <limits>
 
 using std::string;
 
@@ -153,10 +154,10 @@ void json_path_impl(json_t* json, std::string_view path, const std::function<voi
             // One or more values
             mxb_assert(!key.empty());
 
-            for (auto k : mxb::strtok<std::string_view>(key, ","))
+            for (auto k : mxb::strtok(std::string(key), ","))
             {
                 uint64_t i = std::numeric_limits<uint64_t>::max();
-                auto res = std::from_chars(k.begin(), k.end(), i);
+                auto res = std::from_chars(k.c_str(), k.c_str() + k.size(), i);
 
                 if (res.ec == std::errc{} && json_is_array(json) && json_array_size(json) > i)
                 {
