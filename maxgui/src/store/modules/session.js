@@ -123,8 +123,8 @@ export default {
         getPaginateParam: ({ pagination_config: { itemsPerPage, page } }) =>
             itemsPerPage === -1 ? '' : `page[size]=${itemsPerPage}&page[number]=${page}`,
         getFilterParamByServiceId: () => serviceId =>
-            `filter=/relationships/services/data/0/id="${serviceId}"`,
+            `filter[relationships.services.data[*].id]="${serviceId}"`,
         getFilterParamByServerId: () => serverId =>
-            `filter=/attributes/connections/0/server="${serverId}"`,
+            `filter[attributes.connections[*].server]="${serverId}"`,
     },
 }
