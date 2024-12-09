@@ -127,7 +127,8 @@ public:
         size_t num_archived = 0;
         bool done = false;
 
-        while (!done && m_sw.split() < expire_log_duration + 5s)
+        mxb::Timer tmr(expire_log_duration + 5s);
+        while (!done && !tmr.alarm())
         {
             auto rows = maxscale.rows("SHOW BINARY LOGS");
             auto res = test.maxscale->ssh_output("ls -l /tmp/archive | grep 000 | wc -l");
