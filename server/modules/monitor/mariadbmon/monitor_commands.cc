@@ -2313,8 +2313,19 @@ bool BackupOperation::start_replication(MariaDBServer* target, MariaDBServer* re
 {
     string gtid;
     // The gtid of the rebuilt server may not be correct, read it from xtrabackup_binlog_info.
-    string read_gtid_cmd = mxb::string_printf("sudo cat %s/xtrabackup_binlog_info | tr -s ' ' | "
-                                              "cut --fields=3 | tail -n 1", m_eff_datadir.c_str());
+    string binlog_info = "xtrabackup_binlog_info";
+    string test_file_exists = mxb::string_printf("sudo test -f %s/mariadb_backup_binlog_info",
+                                                 m_eff_datadir.c_str());
+    auto test_res = ssh_util::run_cmd(*m_target_ses, test_file_exists, m_ssh_timeout);
+
+    if (test_res.type == RType::OK && test_res.rc == 0)
+    {
+        // MariaDB 11.4 has renamed the file to mariadb_backup_binlog_info.
+        binlog_info = "mariadb_backup_binlog_info";
+    }
+
+    string read_gtid_cmd = mxb::string_printf("sudo cat %s/%s | tr -s ' ' | cut --fields=3 | tail -n 1",
+                                              m_eff_datadir.c_str(), binlog_info.c_str());
     auto res = ssh_util::run_cmd(*m_target_ses, read_gtid_cmd, m_ssh_timeout);
     if (res.type == RType::OK && res.rc == 0)
     {
