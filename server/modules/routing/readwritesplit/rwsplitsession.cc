@@ -563,6 +563,9 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             return false;
         }
 
+        // Query completed successfully, reset retry duration
+        m_retry_duration = 0;
+
         bool ignore_response = backend->should_ignore_response();
 
         if (ignore_response)
@@ -928,7 +931,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
                 errmsg += " Cannot retry query as multiple queries were in progress.";
             }
             else if (m_config.retry_failed_reads && m_prev_plan.route_target != TARGET_MASTER
-                     && !trx_is_open() && can_recover_master())
+                     && !trx_is_open() && can_recover_master() && retry_duration_below_timeout())
             {
                 // This was not a write but it just ended up being routed to the current master. It can be
                 // safely retried if a transaction is not open.
@@ -1073,6 +1076,11 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
             {
                 MXS_INFO("Cannot retry failed read as there are no candidates to "
                          "try it on and delayed_retry is not enabled");
+                return false;
+            }
+            else if (!retry_duration_below_timeout())
+            {
+                MXS_INFO("Cannot retry failed read as delayed_retry_timeout was exceeded.");
                 return false;
             }
 

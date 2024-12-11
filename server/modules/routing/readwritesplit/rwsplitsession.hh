@@ -238,6 +238,11 @@ private:
         return static_cast<MYSQL_session*>(m_pSession->protocol_data());
     }
 
+    inline bool retry_duration_below_timeout() const
+    {
+        return m_retry_duration < m_config.delayed_retry_timeout.count();
+    }
+
     inline bool can_retry_query() const
     {
         /** Individual queries can only be retried if we are not inside
@@ -252,7 +257,7 @@ private:
                 // For example, retrying an INSERT would generate two rows instead of just one if done with
                 // autocommit=1.
                && m_expected_responses == 0
-               && m_retry_duration < m_config.delayed_retry_timeout.count()
+               && retry_duration_below_timeout()
                && !trx_is_open();
     }
 
