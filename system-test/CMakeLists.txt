@@ -939,6 +939,9 @@ add_test_executable(mxs5193_multistmt_sescmd.cc mxs5193_multistmt_sescmd mxs5193
 # MXS-5302: Executing more than max_sescmd_history prepared statements may lose some of them
 add_test_executable(mxs5302_ps_overflow.cc mxs5302_ps_overflow mxs5302_ps_overflow LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5415: retry_failed_reads is not affected by delayed_retry_timeout
+add_test_executable(mxs5415_retry_failed_reads_timeout.cc mxs5415_retry_failed_reads_timeout mxs5415_retry_failed_reads_timeout LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
