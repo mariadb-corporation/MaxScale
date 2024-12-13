@@ -23,9 +23,10 @@ elif command -v dnf
 then
     # RHEL, Rocky Linux or Alma Linux
 
-    # This enables the CodeReadyBuilder on RHEL/Rocky 9 which is needed to
-    # install the EPEL repository.
-    sudo crb enable
+    # This enables the CodeReadyBuilder on RHEL/Rocky 9 which is needed by
+    # some packages in the EPEL repository.
+    sudo dnf install -y dnf-plugins-core
+    sudo dnf config-manager --enable crb
     sudo dnf install -y epel-release
 
     # The --allowerasing is needed on systems where curl-minimal is installed instead of curl.
