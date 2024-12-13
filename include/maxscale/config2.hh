@@ -2779,7 +2779,7 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
                 if (pMessage)
                 {
                     *pMessage = "Cannot set '" + this->name() + "' to " + value_as_string
-                        + ": value must be defined in seconds.";
+                        + ": value too small, it must be greater than or equal to one second.";
                 }
 
                 valid = false;
@@ -2819,7 +2819,8 @@ json_t* ParamDuration<T>::to_json() const
 {
     auto rv = ConcreteParam<ParamDuration<T>, T>::to_json();
 
-    json_object_set_new(rv, "unit", json_string("ms"));
+    const char* unit = m_interpretation == INTERPRET_AS_SECONDS ? "s" : "ms";
+    json_object_set_new(rv, "unit", json_string(unit));
 
     return rv;
 }

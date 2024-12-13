@@ -30,6 +30,10 @@ describe("MaxScale Core", function () {
       return set_value("auth_write_timeout", "10000ms").should.be.fulfilled;
     });
 
+    it("parameter with seconds rejects sub-second values", function () {
+      return set_value("auth_write_timeout", "10ms").should.be.rejected;
+    });
+
     it("will not modify static parameters", function () {
       return set_value("threads", "1").should.be.rejected;
     });
@@ -48,12 +52,16 @@ describe("MaxScale Core", function () {
       const check_type = function (obj, name, type) {
         obj.data.attributes.parameters.find((e) => e.name == name).type.should.equal(type);
       };
+      const check_unit = function (obj, name, type) {
+        obj.data.attributes.parameters.find((e) => e.name == name).unit.should.equal(type);
+      };
 
       var core = await request.get(base_url + "/maxscale/modules/maxscale");
       check_type(core, "admin_auth", "bool");
       check_type(core, "admin_host", "string");
       check_type(core, "admin_port", "int");
       check_type(core, "auth_connect_timeout", "duration");
+      check_unit(core, "auth_connect_timeout", "s");
       check_type(core, "dump_last_statements", "enum");
       check_type(core, "log_throttling", "throttling");
       check_type(core, "query_classifier_cache_size", "size");
@@ -61,6 +69,8 @@ describe("MaxScale Core", function () {
 
       var mon = await request.get(base_url + "/maxscale/modules/mariadbmon");
       check_type(mon, "events", "enum_mask");
+      check_type(mon, "monitor_interval", "duration");
+      check_unit(mon, "monitor_interval", "ms");
     });
   });
 
