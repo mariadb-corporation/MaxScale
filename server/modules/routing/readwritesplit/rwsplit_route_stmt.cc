@@ -385,9 +385,6 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
 
         track_optimistic_trx(&buffer, res);
 
-        // We have a valid target, reset retry duration
-        m_retry_duration = 0;
-
         if (!prepare_target(target, res.route_target))
         {
             // The connection to target was down and we failed to reconnect
@@ -643,9 +640,6 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             m_router->update_max_sescmd_sz(protocol_data()->history.size());
 
             m_current_query = std::move(buffer);
-
-            // Session command routed, reset retry duration
-            m_retry_duration = 0;
 
             m_prev_plan = plan;
 

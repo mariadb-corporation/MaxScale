@@ -948,6 +948,9 @@ add_test_executable(mxs5302_ps_overflow.cc mxs5302_ps_overflow mxs5302_ps_overfl
 add_test_executable(mxs5268_trx_replay_switchover.cc mxs5268_trx_replay_switchover mxs5268_trx_replay_switchover
   LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5415: retry_failed_reads is not affected by delayed_retry_timeout
+add_test_executable(mxs5415_retry_failed_reads_timeout.cc mxs5415_retry_failed_reads_timeout mxs5415_retry_failed_reads_timeout LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
