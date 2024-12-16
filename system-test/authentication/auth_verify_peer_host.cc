@@ -41,6 +41,16 @@ void test_main(TestConnections& test)
         return server_names;
     };
 
+    /**
+     * Inject fixed hostnames into the MaxScale VM for the backend nodes. The actual hostnames
+     * might be different depending on where the nodes are located. This way, the test can
+     * be made much simpler.
+     */
+    for (int i = 0; i < test.repl->n_nodes(); i++)
+    {
+        test.maxscale->ssh_node_f(true, "echo '%s node00%d' >> /etc/hosts", test.repl->ip(i), i);
+    }
+
     test.tprintf("Server peer cert & host verification is on and servers have valid certificates. "
                  "All should be working normally.");
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
@@ -113,6 +123,11 @@ void test_main(TestConnections& test)
         restore_certificate(repl.backend(3));
         mxs.wait_for_monitor();
         mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    }
+
+    for (int i = 0; i < test.repl->n_nodes(); i++)
+    {
+        test.maxscale->ssh_node_f(true, "sed -i '/node00%d/ d' /etc/hosts", i);
     }
 }
 

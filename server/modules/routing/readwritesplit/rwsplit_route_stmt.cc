@@ -211,7 +211,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
         discard_connection(m_current_master, "The original primary is not available");
     }
     else if (res.route_target == TARGET_MASTER
-             && (!m_config->delayed_retry || m_retry_duration >= m_config->delayed_retry_timeout.count()))
+             && (!m_config->delayed_retry || !retry_duration_below_timeout()))
     {
         // Cannot retry the query, log a message that routing has failed
         log_master_routing_failure(res.target != nullptr, m_current_master, res.target);
@@ -370,9 +370,6 @@ bool RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
         update_statistics(res);
 
         track_optimistic_trx(buffer, res);
-
-        // We have a valid target, reset retry duration
-        m_retry_duration = 0;
 
         if (!prepare_target(target, res.route_target))
         {
@@ -639,9 +636,6 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
 
             m_current_query.buffer = std::move(buffer);
 
-            // Session command routed, reset retry duration
-            m_retry_duration = 0;
-
             m_prev_plan = plan;
 
             mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
@@ -696,7 +690,7 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
         }
         else
         {
-            if (m_retry_duration >= m_config->delayed_retry_timeout.count())
+            if (!retry_duration_below_timeout())
             {
                 error << " Retry took too long (" << m_retry_duration << " seconds).";
             }
@@ -926,7 +920,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 {
     std::string errmsg;
 
-    if (m_config->delayed_retry && m_retry_duration >= m_config->delayed_retry_timeout.count())
+    if (m_config->delayed_retry && !retry_duration_below_timeout())
     {
         errmsg = get_delayed_retry_failure_reason();
     }

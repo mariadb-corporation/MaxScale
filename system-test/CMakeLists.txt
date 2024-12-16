@@ -988,6 +988,9 @@ add_test_executable(mxs5268_trx_replay_switchover.cc mxs5268_trx_replay_switchov
 # MXS-5356: Using GET_LOCK() should prevent reconnections
 add_test_executable(mxs5356_get_lock.cc mxs5356_get_lock mxs5356_get_lock LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5415: retry_failed_reads is not affected by delayed_retry_timeout
+add_test_executable(mxs5415_retry_failed_reads_timeout.cc mxs5415_retry_failed_reads_timeout mxs5415_retry_failed_reads_timeout LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
