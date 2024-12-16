@@ -223,7 +223,7 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
         discard_connection(m_current_master, "The original primary is not available");
     }
     else if (plan.route_target == TARGET_MASTER
-             && (!m_config->delayed_retry || m_retry_duration >= m_config->delayed_retry_timeout.count()))
+             && (!m_config->delayed_retry || !retry_duration_below_timeout()))
     {
         // Cannot retry the query, log a message that routing has failed
         return get_master_routing_failure(plan.target != nullptr, m_current_master, plan.target);
@@ -351,8 +351,7 @@ void RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& plan)
 
     update_statistics(plan);
 
-    // The query was successfully routed, reset the retry duration and store the routing plan
-    m_retry_duration = 0;
+    // The query was successfully routed, store the routing plan
     m_prev_plan = plan;
 }
 
@@ -737,7 +736,7 @@ std::string RWSplitSession::get_master_routing_failure(bool found,
 {
     std::string errmsg;
 
-    if (m_config->delayed_retry && m_retry_duration >= m_config->delayed_retry_timeout.count())
+    if (m_config->delayed_retry && !retry_duration_below_timeout())
     {
         errmsg = get_delayed_retry_failure_reason();
     }

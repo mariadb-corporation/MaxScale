@@ -700,6 +700,9 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
         m_expected_responses--;
         mxb_assert(m_expected_responses >= 0);
 
+        // Query completed successfully, reset retry duration
+        m_retry_duration = 0;
+
         track_tx_isolation(reply);
 
         if (m_state == OTRX_ROLLBACK)
@@ -1051,12 +1054,15 @@ void RWSplitSession::handle_slave_error(const char* name, const std::string& mes
                 "Cannot retry read because 'retry_failed_reads' is disabled and a query was ",
                 "active on '", name, "' when it failed: ", message);
         }
-
         else if (!m_config->delayed_retry && !have_connections)
         {
             throw RWSException(
                 "Cannot retry failed read, no candidates to try it on and delayed_retry is not enabled. ",
                 "'", name, "' was the last server to fail: ", message);
+        }
+        else if (!retry_duration_below_timeout())
+        {
+            throw RWSException("Cannot retry failed read as delayed_retry_timeout was exceeded.");
         }
 
         MXB_INFO("Re-routing failed read after server '%s' failed", name);
