@@ -101,7 +101,6 @@ if [[ ${packager_type} == "yum" ]]
 then
     install_libdir=/usr/lib64
     # YUM!
-    sudo yum clean all
     sudo yum update -d1 -y
     unset enable_power_tools
     yum repolist all | grep "^PowerTools"
