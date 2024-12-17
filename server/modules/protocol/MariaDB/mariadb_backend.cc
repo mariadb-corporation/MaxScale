@@ -270,6 +270,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     uint16_t errcode = mxs_mysql_get_mysql_errno(buffer);
+    auto error_type = mxs::ErrorType::PERMANENT;
     std::string reason = mxs::extract_error(buffer);
     std::string errmsg = mxb::string_printf(
         "Authentication to '%s' failed: %hu, %s",
@@ -316,8 +317,11 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
         }
         // If user cache does not exist, do nothing.
     }
-
-    auto error_type = mxs::ErrorType::PERMANENT;
+    else if (errcode == ER_USER_LIMIT_REACHED)
+    {
+        // Same as connection limit reached but for this specific user.
+        error_type = mxs::ErrorType::TRANSIENT;
+    }
 
     // XPand responds with this sort of an authentication failure error while it's doing a group change. To
     // avoid permanently closing the backends, treat it as a transient error.
