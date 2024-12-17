@@ -30,7 +30,7 @@ then
     sudo dnf install -y epel-release
 
     # The --allowerasing is needed on systems where curl-minimal is installed instead of curl.
-    sudo dnf install -y --allowerasing curl php-cli php-mysqlnd oathtool java-17-openjdk krb5-workstation maven unixODBC-devel
+    sudo dnf install -y --allowerasing curl php-cli php-mysqlnd oathtool java-17-openjdk maven-openjdk17 krb5-workstation  unixODBC-devel
     install_mariadb_repo
     sudo dnf install -y MariaDB-test MariaDB-client
 else
