@@ -245,12 +245,16 @@ export default {
     },
     methods: {
         watch_resultSetItems() {
-            this.unwatch_resultSetItems = this.$watch('resultSetItems', v => {
-                if (v.length) {
-                    const errResSetIdx = v.findIndex(item => item.id === this.errorTabId)
-                    this.activeResSet = errResSetIdx >= 0 ? v[errResSetIdx].id : v[0].id
-                }
-            })
+            this.unwatch_resultSetItems = this.$watch(
+                'resultSetItems',
+                v => {
+                    if (v.length) {
+                        const errResSetIdx = v.findIndex(item => item.id === this.errorTabId)
+                        this.activeResSet = errResSetIdx >= 0 ? v[errResSetIdx].id : v[0].id
+                    }
+                },
+                { immediate: true }
+            )
         },
         setHeaderHeight() {
             if (!this.$refs.header) return
