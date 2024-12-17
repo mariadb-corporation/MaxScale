@@ -57,7 +57,7 @@ const ServerStatusDesc status_flag_to_str[] = {
     {Status::EXT_MASTER_IO_STOPPED,  StatusType::DETAIL, SLAVE_OF_EXT " (IO stopped)" },
     {Status::EXT_MASTER_SQL_STOPPED, StatusType::DETAIL, SLAVE_OF_EXT " (SQL stopped)"},
     {Status::EXT_MASTER_CONNECTING,  StatusType::DETAIL, SLAVE_OF_EXT " (connecting)" },
-    {Status::NEED_DNS_LOOKUP,        StatusType::DETAIL, "Need DNS lookup"            }
+    {Status::NEED_DNS_LOOKUP,        StatusType::STATUS, "Need DNS lookup"            }
 };
 }
 
@@ -1381,7 +1381,7 @@ bool ServerInfo::status_from_string(const string& source, const string& details)
     bool error = false;
 
     auto check_tokens = [this, &error](std::vector<string> tokens, StatusType expected_type) {
-        const char* expected_type_str = (expected_type == StatusType::STATUS) ? "status" : "detail";
+        const char* expected_type_str = (expected_type == StatusType::STATUS) ? "state" : "state detail";
 
         for (string& token : tokens)
         {
