@@ -236,18 +236,15 @@ export default {
                     if (this.isErrorTab) this.$refs.resultSetItems.scrollToBottom()
                 })
         },
-        resultSetItems: {
-            deep: true,
-            handler(v) {
-                if (v.length) {
-                    const errResSetIdx = v.findIndex(item => item.id === this.errorTabId)
-                    this.activeResSet = errResSetIdx >= 0 ? v[errResSetIdx].id : v[0].id
-                }
-            },
-        },
         isLoading(v) {
             if (!v) this.setHeaderHeight()
         },
+    },
+    activated() {
+        this.watch_resultSetItems()
+    },
+    deactivated() {
+        this.$typy(this.unwatch_resultSetItems).safeFunction()
     },
     methods: {
         setHeaderHeight() {
@@ -255,6 +252,18 @@ export default {
         },
         onClickResSetTab(item) {
             this.activeResSet = item.id
+        },
+        watch_resultSetItems() {
+            this.unwatch_resultSetItems = this.$watch(
+                'resultSetItems',
+                v => {
+                    if (v.length) {
+                        const errResSetIdx = v.findIndex(item => item.id === this.errorTabId)
+                        this.activeResSet = errResSetIdx >= 0 ? v[errResSetIdx].id : v[0].id
+                    }
+                },
+                { immediate: true }
+            )
         },
     },
 }
