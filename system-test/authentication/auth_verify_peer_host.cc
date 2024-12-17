@@ -51,6 +51,8 @@ void test_main(TestConnections& test)
         test.maxscale->ssh_node_f(true, "echo '%s node00%d' >> /etc/hosts", test.repl->ip(i), i);
     }
 
+    test.maxscale->start();
+
     test.tprintf("Server peer cert & host verification is on and servers have valid certificates. "
                  "All should be working normally.");
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
@@ -131,5 +133,6 @@ void test_main(TestConnections& test)
 
 int main(int argc, char** argv)
 {
+    TestConnections::skip_maxscale_start(true);
     return TestConnections().run_test(argc, argv, test_main);
 }
