@@ -1,10 +1,5 @@
 # Diff - router for comparing servers
 
-**NOTE** The Diff router requires a MaxScale license. This license is included
-with a MariaDB support agreement, but can also be purchased separately. The
-Diff router will be a standard part of MaxScale 24.08, but is available upon
-request for evaluation with MaxScale 24.02.
-
 [TOC]
 
 ## Overview

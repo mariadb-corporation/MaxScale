@@ -1,9 +1,8 @@
 # WCAR: Workload Capture and Replay
 
-**NOTE** The WCAR filter requires a MaxScale license. This license is included
-with a MariaDB support agreement, but can also be purchased separately. The
-WCAR filter will be a standard part of MaxScale 24.08, but is available upon
-request for evaluation with MaxScale 24.02.
+[TOC]
+
+## Overview
 
 The _WCAR_ filter captures client traffic and stores it in a replayable format.
 
@@ -17,8 +16,6 @@ expected and to measure what effects configuration changes may have.
 
 Another use case is to find out why certain scenarios take much longer then
 expected, a kind of sql debugging.
-
-[TOC]
 
 ## Prerequisites
 
