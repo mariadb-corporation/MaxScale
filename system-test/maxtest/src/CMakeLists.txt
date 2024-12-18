@@ -33,3 +33,7 @@ target_link_libraries(maxtest
   m)
 set_target_properties(maxtest PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
 install(TARGETS maxtest DESTINATION system-test)
+
+if (FORCE_BUNDLE)
+  add_dependencies(maxtest librdkafka)
+endif()
