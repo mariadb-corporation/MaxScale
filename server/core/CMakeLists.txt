@@ -125,6 +125,10 @@ add_dependencies(maxscale-common connector-c maxbase maxsimd)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 install_module(maxscale-common core)
 
+if (FORCE_BUNDLE)
+  add_dependencies(maxscale-common libmicrohttpd)
+endif()
+
 add_executable(maxscale gateway.cc)
 
 if(WITH_JEMALLOC)

@@ -15,3 +15,8 @@ install_file(LICENSE cdc-connector)
 set(cdc-connector_PACKAGE_SUMMARY "MaxScale CDC Connector" CACHE INTERNAL "")
 set(cdc-connector_PACKAGE_DESCRIPTION "The C++ connector for the MariaDB MaxScale CDC system." CACHE INTERNAL "")
 set(cdc-connector_LICENSE "LGPLv2.1" CACHE INTERNAL "")
+
+if (FORCE_BUNDLE)
+  add_dependencies(cdc_connector jansson)
+  add_dependencies(cdc_connector_static jansson)
+endif()
