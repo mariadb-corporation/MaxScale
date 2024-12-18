@@ -57,3 +57,7 @@ target_link_libraries(maxbase
 if (BUILD_TESTS)
   add_subdirectory(test)
 endif()
+
+if (FORCE_BUNDLE)
+  add_dependencies(maxbase jansson pcre2)
+endif()
