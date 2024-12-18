@@ -541,11 +541,26 @@ bool DCB::socket_read_SSL(size_t maxbytes)
                 {
                     // EOF from client while reading with an old OpenSSL version. See the check for
                     // SSL_R_UNEXPECTED_EOF_WHILE_READING in log_ssl_errors() for the explanation.
-                    success = false;
+                    if (bytes_from_socket > 0)
+                    {
+                        // Something was read from the socket. Return it and trigger a read event
+                        // so that the next read returns the actual error.
+                        trigger_read_event();
+                    }
+                    else
+                    {
+                        success = false;
+                    }
                     break;
                 }
                 [[fallthrough]];
 
+            case SSL_ERROR_NONE:
+                // The documentation for SSL_read() states that this value is only returned
+                // of SSL_read() returned >0 value. This still seems to happen for some reason
+                // under some circumstances and if we for whatever reason end up here with an
+                // SSL_ERROR_NODE and data was read from the socket, treat it as a success and
+                // then trigger a read. If it's an actual error, it'll be delivered separately.
             case SSL_ERROR_SSL:
                 // Non-recoverable error, connection will be closed. Check SSL error queue for more info.
                 // If data was already read, return success + data, then return here after data has been
