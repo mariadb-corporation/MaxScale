@@ -55,6 +55,7 @@ if (FORCE_BUNDLE)
   include(cmake/BuildMicroHttpd.cmake)
   include(cmake/BuildJansson.cmake)
   include(cmake/BuildPCRE2.cmake)
+  include(cmake/BuildLibSSH.cmake)
 
   # Both of these modules require librdkafka
   if (BUILD_KAFKACDC OR BUILD_KAFKAIMPORTER OR BUILD_MIRROR OR BUILD_SYSTEM_TESTS)
