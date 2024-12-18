@@ -38,6 +38,7 @@ option(WITH_SCRIPTS "Install init.d scripts and ldconf configuration files" ON)
 option(WITH_TCMALLOC "Use tcmalloc as the memory allocator" OFF)
 option(WITH_TSAN "Enable ThreadSanitizer" OFF)
 option(WITH_LTO "Enable link-time optimization" OFF)
+option(FORCE_BUNDLE "Always build and use static versions of dependencies." ON)
 option(BUNDLE "If dynamic versions of packages are not found, build and use static versions of them." ON)
 option(WITH_SYSTEM_NODEJS "Use system Node.js for MaxCtrl instead of bundling a custom one" OFF)
 
