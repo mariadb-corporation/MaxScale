@@ -44,7 +44,6 @@ find_package(TCMalloc)
 find_package(Jemalloc)
 find_package(GSSAPI)
 find_package(SQLite)
-find_package(Rdkafka)
 find_package(Git REQUIRED)
 find_package(LibUUID REQUIRED)
 find_package(CURL REQUIRED)
@@ -53,10 +52,26 @@ find_package(GnuTLS REQUIRED)
 find_package(Libatomic REQUIRED)
 find_package(Tclsh REQUIRED)
 find_package(ODBC REQUIRED)
-find_package(PCRE2 REQUIRED)
-find_package(Jansson REQUIRED)
-find_package(MicroHttpd REQUIRED)
-find_package(LibSSH REQUIRED)
+
+if (FORCE_BUNDLE)
+  include(cmake/BuildMicroHttpd.cmake)
+  include(cmake/BuildJansson.cmake)
+  include(cmake/BuildPCRE2.cmake)
+  include(cmake/BuildLibSSH.cmake)
+
+  # Both of these modules require librdkafka
+  if (BUILD_KAFKACDC OR BUILD_KAFKAIMPORTER OR BUILD_MIRROR OR BUILD_SYSTEM_TESTS)
+    include(cmake/BuildRdkafka.cmake)
+    include_directories(${RDKAFKA_INCLUDE_DIR})
+  endif()
+
+else()
+  find_package(MicroHttpd REQUIRED)
+  find_package(Jansson REQUIRED)
+  find_package(PCRE2 REQUIRED)
+  find_package(LibSSH REQUIRED)
+  find_package(Rdkafka)
+endif()
 
 if (PCRE2_VERSION VERSION_LESS_EQUAL "10.32")
   message(STATUS "PCRE2 ${PCRE2_VERSION} is too old, disabling JIT compilation.")
@@ -75,11 +90,15 @@ if (WITH_LTO)
   endif()
 endif()
 
-include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
-
 # Always build Connector-C from a known good commit
 include(cmake/BuildMariaDBConnector.cmake)
 include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
+
+# Include the directorories of the libraries. As these might be custom versions,
+# we always include them before all other directories.
+include_directories(BEFORE ${MICROHTTPD_INCLUDE_DIR})
+include_directories(BEFORE ${JANSSON_INCLUDE_DIR})
+include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
 
 # Include jwt-cpp headers
 include_directories(jwt-cpp/include)
