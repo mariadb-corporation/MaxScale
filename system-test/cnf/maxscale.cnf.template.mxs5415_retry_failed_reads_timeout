@@ -17,7 +17,7 @@ router=readwritesplit
 servers=server1
 user=maxskysql
 password=skysql
-delayed_retry_timeout=3
+delayed_retry_timeout=3s
 master_reconnection=true
 master_failure_mode=fail_on_write
 
