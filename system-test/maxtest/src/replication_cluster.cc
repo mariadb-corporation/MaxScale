@@ -134,7 +134,7 @@ bool ReplicationCluster::setup_replication()
                 }
             }
 
-            if (repl_ok && sync_slaves(0, 5))
+            if (repl_ok && sync_slaves(0, 20))
             {
                 logger().log_msgf("Replication setup success on %s.", name().c_str());
                 rval = true;
