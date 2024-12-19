@@ -39,7 +39,7 @@ srcdir=$1
 testsrc=$2
 testdir=$3
 
-maxscaledir=$PWD/maxscale_test/
+maxscaledir=$PWD/
 
 rm -f $maxscaledir/maxscale1.output $maxscaledir/log/maxscale/maxscale.log
 
@@ -74,15 +74,11 @@ export UBSAN_OPTIONS=abort_on_error=1:print_stacktrace=1
 # Configure and install MaxScale
 cd $maxscaledir
 cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
-      -DWITH_ASAN=Y \
-      -DWITH_UBSAN=Y \
       -DCMAKE_INSTALL_PREFIX=$maxscaledir \
       -DDEFAULT_CONFIGSUBDIR=$maxscaledir \
       -DDEFAULT_SYSTEMD_CONFIGDIR=$maxscaledir \
       -DDEFAULT_MODULE_CONFIGDIR=$maxscaledir \
       -DMAXSCALE_VARDIR=$maxscaledir \
-      -DWITH_SCRIPTS=N \
-      -DWITH_MAXSCALE_CNF=N \
       $MXS_EXTRA_CMAKE_OPTIONS || exit 1
 
 make -j $NUMCPU install || exit 1
