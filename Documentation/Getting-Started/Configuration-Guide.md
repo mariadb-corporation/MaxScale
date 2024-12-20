@@ -1390,13 +1390,12 @@ the MaxScale log.
 - **Type**: [size](#size)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: `16Mi`
+- **Default**: `65536`
 
 High water mark for network write buffer. When the size of the outbound network
 buffer in MaxScale for a single connection exceeds this value, network traffic
-throtting for that connection is started. The parameter accepts
-[size type values](#sizes). The default value is 65536 bytes (was 16777216 bytes
-before 22.08.4).
+throtting for that connection is started. The parameter accepts [size type
+values](#sizes). The default value was 16777216 bytes before 22.08.4.
 
 More specifically, if the client side write queue is above this value, it will
 block traffic coming from backend servers. If the backend side write queue is
@@ -1416,12 +1415,12 @@ to 0.
 - **Type**: [size](#size)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: `8Ki`
+- **Default**: `1024`
 
 Low water mark for network write buffer. Once the traffic throttling is enabled,
 it will only be disabled when the network write buffer is below
 `writeq_low_water` bytes. The parameter accepts [size type values](#sizes). The
-default value is 1024 bytes (was 8192 bytes before 22.08.4).
+default value was 8192 bytes before 22.08.4.
 
 The value of `writeq_high_water` must always be greater than the value of
 `writeq_low_water`.
