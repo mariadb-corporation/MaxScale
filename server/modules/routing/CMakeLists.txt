@@ -28,7 +28,3 @@ endif()
 if (BUILD_MIRROR)
   add_subdirectory(mirror)
 endif()
-
-if (BUILD_POSTGRES)
-  add_subdirectory(xrouter)
-endif()
