@@ -95,6 +95,7 @@ add_test_executable(mxs3416_causal_reads_extra_packet.cc mxs3416_causal_reads_ex
 # https://jira.mariadb.org/browse/MXS-1720
 # Also covers MXS-4122: causal_reads=fast_global
 add_test_executable(mxs1720_fast_causal_reads.cc mxs1720_fast_causal_reads mxs1720_fast_causal_reads LABELS readwritesplit REPL_BACKEND)
+add_test_derived(fast_causal_reads_galera mxs1720_fast_causal_reads fast_causal_reads_galera LABELS readwritesplit GALERA_BACKEND)
 
 # MXS-3499: Prepared statement support for causal_reads
 # https://jira.mariadb.org/browse/MXS-3499

@@ -983,13 +983,12 @@ server which would cause the connection to be closed and a warning to be logged.
 
 #### Limitations of Causal Reads
 
-- This feature does not work with Galera or any other non-standard
-  replication mechanisms. As Galera does not update the `gtid_slave_pos`
-  variable when events are replicated via the Galera library, the
+- Starting with MaxScale 24.02.5, the fast modes `fast`, `fast_global` and
+  `fast_universal` work with Galera clusters. In older versions, none of the
+  `causal_reads` modes worked with Galera. The non-fast modes that rely on the
   [`MASTER_GTID_WAIT`](https://mariadb.com/kb/en/library/master_gtid_wait/)
-  function used by MaxScale to synchronize reads will wait until the
-  timeout. With Galera this is not a serious issue as it, by nature, is a
-  mostly-synchronous replication mechanism.
+  function still do not work with Galera. This is because Galera does not
+  implement a mechanism that allows a client to wait for a particular GTID.
 
 - If the combination of the original SQL statement and the modifications
   added to it by readwritesplit exceed the maximum packet size (16777213 bytes),

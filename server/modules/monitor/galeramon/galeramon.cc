@@ -29,6 +29,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/protocol/mariadb/maxscale.hh>
+#include <maxscale/protocol/mariadb/gtid.hh>
 #include <maxscale/secrets.hh>
 #include <maxsql/mariadb.hh>
 #include <maxsql/mariadb_connector.hh>
@@ -274,6 +275,19 @@ void get_gtid(GaleraServer* srv, GaleraNode* info)
                 if (!info->gtid_binlog_pos.empty() && info->gtid_current_pos.empty())
                 {
                     info->gtid_current_pos = info->gtid_binlog_pos;
+                }
+
+                if (!info->gtid_current_pos.empty())
+                {
+                    std::vector<std::pair<uint32_t, uint64_t>> positions;
+                    auto gtid_list = mariadb::GtidList::from_string(info->gtid_current_pos);
+
+                    for (const auto& gtid : gtid_list.triplets())
+                    {
+                        positions.emplace_back(gtid.m_domain, gtid.m_sequence);
+                    }
+
+                    srv->server->set_gtid_list(positions);
                 }
             }
         }
