@@ -1801,12 +1801,13 @@ const std::vector<SERVER*>& Monitor::configured_servers() const
 
 namespace journal_fields
 {
-const char FIELD_MXSVERSION[] = "maxscale_version";
+const char FIELD_CONFIG_PATH[] = "config_path";
 const char FIELD_MODULE[] = "module";
-const char FIELD_TIMESTAMP[] = "timestamp";
+const char FIELD_MXSVERSION[] = "maxscale_version";
 const char FIELD_NAME[] = "name";
-const char FIELD_STATUS[] = "status";
 const char FIELD_SERVERS[] = "servers";
+const char FIELD_STATUS[] = "status";
+const char FIELD_TIMESTAMP[] = "timestamp";
 }
 
 void Monitor::write_journal_if_needed()
@@ -1825,6 +1826,7 @@ void Monitor::write_journal()
     auto mod = get_module(m_module, mxs::ModuleType::MONITOR);
     data.set_int(journal_fields::FIELD_MXSVERSION, mod->mxs_version);
     data.set_int(journal_fields::FIELD_TIMESTAMP, time(nullptr));
+    data.set_string(journal_fields::FIELD_CONFIG_PATH, Config::get().file_path());
 
     Json servers_data(Json::Type::ARRAY);
     for (auto* db : m_servers)
@@ -1855,6 +1857,7 @@ void Monitor::read_journal()
             int64_t timestamp = data.get_int(journal_fields::FIELD_TIMESTAMP);
             int64_t version = data.get_int(journal_fields::FIELD_MXSVERSION);
             string module = data.get_string(journal_fields::FIELD_MODULE);
+            string config_path = data.get_string(journal_fields::FIELD_CONFIG_PATH);
 
             if (data.ok())
             {
@@ -1876,6 +1879,12 @@ void Monitor::read_journal()
                 {
                     fail_reason = mxb::string_printf("File is %li seconds old. Limit is %li seconds.",
                                                      age, max_age);
+                }
+                else if (config_path != Config::get().file_path())
+                {
+                    fail_reason = mxb::string_printf("File saved for config '%s'. Currently using '%s'.",
+                                                     config_path.c_str(),
+                                                     Config::get().file_path().c_str());
                 }
                 else
                 {
