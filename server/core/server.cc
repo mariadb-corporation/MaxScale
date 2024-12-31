@@ -1495,7 +1495,9 @@ int Server::connect_socket(sockaddr_storage* addr)
     int so = -1;
     size_t sz;
     auto host = address();
-    if (host[0] == '/')
+    bool is_unix_socket = host[0] == '/';
+
+    if (is_unix_socket)
     {
         so = open_unix_socket(MxsSocketType::CONNECT, (sockaddr_un*)addr, host);
         sz = sizeof(sockaddr_un);
@@ -1519,7 +1521,8 @@ int Server::connect_socket(sockaddr_storage* addr)
 
     if (so != -1)
     {
-        if (::connect(so, (sockaddr*)addr, sz) == -1 && errno != EINPROGRESS)
+        if (::connect(so, (sockaddr*)addr, sz) == -1
+            && ((is_unix_socket && errno != EAGAIN) || (!is_unix_socket && errno != EINPROGRESS)))
         {
             MXB_ERROR("Failed to connect backend server %s ([%s]:%d). Error %d: %s.",
                       name(), host, port(), errno, mxb_strerror(errno));
