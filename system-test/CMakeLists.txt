@@ -942,6 +942,9 @@ add_test_executable(mxs5302_ps_overflow.cc mxs5302_ps_overflow mxs5302_ps_overfl
 # MXS-5415: retry_failed_reads is not affected by delayed_retry_timeout
 add_test_executable(mxs5415_retry_failed_reads_timeout.cc mxs5415_retry_failed_reads_timeout mxs5415_retry_failed_reads_timeout LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5432: Executing prepared statements too fast may stall query execution
+add_test_executable(mxs5432_queued_ps.cc mxs5432_queued_ps mxs5432_queued_ps LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
