@@ -558,8 +558,9 @@ int connect_socket(const char* host, int port, sockaddr_storage* addr)
     mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
     int so;
     size_t sz;
+    bool is_unix_socket = host[0] == '/';
 
-    if (host[0] == '/')
+    if (is_unix_socket)
     {
         so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)addr, host);
         sz = sizeof(sockaddr_un);
@@ -572,7 +573,8 @@ int connect_socket(const char* host, int port, sockaddr_storage* addr)
 
     if (so != -1)
     {
-        if (::connect(so, (struct sockaddr*)addr, sz) == -1 && errno != EINPROGRESS)
+        if (::connect(so, (struct sockaddr*)addr, sz) == -1
+            && ((is_unix_socket && errno != EAGAIN) || (!is_unix_socket && errno != EINPROGRESS)))
         {
             MXB_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
                       host, port, errno, mxb_strerror(errno));
