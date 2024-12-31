@@ -2952,26 +2952,6 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
 void MariaDBBackendConnection::store_delayed_packet(GWBUF&& buffer)
 {
     uint8_t cmd = mxs_mysql_get_command(&buffer);
-
-    if (cmd == MXS_COM_STMT_CLOSE && !m_delayed_packets.empty())
-    {
-        // This'll ignore MARIADB_PS_DIRECT_EXEC_ID which could also be handled by popping
-        // the last command if it's a COM_STMT_PREPARE. This is unlikely to happen as no
-        // connector is known to behave like this.
-        uint32_t ps_id = mxs_mysql_extract_ps_id(&buffer);
-        auto it = std::find_if(m_delayed_packets.begin(), m_delayed_packets.end(), [&](const auto& buffer){
-            return buffer.id() == ps_id;
-        });
-
-        if (it != m_delayed_packets.end())
-        {
-            MXB_INFO("COM_STMT_CLOSE refers to COM_STMT_PREPARE with ID %u that is "
-                     "queued for execution, removing both from the queue.", ps_id);
-            m_delayed_packets.erase(it);
-            return;
-        }
-    }
-
     m_delayed_packets.emplace_back(std::move(buffer));
 
     MXB_INFO("Storing %s while in state '%s', %lu packet(s) queued: %s",
