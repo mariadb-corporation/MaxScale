@@ -1863,6 +1863,8 @@ int main(int argc, char** argv)
         return rc;
     }
 
+    cnf.set_file_path(cnf_file_path);
+
     auto cfg_file_read_res = sniff_configuration(cnf_file_path);
     if (!cfg_file_read_res.success)
     {

@@ -243,6 +243,26 @@ public:
     }
 
     /**
+     * Sets the path of the main configuration file. To be called once from @main.
+     *
+     * @param file_path  The path of the main configuration file.
+     */
+    void set_file_path(std::string_view file_path)
+    {
+        mxb_assert(m_file_path.empty());
+
+        m_file_path = file_path;
+    }
+
+    /**
+     * @return The path of the main configuration file, or empty if not yet known.
+     */
+    const std::string& file_path() const
+    {
+        return m_file_path;
+    }
+
+    /**
      * Get the type of an object.
      *
      * @param name  The name of a configuration object.
@@ -526,6 +546,7 @@ public:
     CacheProperties  qc_cache_properties;       /**< The query classifier cache properties. */
     int64_t          promoted_at;               /**< Time when this Maxscale instance was
                                                 * promoted from a passive to an active */
+    std::string m_file_path; // Path of main configuration file.
 
     using config::Configuration::configure;
 
