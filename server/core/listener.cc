@@ -1532,6 +1532,16 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
 
             if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
             {
+                if (mxb::lower_case_copy(m_config.authenticator).find("ed25519auth") != std::string::npos
+                    && m_config.authenticator_options.empty() && m_config.user_mapping_file.empty())
+                {
+                    MXB_WARNING("The 'ed25519auth' authenticator is being used without any options: "
+                                "the authentication with the backend MariaDB servers will most likely fail. Add "
+                                "'authenticator_options=ed_mode=sha256' to the listener to enable automatic "
+                                "password handling or configure 'user_mapping_file'. To disable this warning, "
+                                "use 'authenticator_options=ed_mode=ed25519'.");
+                }
+
                 // If the protocol uses separate authenticator modules, assume that at least
                 // one must be created.
                 authenticators = protocol_module->create_authenticators(m_params);

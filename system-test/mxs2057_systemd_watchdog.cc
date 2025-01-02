@@ -69,7 +69,11 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
     query += "'";
 
     // Make one thread in maxscale hang
+    test.log_printf("Starting query");
+    auto start = mxb::Clock::now();
     mysql_query(test.maxscale->conn_rwsplit, query.c_str());
+    auto end = mxb::Clock::now();
+    test.log_printf("Query complete in %.02f seconds", mxb::to_secs(end - start));
 
     // maxscale should get killed by systemd in less than duration(interval - epsilon).
     bool maxscale_alive = staying_alive(test, mxb::from_secs(1.2 * mxb::to_secs(watchdog_interval)));
