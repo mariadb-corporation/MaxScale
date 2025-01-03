@@ -1,17 +1,17 @@
 [maxscale]
 threads=###threads###
 
-###server###
+###gserver###
 
 [Monitor]
 type=monitor
 module=galeramon
-servers=###server_line###
+servers=###gserver_line###
 user=maxskysql
 password=skysql
 monitor_interval=1s
 
-[Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 cluster=Monitor
