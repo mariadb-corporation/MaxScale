@@ -2954,15 +2954,6 @@ void MariaDBBackendConnection::store_delayed_packet(mxs::Buffer buffer)
     MXB_INFO("Storing %s while in state '%s', %lu packet(s) queued: %s",
              STRPACKETTYPE(cmd), to_string(m_state).c_str(), m_delayed_packets.size(),
              mxs::extract_sql(m_delayed_packets.back()).c_str());
-
-    size_t too_many_packets = std::max(mysql_session()->max_sescmd_history, 5UL);
-
-    if (m_delayed_packets.size() > too_many_packets)
-    {
-        MXB_WARNING("Server '%s' is too much behind (%lu queued packets), closing connection.",
-                    m_server.name(), m_delayed_packets.size());
-        m_dcb->trigger_hangup_event();
-    }
 }
 
 bool MariaDBBackendConnection::send_delayed_packets()

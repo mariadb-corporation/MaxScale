@@ -34,6 +34,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_config(instance->config())
     , m_expected_responses(0)
     , m_router(instance)
+    , m_max_packets_behind(std::max(5L, instance->service()->config()->max_sescmd_history))
     , m_wait_gtid(NONE)
     , m_next_seq(0)
     , m_qc(this, session, m_config.use_sql_variables_in)
