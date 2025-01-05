@@ -458,6 +458,28 @@ bool MariaDBCluster::unblock_all_nodes()
     return run_on_every_backend(func);
 }
 
+bool MariaDBCluster::suspend_node(int node)
+{
+    auto cmd = block_command(node);
+    std::string reject = "-j REJECT";
+    auto it = cmd.find(reject);
+
+    while (it != std::string::npos)
+    {
+        cmd.replace(it, reject.size(), "-j DROP");
+        it = cmd.find(reject);
+    }
+
+    int res = ssh_node(node, cmd, true);
+    m_blocked[node] = true;
+    return res == 0;
+}
+
+bool MariaDBCluster::unsuspend_node(int node)
+{
+    return unblock_node(node);
+}
+
 bool MariaDBCluster::fix_replication()
 {
     auto namec = name().c_str();

@@ -307,6 +307,24 @@ public:
     bool unblock_all_nodes();
 
     /**
+     * Setup firewall on a backend node to drop all packets on the MariaDB port.
+     *
+     * @param node Index of node to suspend
+     *
+     * @return True on success
+     */
+    bool suspend_node(int node);
+
+    /**
+     * Setup firewall on a backend node to allow all packets on the MariaDB port.
+     *
+     * @param node Index of node to unsuspend
+     *
+     * @return True on success
+     */
+    bool unsuspend_node(int node);
+
+    /**
      * @brief clean_iptables removes all itables rules connected to MariaDB port to avoid duplicates
      * @param node Index of node to clean
      * @return 0 in case of success
