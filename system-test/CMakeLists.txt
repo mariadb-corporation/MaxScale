@@ -1009,28 +1009,7 @@ add_test_executable(mxs4010_avro_rotate.cc mxs4010_avro_rotate mxs4010_avro_rota
 # BEGIN: Galera tests                      #
 ############################################
 
-# Crash in case of backend node in Galera cluster stopping and then reconnect to Maxscale
-add_test_executable(bug676.cc bug676 galera LABELS galeramon GALERA_BACKEND)
-
-# Galera node priority test. Also tests MXS-3826 and MXS-3532.
-add_test_executable(galera_priority.cc galera_priority galera_priority LABELS galeramon LIGHT GALERA_BACKEND)
-
-# INSERT extremelly big number of rows
-add_test_executable(lots_of_rows.cc lots_of_rows galera LABELS readwritesplit HEAVY GALERA_BACKEND)
-
-# Prepearing and execution statements in the loop
-add_test_executable(mxs244_prepared_stmt_loop.cc mxs244_prepared_stmt_loop galera LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
-
-# Playing with blocking and unblocking nodes under INSERT load
-add_test_executable(mxs564_big_dump.cc mxs564_big_dump galera_mxs564 LABELS readwritesplit readconnroute GALERA_BACKEND)
-
-# MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current master
-# https://jira.mariadb.org/browse/MXS-1476
-add_test_executable(mxs1476.cc mxs1476 mxs1476 LABELS galeramon GALERA_BACKEND)
-
-# MXS-1751: Maxscale crashes when certain config is in play (with nodes down)
-# https://jira.mariadb.org/browse/MXS-1751
-add_test_executable(mxs1751_available_when_donor_crash.cc mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS galeramon GALERA_BACKEND)
+add_subdirectory(galera)
 
 # Persistant connection test. Also MXS-3265.
 add_test_executable(pers_01.cc pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
@@ -1046,10 +1025,6 @@ add_test_script(mariadb_tests_hartmut_galera.sh mariadb_tests_hartmut.sh galera_
 
 # Crash with Galera and backend restart when persistant cfonnections are in use
 add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale REPL_BACKEND GALERA_BACKEND)
-
- # MXS-1585: Crash in MaxScale 2.1.12
- # https://jira.mariadb.org/browse/MXS-1585
-add_test_executable(mxs1585.cc mxs1585 mxs1585 LABELS GALERA_BACKEND)
 
 # Test big number of opened connections with persistent connections configured
 add_test_executable(pers_02.cc pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
