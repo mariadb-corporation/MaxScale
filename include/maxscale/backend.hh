@@ -171,6 +171,16 @@ public:
     }
 
     /**
+     * @brief Get the number of expected responses
+     *
+     * @return The number of expected responses
+     */
+    size_t expected_responses() const
+    {
+        return m_responses.size();
+    }
+
+    /**
      * @brief Check if any results are expected
      *
      * Ignored results count as expected results. Use is_waiting_result() to see if a result is expected that

@@ -499,6 +499,23 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
         type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
     }
 
+    // If this is not an important backend and there are no responses expected from it,
+    // it can be closed if it's lagging behind too much. This happens when one server
+    // in the cluster is a lot further away or is otherwise slow and ends up not getting
+    // any traffic. If the connection is not closed, the delay queue may end up getting
+    // filled up with prepared statements. This also results in massive latency spikes
+    // for queries that would end up being routed there.
+    if (backend != m_current_master
+        && backend != m_sescmd_replier
+        && backend->expected_responses() > m_max_packets_behind
+        && !backend->is_waiting_result())
+    {
+        MXB_WARNING("Backend '%s' is lagging behind too much (%lu queued packets), closing connection.",
+                    backend->name(), backend->expected_responses());
+        backend->close();
+        return true;
+    }
+
     if (backend->write(std::move(buffer), type))
     {
         auto& stats = m_router->local_server_stats()[backend->target()];

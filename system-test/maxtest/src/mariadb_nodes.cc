@@ -495,6 +495,17 @@ bool mxt::MariaDBServer::block()
     return rval;
 }
 
+bool mxt::MariaDBServer::suspend()
+{
+    if (m_vm.type() == Node::Type::REMOTE)
+    {
+        return suspend_port(m_port);
+    }
+
+    m_shared.log.log_msgf("Suspend not supported.");
+    return false;
+}
+
 bool mxt::MariaDBServer::block_port(int port)
 {
     const char block_fmt[] =
@@ -507,6 +518,18 @@ bool mxt::MariaDBServer::block_port(int port)
     int res = m_vm.run_cmd_sudo(command);
     m_blocked = true;
     return res == 0;
+}
+
+bool mxt::MariaDBServer::suspend_port(int port)
+{
+    std::ostringstream ss;
+    ss << "iptables -I INPUT -p tcp --dport " << port << " -j DROP;"
+       << "iptables -I OUTPUT -p tcp --sport " << port << " -j DROP;"
+       << "ip6tables -I INPUT -p tcp --dport " << port << " -j DROP;"
+       << "ip6tables -I OUTPUT -p tcp --sport " << port << " -j DROP";
+
+    m_blocked = true;
+    return m_vm.run_cmd_sudo(ss.str()) == 0;
 }
 
 bool mxt::MariaDBServer::unblock()
@@ -595,6 +618,16 @@ bool MariaDBCluster::unblock_all_nodes()
         return unblock_node(i);
     };
     return run_on_every_backend(func);
+}
+
+bool MariaDBCluster::suspend_node(int node)
+{
+    return m_backends[node]->suspend();
+}
+
+bool MariaDBCluster::unsuspend_node(int node)
+{
+    return unblock_node(node);
 }
 
 bool MariaDBCluster::prepare_for_test()
