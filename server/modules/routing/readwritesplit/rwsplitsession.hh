@@ -514,6 +514,7 @@ private:
     std::deque<GWBUF> m_query_queue;    /**< Queued commands waiting to be executed */
     RWSplit*          m_router;         /**< The router instance */
     mxs::RWBackend*   m_sescmd_replier {nullptr};
+    const size_t      m_max_packets_behind;
 
     std::vector<ExecInfo> m_exec_map;       // Information about COM_STMT_EXECUTE execution
 

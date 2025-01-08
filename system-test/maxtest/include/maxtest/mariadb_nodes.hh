@@ -132,6 +132,8 @@ public:
 
     bool block();
     bool block_port(int port);
+    bool suspend();
+    bool suspend_port(int port);
     bool unblock();
     bool unblock_port(int port);
     bool is_blocked() const;
@@ -320,6 +322,24 @@ public:
      * @return True on success
      */
     bool unblock_all_nodes();
+
+    /**
+     * Setup firewall on a backend node to drop all packets on the MariaDB port.
+     *
+     * @param node Index of node to suspend
+     *
+     * @return True on success
+     */
+    bool suspend_node(int node);
+
+    /**
+     * Setup firewall on a backend node to allow all packets on the MariaDB port.
+     *
+     * @param node Index of node to unsuspend
+     *
+     * @return True on success
+     */
+    bool unsuspend_node(int node);
 
     /**
      * @brief Stop DB server on the node
