@@ -24,6 +24,7 @@
  - [MaxScale REST API](REST-API/API.md)
  - [Module Commands](Reference/Module-Commands.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
+ - [Hardening](Reference/Hardening.md)
 
 ## Tutorials
 
