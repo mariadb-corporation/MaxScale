@@ -20,6 +20,7 @@
 
 ## Reference
 
+ - [Hardening](Reference/Hardening.md)
  - [MaxCtrl - Command Line Admin Interface](Reference/MaxCtrl.md)
  - [MaxScale REST API](REST-API/API.md)
  - [Module Commands](Reference/Module-Commands.md)
