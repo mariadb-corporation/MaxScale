@@ -173,6 +173,16 @@ public:
     }
 
     /**
+     * @brief Get the number of expected responses
+     *
+     * @return The number of expected responses
+     */
+    size_t expected_responses() const
+    {
+        return m_responses.size();
+    }
+
+    /**
      * @brief Check if the backend is closed
      *
      * @return True if the backend is closed

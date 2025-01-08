@@ -469,6 +469,7 @@ private:
     std::deque<mxs::Buffer> m_query_queue;  /**< Queued commands waiting to be executed */
     RWSplit*                m_router;       /**< The router instance */
     mxs::RWBackend*         m_sescmd_replier {nullptr};
+    const size_t            m_max_packets_behind;
 
     ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
 
