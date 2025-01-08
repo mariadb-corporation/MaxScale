@@ -2393,12 +2393,13 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                     }
                     else if (parse_handshake_response_packet(buffer))
                     {
-                        // Trying to log in without ssl. Server sends this error when a user account requires
-                        // ssl but client is not using it.
-                        send_authentication_error(AuthErrorType::ACCESS_DENIED);
-                        MXB_INFO("Client %s tried to log in without SSL when listener '%s' is configured to "
-                                 "require it.", m_session->user_and_host().c_str(),
-                                 m_session->listener_data()->m_listener_name.c_str());
+                        // Trying to log in without ssl. Server sends this error when a
+                        // user account requires ssl but client is not using it.
+                        std::string extra = mxb::string_printf(
+                            "Client %s tried to log in without SSL when listener '%s' is configured to "
+                            "require it.", m_session->user_and_host().c_str(),
+                            m_session->listener_data()->m_listener_name.c_str());
+                        send_authentication_error(AuthErrorType::ACCESS_DENIED, "", extra);
                         m_handshake_state = HSState::FAIL;
                     }
                     else
@@ -2489,7 +2490,8 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
     return rval;
 }
 
-void MariaDBClientConnection::send_authentication_error(AuthErrorType error, const std::string& auth_mod_msg)
+void MariaDBClientConnection::send_authentication_error(AuthErrorType error, const std::string& auth_mod_msg,
+                                                        const std::string& extra)
 {
     auto ses = m_session_data;
     string mariadb_msg;
@@ -2523,19 +2525,30 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
     }
 
     // Also log an authentication failure event.
+    string total_msg = mxb::string_printf("Authentication failed for user '%s'@[%s] to service '%s'. "
+                                          "Originating listener: '%s'. MariaDB error: '%s'.",
+                                          auth_data.user.c_str(), ses->remote.c_str(),
+                                          m_session->service->name(),
+                                          m_session->listener_data()->m_listener_name.c_str(),
+                                          mariadb_msg.c_str());
+    if (!extra.empty())
+    {
+        total_msg += " ";
+        total_msg += extra;
+    }
+
+    if (!auth_mod_msg.empty())
+    {
+        total_msg += mxb::string_printf(" Authenticator error: '%s'.", auth_mod_msg.c_str());
+    }
+
     if (m_session->service->config()->log_auth_warnings)
     {
-        string total_msg = mxb::string_printf("Authentication failed for user '%s'@[%s] to service '%s'. "
-                                              "Originating listener: '%s'. MariaDB error: '%s'.",
-                                              auth_data.user.c_str(), ses->remote.c_str(),
-                                              m_session->service->name(),
-                                              m_session->listener_data()->m_listener_name.c_str(),
-                                              mariadb_msg.c_str());
-        if (!auth_mod_msg.empty())
-        {
-            total_msg += mxb::string_printf(" Authenticator error: '%s'.", auth_mod_msg.c_str());
-        }
         MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s", total_msg.c_str());
+    }
+    else
+    {
+        MXB_INFO("%s", total_msg.c_str());
     }
 }
 
@@ -2668,6 +2681,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
             {
                 // Translate the original user account search error type to an error message type.
                 auto error = AuthErrorType::ACCESS_DENIED;
+                std::string extra;
                 switch (entrytype)
                 {
                 case UserEntryType::DB_ACCESS_DENIED:
@@ -2685,16 +2699,17 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
 
                 case UserEntryType::NEED_SSL:
                     error = AuthErrorType::ACCESS_DENIED;
-                    MXB_INFO("Client %s tried to log in without SSL when user account '%s'@'%s' "
-                             "requires it.", m_session->user_and_host().c_str(),
-                             auth_data.user_entry.entry.username.c_str(),
-                             auth_data.user_entry.entry.host_pattern.c_str());
+                    extra = mxb::string_printf(
+                        "Client %s tried to log in without SSL when user account '%s'@'%s' "
+                        "requires it.", m_session->user_and_host().c_str(),
+                        auth_data.user_entry.entry.username.c_str(),
+                        auth_data.user_entry.entry.host_pattern.c_str());
                     break;
 
                 default:
                     mxb_assert(!true);
                 }
-                send_authentication_error(error, auth_val.msg);
+                send_authentication_error(error, auth_val.msg, extra);
                 m_auth_state = AuthState::FAIL;
             }
         }
