@@ -75,6 +75,8 @@ void test_main(TestConnections& test)
     {
         // Test a normal failover.
         test_failover(test, *primary_mon1->maxscale);
+        mxs1.get_servers().print();
+        mxs2.get_servers().print();
     }
 
     // If ok so far, stop the MaxScale with the current primary monitor.
@@ -100,8 +102,9 @@ void test_main(TestConnections& test)
 
             // Again, check that failover works. Wait a few more intervals since failover is not
             // immediately enabled on primary MaxScale switch.
-            current_primary_maxscale->wait_for_monitor(failover_mon_ticks);
+            current_primary_maxscale->sleep_and_wait_for_monitor(2, failover_mon_ticks);
             test_failover(test, *current_primary_maxscale);
+            current_primary_maxscale->get_servers().print();
         }
         test.tprintf("Starting %s.", previous_primary_maxscale->node_name().c_str());
         previous_primary_maxscale->start();
