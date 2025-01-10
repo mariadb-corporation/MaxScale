@@ -16,6 +16,7 @@ endif()
 
 ExternalProject_Add(libmicrohttpd
   URL ${LIBMICROHTTPD_URLS}
+  URL_HASH SHA256=9e7023a151120060d2806a6ea4c13ca9933ece4eacfc5c9464d20edddb76b0a0
   SOURCE_DIR ${CMAKE_BINARY_DIR}/libmicrohttpd/
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/libmicrohttpd//configure ${LIBMICROHTTPD_C_COMPILER} --prefix=${CMAKE_BINARY_DIR}/libmicrohttpd/ --enable-shared --with-pic --libdir=${CMAKE_BINARY_DIR}/libmicrohttpd/lib/ --disable-examples --disable-doc --disable-dependency-tracking
   BINARY_DIR ${CMAKE_BINARY_DIR}/libmicrohttpd/
