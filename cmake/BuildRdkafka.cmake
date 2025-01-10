@@ -19,6 +19,7 @@ endif()
 
 ExternalProject_Add(librdkafka
   URL ${RDKAFKA_URL}
+  URL_HASH SHA256=689028b5fdfdce026f396fc2f3bfe9e38947210d9bd22be28c3159cc8c41b57e
   SOURCE_DIR ${CMAKE_BINARY_DIR}/librdkafka/
   BINARY_DIR ${CMAKE_BINARY_DIR}/librdkafka/
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/librdkafka/configure ${RDKAFKA_C_COMPILER} ${RDKAFKA_CXX_COMPILER} --prefix=${CMAKE_BINARY_DIR}/librdkafka/ --disable-zstd --disable-lz4-ext

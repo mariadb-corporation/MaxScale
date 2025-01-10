@@ -3,6 +3,7 @@ set(AVRO_C_URL "https://github.com/apache/avro/archive/release-1.10.0.tar.gz" CA
 
 ExternalProject_Add(avro-c
   URL ${AVRO_C_URL}
+  URL_HASH SHA256=50ceefe582193ef8a92a8891bac1520df778f5c260f2ba68f4c9ae41417e3777
   SOURCE_DIR ${CMAKE_BINARY_DIR}/avro-c/
   PATCH_COMMAND sed -i -e "s/find_package(Snappy)//" -e "s/add_subdirectory(examples)//" -e "s/add_subdirectory(tests)//" lang/c/CMakeLists.txt
   SOURCE_SUBDIR lang/c/
