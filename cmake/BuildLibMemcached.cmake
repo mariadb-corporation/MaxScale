@@ -26,6 +26,7 @@ set(LIBMEMCACHED_INSTALL "${LIBMEMCACHED_BASE}/install")
 
 ExternalProject_Add(libmemcached
   URL ${LIBMEMCACHED_URL}
+  URL_HASH SHA256=e22c0bb032fde08f53de9ffbc5a128233041d9f33b5de022c0978a2149885f82
   SOURCE_DIR ${LIBMEMCACHED_SOURCE}
   CONFIGURE_COMMAND ${LIBMEMCACHED_SOURCE}/configure --prefix=${LIBMEMCACHED_INSTALL} --enable-shared --with-pic --libdir=${LIBMEMCACHED_INSTALL}/lib/
   PATCH_COMMAND sed -i "s/opt_servers == false/opt_servers == 0/" ${LIBMEMCACHED_SOURCE}/clients/memflush.cc
