@@ -27,6 +27,10 @@ module.exports = {
     {
       module: /colors.js/,
       message: /the request of a dependency is an expression/
+    },
+    {
+      module: /debug.js/,
+      message: /Can't resolve 'debug' in/
     }
   ]
 };
