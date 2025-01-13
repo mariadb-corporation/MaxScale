@@ -366,7 +366,6 @@ void FileTransformer::run()
         if (m_config.expire_log_duration().count()
             || m_config.compression_algorithm() != mxb::CompressionAlgorithm::NONE)
         {
-            auto now = wall_time::Clock::now();
             int millisecs = 2000;
             if (poll(&pfd, 1, millisecs) == -1)
             {
@@ -511,10 +510,17 @@ static std::string make_temp_compression_name(const std::string& file_path)
 
 void FileTransformer::update_compression()
 {
-    if (m_config.compression_algorithm() == mxb::CompressionAlgorithm::ZSTANDARD
-        && (!m_compression_future.valid()
-            || m_compression_future.wait_for(0s) == std::future_status::ready))
+    if (m_config.compression_algorithm() == mxb::CompressionAlgorithm::ZSTANDARD)
     {
+        if (m_compression_future.valid())
+        {
+            if (m_compression_future.wait_for(0s) == std::future_status::ready)
+            {
+                m_compression_future.get();
+            }
+            return;
+        }
+
         ssize_t ncheck = m_file_names.size() - m_config.number_of_noncompressed_files();
         for (ssize_t i = 0; i < ncheck; ++i)
         {
