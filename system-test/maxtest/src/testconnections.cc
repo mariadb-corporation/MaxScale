@@ -601,7 +601,7 @@ void TestConnections::read_basic_settings()
     // The following settings are final, and not modified by either command line parameters or mdbci.
     m_backend_log_copy = !readenv_bool("no_backend_log_copy", false);
     m_mdbci_vm_path = envvar_get_set("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
-    m_mdbci_config_name = envvar_get_set("mdbci_config_name", "local");
+    m_mdbci_config_name = envvar_get_set("mdbci_config_name", "develop");
     mxb_assert(!m_mdbci_vm_path.empty() && !m_mdbci_config_name.empty());
     m_vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
 
