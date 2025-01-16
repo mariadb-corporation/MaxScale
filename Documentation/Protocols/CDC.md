@@ -1,5 +1,9 @@
 # Change Data Capture (CDC) Protocol
 
+The CDC protocol was deprecated in MaxScale 24.08 and will be removed
+in the next major release. [KafkaCDC](../Routers/KafkaCDC.md) can be
+used instead.
+
 CDC is a new protocol that allows compatible clients to authenticate and
 register for Change Data Capture events. The new protocol must be use in
 conjunction with AVRO router which currently converts MariaDB binlog events into

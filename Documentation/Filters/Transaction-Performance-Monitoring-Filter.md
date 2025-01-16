@@ -38,7 +38,7 @@ filters=MyLogFilter
 
 The TPM filter does not support any filter options currently.
 
-## Filter Parameters
+## Settings
 
 The TPM filter accepts a number of optional parameters.
 

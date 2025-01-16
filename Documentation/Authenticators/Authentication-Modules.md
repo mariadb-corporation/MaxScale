@@ -104,7 +104,7 @@ are only interpreted as wildcards when the grant is to a database:
 ``grant select on `test_`.t1 to 'alice'@'%';`` only grants access to the
 *test_.t1*-table, not to *test1.t1*.
 
-## Authenticator options
+## Settings
 
 The listener configuration defines authentication options which only affect the
 listener. *authenticator* defines the authentication plugins to use.

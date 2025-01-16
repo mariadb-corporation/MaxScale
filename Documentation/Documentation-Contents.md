@@ -20,11 +20,11 @@
 
 ## Reference
 
- - [Hardening](Reference/Hardening.md)
  - [MaxCtrl - Command Line Admin Interface](Reference/MaxCtrl.md)
  - [MaxScale REST API](REST-API/API.md)
  - [Module Commands](Reference/Module-Commands.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
+ - [Settings](Reference/Settings.md)
 
 ## Tutorials
 
@@ -55,6 +55,7 @@ of their use.
  - [Avrorouter](Routers/Avrorouter.md)
  - [Binlogrouter](Routers/Binlogrouter.md)
  - [Cat](Routers/Cat.md)
+ - [Diff](Routers/Diff.md)
  - [KafkaCDC](Routers/KafkaCDC.md)
  - [KafkaImporter](Routers/KafkaImporter.md)
  - [MirrorRouter](Routers/Mirror.md)
@@ -81,6 +82,8 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Masking Filter](Filters/Masking.md)
  - [Maxrows Filter](Filters/Maxrows.md)
  - [Named Server Filter](Filters/Named-Server-Filter.md)
+ - [Prepared Statement Reuse Filter](Filters/PsReuse.md)
+ - [Optimistic Transaction Execution Filter](Filters/OptimisticTrx.md)
  - [Query Log All](Filters/Query-Log-All-Filter.md)
  - [Regex Filter](Filters/Regex-Filter.md)
  - [Rewrite Filter](Filters/RewriteFilter.md)

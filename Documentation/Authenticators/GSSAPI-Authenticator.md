@@ -33,7 +33,7 @@ authenticator_options=principal_name=mariadb/localhost.localdomain@EXAMPLE.COM
 
 The principal name should be the same as on the MariaDB servers.
 
-## Authenticator options
+## Settings
 
 ### `principal_name`
 

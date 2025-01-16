@@ -14,7 +14,7 @@ a single entry point in MaxScale. This allows a MaxScale client to freely mix
 transactional and analytical queries using the same connection. This is known
 as Hybrid Transactional and Analytical Processing, HTAP.
 
-## Configuration
+## Settings
 
 SmartRouter is configured as a service that either routes to other MaxScale
 routers or plain servers. Although one can configure SmartRouter to use a plain

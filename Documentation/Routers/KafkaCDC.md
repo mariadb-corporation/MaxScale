@@ -129,7 +129,7 @@ seconds if the network is slow or there are network problems.
 * The KafkaCDC service must not be configured to use listeners. If a listener is
   configured, all attempts to start a session will fail.
 
-## Parameters
+## Settings
 
 ### `bootstrap_servers`
 

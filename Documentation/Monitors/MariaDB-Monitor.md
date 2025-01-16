@@ -148,12 +148,12 @@ The grants required by `user` depend on which monitor features are used.  A full
 list of the grants can be found in the [Required Grants](#required-grants)
 section.
 
-## Common Monitor Parameters
+## Common Monitor Settings
 
 For a list of optional parameters that all monitors support, read the
 [Monitor Common](Monitor-Common.md) document.
 
-## MariaDB Monitor optional parameters
+## Settings
 
 These are optional parameters specific to the MariaDB Monitor. Failover,
 switchover and rejoin-specific parameters are listed in their own
@@ -466,9 +466,12 @@ see [general monitor documentation](./Monitor-Common.md#script).
 
 ## Cluster manipulation operations
 
-Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
-modification. The operations implemented are:
+MariaDB Monitor can perform several operations that modify the replication
+topology. The supported operations are:
+
 - [failover](#failover), which replaces a failed primary with a replica
+- [failover-safe](#failover-safe), which replaces a failed primary with a replica
+  only if no data is clearly lost
 - [switchover](#switchover), which swaps a running primary with a replica
 - [switchover-force](#switchover-force), which swaps a running primary with a replica, ignoring
   most errors
@@ -567,6 +570,21 @@ later.
 
 Failover is considered successful if steps 1 to 3 succeed, as the cluster then
 has at least a valid primary server.
+
+#### Failover-safe
+
+```
+call command mariadbmon failover-safe MONITOR
+```
+
+**Failover-safe** performs the same steps as a normal failover but refuses to
+start if it's clear that data would be lost. Dataloss occurs if the primary
+had data which was not replicated to any replica before the primary went down.
+MaxScale detects this by looking at the GTIDs of the servers. Because the
+monitor queries the GTIDs only every monitor interval, this check is inaccurate.
+If the primary performs a write just before crashing and before MaxScale queries
+the GTID, data could be lost even with "safe" failover. Thus, this feature
+mainly protects against situations where the replicas are constantly lagging.
 
 #### Switchover
 
@@ -679,6 +697,7 @@ are unequal, an error is given.
 Example commands are below:
 ```
 maxctrl call command mariadbmon failover MyMonitor
+maxctrl call command mariadbmon failover-safe MyMonitor
 maxctrl call command mariadbmon rejoin MyMonitor OldPrimaryServ
 maxctrl call command mariadbmon reset-replication MyMonitor
 maxctrl call command mariadbmon reset-replication MyMonitor NewPrimaryServ
@@ -749,6 +768,38 @@ maxctrl call command mariadbmon fetch-cmd-result Cluster1
     },
     "meta": "switchover completed successfully."
 }
+```
+
+#### Switchover with key-value arguments
+
+As of MaxScale 24.08.0, switchover can be launched using an alternate command
+syntax which passes arguments as key-value pairs. This allows for greater
+flexibility as a variable number of arguments can be easily defined in the call.
+This alternative form of _switchover_ accepts the following arguments:
+
+| argument          | type    | default            | description                      |
+|-------------------|---------|--------------------|----------------------------------|
+| monitor           | monitor | none (mandatory)   | Monitor name                     |
+| new_primary       | server  | empty (autoselect) | Which server to promote          |
+| old_primary       | server  | empty (autoselect) | Which server to demote           |
+| async             | boolean | false              | Run command asynchronously       |
+| force             | boolean | false              | Ignore most errors               |
+| old_primary_maint | boolean | false              | Leave old primary to maintenance |
+
+The key-value syntax thus supports the same features as the old _switchover_,
+_async-switchover_ and _switchover-force_-commands.
+```
+maxctrl call command mariadbmon switchover monitor=MyMonitor new_primary=MyServer2 async=1 force=1
+```
+
+In addition, key-value argument passing supports `old_primary_maint`. This
+feature leaves the old primary server in maintenance mode without replication.
+This is useful when performing rolling MariaDB Server version upgrades. After
+all replicas have been upgraded, switch out the old primary with
+`old_primary_maint=1` to promote one of the replicas while leaving the old
+primary as standalone.
+```
+maxctrl call command mariadbmon switchover monitor=MyMonitor old_primary_maint=1
 ```
 
 ### Automatic activation
@@ -877,16 +928,21 @@ server. To normalize the situation, either have *auto_rejoin* on or manually
 execute a rejoin. This will redirect the old primary to the current cluster
 primary.
 
-### Configuration parameters
+### Settings for Cluster manipulation operations
 
 #### `auto_failover`
 
-- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
+- **Values**: `true`, `on`, `yes`, `1`, `false`, `off`, `no`, `0`, `safe`
 - **Default**: `false`
 
-Enable automatic primary failover. When automatic failover is enabled, MaxScale
+Enable automatic primary failover. `true`, `on`, `yes` and `1` enable normal
+failover. `false`, `off`, `no` and `0` disable the feature. `safe` enables
+[safe failover](#failover-safe).
+
+When automatic failover is enabled, MaxScale
 will elect a new primary server for the cluster if the old primary goes down. A
 server is assumed *Down* if it cannot be connected to, even if this is caused by
 incorrect credentials. Failover triggers if the primary stays down for
@@ -986,16 +1042,16 @@ should be simple.
 enforce_simple_topology=true
 ```
 
-#### `replication_user` and `replication_password`
+#### `replication_user`
 
 - **Type**: string
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Default**: None
 
-The username and password of the replication user. These are given as the values
-for `MASTER_USER` and `MASTER_PASSWORD` whenever a `CHANGE MASTER TO` command is
-executed.
+This and `replication_password` specify the username and password of the
+replication user. These are given as the values for `MASTER_USER` and
+`MASTER_PASSWORD` whenever a `CHANGE MASTER TO` command is executed.
 
 Both `replication_user` and `replication_password` parameters must be defined if
 a custom replication user is used. If neither of the parameters is defined, the
@@ -1008,6 +1064,15 @@ privilege.
 `replication_password` uses the same encryption scheme as other password
 parameters. If password encryption is in use, `replication_password` must be
 encrypted with the same key to avoid erroneous decryption.
+
+#### `replication_password`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+See [replication_user](#replication_user)
 
 #### `replication_master_ssl`
 
@@ -1045,28 +1110,33 @@ replication_custom_options=MASTER_SSL_CERT = '/tmp/certs/client-cert.pem',
                            MASTER_SSL_VERIFY_SERVER_CERT=0
 ```
 
-#### `failover_timeout` and `switchover_timeout`
+#### `failover_timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Default**: `90s`
 
-Time limit for failover and switchover operations. The default
-values are 90 seconds for both. `switchover_timeout` is also used as the time
-limit for a rejoin operation. Rejoin should rarely time out, since it is a
-faster operation than switchover.
-
-The timeouts are specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
-is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
-versions a value without a unit may be rejected. Note that since the granularity
-of the timeouts is seconds, a timeout specified in milliseconds will be rejected,
+Time limit for failover operation. Note that since the granularity of the
+timeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
 
-If no successful failover/switchover takes place within the configured time
-period, a message is logged and automatic failover is disabled. This prevents
+If no successful failover takes place within the configured time period,
+a message is logged and automatic failover is disabled. This prevents
 further automatic modifications to the misbehaving cluster.
+
+#### `switchover_timeout`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `90s`
+
+Time limit for switchover operations. The timeout is also used as the time
+limit for a rejoin operation. Rejoin should rarely time out, since it is a
+faster operation than switchover. Note that since the granularity of the
+timeouts is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 #### `verify_master_failure`
 
@@ -1139,14 +1209,14 @@ server selection during MaxScale startup or due to replication topology
 changes. A server listed in `servers_no_promotion` will thus not be
 selected as primary unless manually designated in a *switchover*-command.
 
-#### `promotion_sql_file` and `demotion_sql_file`
+#### `promotion_sql_file`
 
 - **Type**: string
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Default**: None
 
-These optional settings are paths to text files with SQL statements in them.
+This and `demotion_sql_file`  are paths to text files with SQL statements in them.
 During promotion or demotion, the contents are read line-by-line and executed on
 the backend. Use these settings to execute custom statements on the servers to
 complement the built-in operations.
@@ -1178,6 +1248,15 @@ replica threads are stopped, breaking replication.
 promotion_sql_file=/home/root/scripts/promotion.sql
 demotion_sql_file=/home/root/scripts/demotion.sql
 ```
+
+#### `demotion_sql_file`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: None
+
+See [promotion_sql_file](#promotion_sql_file).
 
 #### `handle_events`
 
@@ -1341,6 +1420,93 @@ MaxScale. Only use it when there is another monitor ready to claim the locks.
 ```
 maxctrl call command mariadbmon release-locks MyMonitor1
 ```
+
+## Primary server write test
+
+Some backend failures are not observable just by connecting to the server and
+running standard monitor queries. A server may be connectable and respond to
+queries sent by the monitor, but its disk could be full or malfunctioning or the
+storage engine could be locked in some way. Normally, MariaDB Monitor would
+consider such a server to be in good health, even if in reality the server
+could not perform any writes.
+
+To detect such errors, MariaDB Monitor can be configured to perform a regular
+write test if the gtid_binlog_pos of the primary server is not advancing
+otherwise. Testing that writes are going through and are being saved to
+the binary log increases the chance of detecting storage failures. The monitor
+can also be configured to perform a failover if the primary server fails the
+write test. Even this test may miss storage issues, as the monitor write test
+performs a small insert that may go through even when a large write done by
+a real application does not.
+
+See the following configuration parameters for more information on how to
+configure this feature.
+
+### Settings for Primary server write test
+
+#### `write_test_interval`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Dynamic**: Yes
+- **Default**: 0s
+
+If enabled (value > 0s), the monitor will perform a write test on the primary
+server if its gtid_binlog_pos has not changed within the configured interval.
+This test inserts one row to the table configured in
+[write_test_table](#write_test_table). If the insert fails or does not complete
+within [backend_read_timeout](Monitor-Common.md#backend_read_timeout),
+the server fails the write test. What happens after that depends on
+[write_test_fail_action](#write_test_fail_action).
+
+```
+write_test_interval=20s
+```
+
+#### `write_test_table`
+
+- **Type**: string
+- **Dynamic**: Yes
+- **Default**: `mxs.maxscale_write_test`
+
+The write test target table. The table name should be fully qualified
+i.e. include the database name. If the table does not exist or
+does not contain expected columns, the monitor (re)creates it. The table is
+created with a query like
+```
+create or replace table mxs.maxscale_write_test
+(id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+`date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+`gtid` TEXT NULL);
+```
+
+The database must be created manually. The monitor user requires privileges to
+create, drop, read and manipulate the table:
+```
+GRANT SELECT, INSERT, DELETE, CREATE, DROP ON `mxs`.* TO 'maxscale'@'maxscalehost';
+```
+
+```
+write_test_table=mxs.my_write_test_table
+```
+
+#### `write_test_fail_action`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Default**: `log`
+- **Values**: `log`, `failover`
+- **Dynamic**: Yes
+
+Which action to take if primary server fails the write test. `log` means that
+MaxScale will simply log the failure but perform no other action. This is mainly
+useful for testing the feature.
+
+If set to `failover`, the monitor will perform a failover if the primary server
+fails the write test [failcount](#failcount) consecutive times. That is,
+the first write test is performed after `write_test_interval` has passed without
+writes. If the test fails, the monitor will repeat the test during the next
+monitor tick. After `failcount` monitor ticks with failed write tests, failover
+begins. After failover, the former primary server is set into maintenance mode.
+Manual intervention is required to take the server into use again.
 
 ## Backup operations
 
@@ -1566,7 +1732,7 @@ maxctrl call command mariadbmon async-restore-from-backup MyMonitor MyTargetServ
 Similar to rebuild-server, the monitor will continue monitoring the servers
 while the backup is transferred and prepared.
 
-### Settings
+### Settings for Backup operations
 
 #### `ssh_user`
 
@@ -1829,7 +1995,7 @@ maxctrl call command mariadbmon fetch-cmd-result MyMonitor
     "timestamp": "2022-05-05 09:50:30.718972"
 }
 ```
-### Settings
+### Settings for Columnstore commands
 
 #### `cs_admin_port`
 

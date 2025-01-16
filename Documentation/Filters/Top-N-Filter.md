@@ -28,12 +28,12 @@ password=mypasswd
 filters=MyLogFilter
 ```
 
-### Filter Parameters
+## Settings
 
 The top filter has one mandatory parameter, `filebase`, and a number of optional
 parameters.
 
-#### `filebase`
+### `filebase`
 
 - **Type**: string
 - **Mandatory**: Yes
@@ -50,7 +50,7 @@ The filebase may also be set as the filter, the mechanism to set the filebase
 via the filter option is superseded by the parameter. If both are set the
 parameter setting will be used and the filter option ignored.
 
-#### `count`
+### `count`
 
 - **Type**: number
 - **Mandatory**: No
@@ -63,7 +63,7 @@ The number of SQL statements to store and report upon.
 count=30
 ```
 
-#### `match`
+### `match`
 
 - **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
 - **Mandatory**: No
@@ -79,7 +79,7 @@ exclude=where
 options=case,extended
 ```
 
-#### `exclude`
+### `exclude`
 
 - **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
 - **Mandatory**: No
@@ -89,7 +89,7 @@ options=case,extended
 [Limits](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
 the queries logged by the filter.
 
-#### `options`
+### `options`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -100,7 +100,7 @@ the queries logged by the filter.
 [Regular expression options](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
 for `match` and `exclude`.
 
-#### `source`
+### `source`
 
 - **Type**: string
 - **Mandatory**: No
@@ -115,7 +115,7 @@ Only sessions that originate from this address will be logged.
 source=127.0.0.1
 ```
 
-#### `user`
+### `user`
 
 - **Type**: string
 - **Mandatory**: No

@@ -23,6 +23,8 @@ port=3306
 
 For the MariaDB protocol module, the prefix is always `mariadbprotocol`.
 
+## Settings
+
 ### `allow_replication`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)

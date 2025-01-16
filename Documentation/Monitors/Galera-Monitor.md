@@ -75,12 +75,12 @@ password=mypwd
 
 ```
 
-## Common Monitor Parameters
+## Common Monitor Settings
 
 For a list of optional parameters that all monitors support, read the
 [Monitor Common](Monitor-Common.md) document.
 
-## Galera Monitor optional parameters
+## Settings
 
 These are optional parameters specific to the Galera Monitor.
 

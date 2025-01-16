@@ -1,5 +1,76 @@
 # Changelog
 
+## MariaDB MaxScale 25.01
+
+* The functionality that was enabled by the `reuse_prepared_statements`
+  parameter in readwritesplit has been moved into the
+  [PsReuse](./Filters/PsReuse.md) filter module. The `reuse_prepared_statements`
+  parameter has been removed from readwritesplit.
+
+* The functionality that was enabled by the `optimistic_trx` parameter in
+  readwritesplit has been moved into the
+  [OptimisticTrx](./Filters/OptimisticTrx.md) filter module. The
+  `optimistic_trx` parameter has been removed from readwritesplit.
+
+* Added a _safe_-option to MariaDB Monitor _auto-failover_. _safe_ does not
+  perform failover if data loss is certain. Equivalent manual command added.
+  See [monitor documentation](Monitors/MariaDB-Monitor.md#auto_failover)
+  for more information.
+
+* MariaDB Monitor can perform a write test on the primary server.
+  See [monitor documentation](Monitors/MariaDB-Monitor.md#primary-server-write-test)
+  for more information.
+
+* MariaDB Monitor switchover can be called with key-value arguments. This form
+  also supports leaving the old primary in maintenance mode instead of
+  redirecting it. See [monitor documentation](Monitors/MariaDB-Monitor.md#switchover-with-key-value-arguments)
+  for more information.
+
+* Allowed REST-API TLS ciphers can be tuned with the global setting
+  [admin_ssl_cipher](Getting-Started/Configuration-Guide.md#admin_ssl_cipher).
+
+* The `transaction_replay_safe_commit` parameter in readwritesplit now
+  also disables the replaying of all writes done when autocommit is
+  enabled. This means that transaction replay will never replay a
+  statement that may commit a transaction.
+
+* NoSQL protocol has been extended.
+   * Now supports [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
+   * Initial support for the command _aggregate_ has been added.
+
+* When running in a container, MaxScale adapts to the amount of resources
+  available in the container.
+
+* MaxGUI Query Editor now requires delimiter changes for compound statements such
+  as stored procedures, functions, etc. See [delimiters documentation](https://mariadb.com/kb/en/delimiters/)
+  for more information. However, the dedicated SQL editor (opened via "Create Function",
+  "Alter Function", "Create Trigger" etc., in the schema tree explorer) does not require
+  delimiter changes as it handles SQL as a single statement.
+
+* MaxGUI Query Editor now automatically injects a `LIMIT` clause with a
+  default limit of 10000 into every `SELECT` statement.
+
+* The new
+  [trace_file_dir](../Getting-Started/Configuration-Guide.md#trace_file_dir) and
+  [trace_file_size](../Getting-Started/Configuration-Guide.md#trace_file_size)
+  parameters can be used to enable a trace log that writes messages from all log
+  levels to a set of rotating log files. If enabled, the symlink
+  `/var/log/maxscale/maxscale.trace` will point to the latest trace log
+  file. This is a low-overhead alternative to enabling `log_info` and is
+  intended to be used for debugging application problems in production where the
+  overhead of `log_info` cannot be afforded.
+
+* The [Avro Router](Routers/Avrorouter.md) and the [CDC Protocol](Protocols/CDC.md)
+  have been deprecated and will be removed in the next major release.
+  [KafkaCDC](Routers/KafkaCDC.md) can be used instead.
+
+* The [passive](../Getting-Started/Configuration-Guide.md#passive) configuration
+  setting has been deprecated and will be removed in the next series.
+
+For more details, please refer to:
+
+* [MariaDB MaxScale Enterprise 25.01.1 Release Notes](Release-Notes/MaxScale-Enterprise-25.01.1-Release-Notes.md)
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The

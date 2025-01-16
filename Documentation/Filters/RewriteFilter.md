@@ -188,9 +188,9 @@ type=service
 filters=Rewrite
 ```
 
-### Parameters in maxscale.cnf
+## Settings
 
-#### `template_file`
+### `template_file`
 
 - **Type**: string
 - **Mandatory**: Yes
@@ -199,7 +199,7 @@ filters=Rewrite
 
 Path to the template file.
 
-#### `regex_grammar`
+### `regex_grammar`
 
 - **Type**: string
 - **Mandatory**: No
@@ -209,7 +209,7 @@ Path to the template file.
 
 Default regex_grammar for templates
 
-#### `case_sensitive`
+### `case_sensitive`
 
 - **Type**: boolean
 - **Mandatory**: No
@@ -218,7 +218,7 @@ Default regex_grammar for templates
 
 Default case sensitivity for templates
 
-#### `log_replacement`
+### `log_replacement`
 
 - **Type**: boolean
 - **Mandatory**: No
@@ -227,30 +227,31 @@ Default case sensitivity for templates
 
 Log replacements at NOTICE level.
 
-### Parameters per template in the template file
+## Settings per template in the template file
 
-#### `regex_grammar`
+### `regex_grammar`
+
 - **Type**: string
 - **Values**: `Native`, `ECMAScript`, `Posix`, `EPosix`, `Awk`, `Grep`, `EGrep`
 - **Default**: From maxscale.cnf
 
 Overrides the global regex_grammar of a template.
 
-#### `case_sensitive`
+### `case_sensitive`
 
 - **Type**: boolean
 - **Default**: From maxscale.cnf
 
 Overrides the global case sensitivity of a template.
 
-#### `ignore_whitespace`
+### `ignore_whitespace`
 
 - **Type**: boolean
 - **Default**: true
 
 Ignore whitespace differences in the match template and input sql.
 
-#### `continue_if_matched`
+### `continue_if_matched`
 
 - **Type**: boolean
 - **Default**: false
@@ -258,7 +259,7 @@ Ignore whitespace differences in the match template and input sql.
 If a template matches and the replacement is done, continue to the
 next template and apply it to the result of the previous rewrite.
 
-#### `what_if`
+### `what_if`
 
 - **Type**: boolean
 - **Default**: false

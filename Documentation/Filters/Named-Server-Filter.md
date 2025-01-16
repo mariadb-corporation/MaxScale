@@ -54,7 +54,7 @@ password=mypasswd
 filters=NamedServerFilter
 ```
 
-## Filter Parameters
+## Settings
 
 NamedServerFilter requires at least one *matchXY* - *targetXY* pair.
 
@@ -78,7 +78,7 @@ match01=^SELECT
 options=case,extended
 ```
 
-#### `options`
+### `options`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No

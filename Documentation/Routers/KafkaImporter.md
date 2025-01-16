@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS my_table (
 The user defined by the `user` parameter of the service must have `INSERT` and
 `CREATE` privileges on all tables that are created.
 
-## Parameters
+## Settings
 
 ### `bootstrap_servers`
 

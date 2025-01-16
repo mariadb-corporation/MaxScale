@@ -279,7 +279,7 @@ supports. The following commands are supported:
 If the server from which the binlogrouter replicates from is using semi-sync
 replication, the binlogrouter will acknowledge the replicated events.
 
-## Configuration Parameters
+## Settings
 
 The binlogrouter is configured similarly to how normal routers are configured in
 MaxScale. It requires at least one listener where clients can connect to and one

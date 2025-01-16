@@ -33,7 +33,7 @@ password=mypasswd
 filters=DataMartFilter
 ```
 
-## Filter Parameters
+## Settings
 
 The tee filter requires a mandatory parameter to define the service to replicate
 statements to and accepts a number of optional parameters.
@@ -84,7 +84,7 @@ What queries should be excluded.
 exclude=/select.*from.*t1/
 ```
 
-## `options`
+### `options`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No

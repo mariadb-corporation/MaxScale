@@ -32,7 +32,7 @@ the following fields:
 |`duration`| Query duration in milliseconds                   |
 |`type`    | Result type, one of `ok`, `error` or `resultset` |
 
-## Configuration Parameters
+## Settings
 
 ### `main`
 

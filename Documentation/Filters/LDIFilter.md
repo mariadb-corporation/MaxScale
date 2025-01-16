@@ -69,7 +69,7 @@ Conversely, if the `host` parameter is set to a plain IP address, it is assumed
 that it does not support the newer virtual-hosted-style request. If the host
 does support it, the filter must be configured with `protocol_version=2`.
 
-## Configuration Parameters
+## Settings
 
 ### `key`
 

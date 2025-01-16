@@ -44,6 +44,8 @@ auth            required        pam_unix.so
 account         required        pam_unix.so
 ```
 
+## Settings
+
 ### `pam_use_cleartext_plugin`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)

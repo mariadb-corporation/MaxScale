@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) 2024 MariaDB plc
+#
+# This is UNPUBLISHED PROPRIETARY SOURCE CODE of MariaDB plc
+#
+
+#
+# This script extracts the configuration settings of MaxScale
+# and outputs a file containing them all.
+#
+# A setting is identified by scanning for "- **Type" and that
+# line and every following line beginning with "- **" are assumed
+# to be documentation for the parameter named 2 lines above the
+# "- **Type" line. Yes, this relies upon the structure being the
+# same everywhere.
+#
+# Every group of settings should be under a heading "Settings"
+# whose heading level should be one less than the level of the
+# settings.
+#
+#     ## Settings
+#
+#     ### `param`
+#
+#     -- **Type**: string
+#     -- **Mandatory**: No
+#     ...
+#
+# In case there are more groups, then the general group should
+# have the heading "Settings" and more specific groups then
+# something like "Settings for XYZ". Since the groups will be
+# ordered alphabetically, that ensures that the general settings
+# are listed first.
+#
+# This script should be invoked in the "Documentation" directory
+# and the output redirected to the file Reference/Settings.md.
+#
+# $ ./gen_settings_reference > Reference/Settings.md
+#
+
+import os
+import re
+import sys
+
+from collections import deque
+
+link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+
+class Entry:
+    def __init__(self, name, path):
+        self.name = name
+        self.path = "../" + path
+        self.lines = []
+
+    def modify_link(self, match):
+        name = match.group(1)  # Extract the name
+        link = match.group(2)  # Extract the link
+
+        path, entry = link.split("#")
+
+        if not path:
+            path = "../Getting-Started/Configuration-Guide.md"
+
+        link = path + "#" + entry
+
+        return f'[{name}]({link})'
+
+    def add(self, line):
+        line = re.sub(link_pattern, self.modify_link, line)
+
+        self.lines.append(line)
+
+    def print(self, prefix):
+        print(prefix + " [" + self.name + "](" + self.path + "#" + self.name + ")")
+        for line in self.lines:
+            print(line)
+
+class Header:
+    def __init__(self, depth, line):
+        self.name = line.lstrip("# ")
+        self.depth = depth
+        self.line = line
+
+class Headers:
+    def __init__(self):
+        self.headers = deque()
+        self.in_code = False
+
+    def check(self, line):
+        if line[:3] == "```":
+            self.in_code = not self.in_code
+        elif not self.in_code:
+            match = re.match(r'^##*', line)
+            if match:
+                depth=len(match.group(0))
+                while len(self.headers) > 0 and self.headers[-1].depth >= depth:
+                    self.headers.pop()
+                self.headers.append(Header(depth, line))
+        else:
+            None
+
+    def current(self):
+        if len(self.headers) >= 1:
+            return self.headers[-1]
+        else:
+            return None
+
+    def prev(self):
+        if len(self.headers) >= 2:
+            return self.headers[-2]
+        else:
+            return None
+
+def scan_lines(entries, path, lines):
+    i=0
+    end = len(lines)
+    headers=Headers()
+    while i < end:
+        line = lines[i]
+        headers.check(line)
+        if line.startswith("- **Type"):
+            if i >= 2:
+                prev = headers.prev().name
+                relevant_entries = entries.get(prev)
+                if not relevant_entries:
+                    relevant_entries = {}
+                    entries[prev] = relevant_entries
+
+                name = lines[i - 2]
+                name = re.sub(r'^#+ ', '', name)
+                name = name.strip("`")
+                entry = Entry(name, path)
+                entry.add(line)
+                i += 1
+                while i < end and lines[i].startswith("- **"):
+                    entry.add(lines[i])
+                    i += 1
+
+                relevant_entries[entry.name] = entry
+        else:
+            i += 1
+
+def scan_md_file(entries, path):
+    with open(path) as fin:
+        try:
+            lines=fin.readlines()
+            lines=[line.strip() for line in lines]
+        except UnicodeDecodeError:
+            print("warning Could not decode file, ignoring.")
+            return
+        except:
+            print("warning: Could not read file, ignoring.")
+            return
+
+    scan_lines(entries, path, lines)
+
+def scan_file(entries, path):
+    if os.path.isdir(path):
+        scan_path(entries, path)
+    elif path.endswith(".md"):
+        name=path.split('/')[-1].replace('.md', '')
+        if name=="Configuration-Guide":
+            name="MaxScale"
+        scope="[" + name + "](../" + path + ")"
+        sub_entries=entries.get(scope)
+        if not sub_entries:
+            sub_entries={}
+            entries[scope] = sub_entries;
+        scan_md_file(sub_entries, path)
+
+def scan_dir(entries, dir):
+    for file in os.listdir(dir):
+        path=dir + "/" + file
+        scan_file(entries, path)
+
+def scan_path(entries, path):
+    if not os.path.exists(path):
+        print("warning: " + path + " does not exist.")
+    elif os.path.isdir(path):
+        sub_entries=entries.get(path)
+        if not sub_entries:
+            sub_entries = {}
+            entries[path] = sub_entries
+        scan_dir(sub_entries, path)
+    elif os.path.isfile(path):
+        i = path.find("/")
+        dir=path[:i]
+        sub_entries=entries.get(dir)
+        if not sub_entries:
+            sub_entries = {}
+            entries[dir]=sub_entries
+        scan_file(sub_entries, path)
+    else:
+        print("warning: '" + path + "' is not a regular file or directory, ignoring.")
+
+def scan_paths(paths):
+    entries = {}
+    for path in paths:
+        scan_path(entries, path)
+
+    return entries
+
+def print_entries(entries, prefix):
+    keys = sorted(entries.keys())
+    for key in keys:
+        entry = entries[key]
+
+        if not isinstance(entry, dict):
+            entry.print(prefix)
+            print()
+
+    for key in keys:
+        entry = entries[key]
+
+        if isinstance(entry, dict):
+            if len(entry) > 0:
+                print(prefix + " " + key)
+                print_entries(entry, prefix + "#")
+                print()
+
+def main(argv):
+    name=argv[0]
+    args=argv[1:]
+
+    if not args:
+        args = ("Getting-Started", "Authenticators",
+                "Filters", "Monitors", "Protocols", "Routers")
+
+    entries = scan_paths(args)
+
+    print("# Configuration Settings")
+    print("[TOC]");
+
+    getting_started = entries.pop("Getting-Started", None)
+
+    if getting_started:
+        print("## General")
+        print_entries(getting_started, "###")
+
+    print_entries(entries, "##")
+
+if __name__ == "__main__":
+    main(sys.argv)

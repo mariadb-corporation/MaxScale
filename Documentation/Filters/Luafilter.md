@@ -11,7 +11,7 @@ information on how to write Lua scripts.
 
 [TOC]
 
-## Filter Parameters
+## Settings
 
 The luafilter has two parameters. They control which scripts will be called by
 the filter. Both parameters are optional but at least one should be defined. If

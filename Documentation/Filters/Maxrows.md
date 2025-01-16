@@ -27,12 +27,12 @@ type=service
 filters=MaxRows
 ```
 
-### Filter Parameters
+## Settings
 
 The Maxrows filter has no mandatory parameters.
 Optional parameters are:
 
-#### `max_resultset_rows`
+### `max_resultset_rows`
 
 - **Type**: number
 - **Mandatory**: No
@@ -48,7 +48,7 @@ If a resultset is larger than this an empty result will be sent instead.
 max_resultset_rows=1000
 ```
 
-#### `max_resultset_size`
+### `max_resultset_size`
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
 - **Mandatory**: No
@@ -62,7 +62,7 @@ not be sent: an empty resultset will be sent instead.
 max_resultset_size=128Ki
 ```
 
-#### `max_resultset_return`
+### `max_resultset_return`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -84,7 +84,7 @@ MariaDB [(test)]> select * from test.t4;
 ERROR 1415 (0A000): Row limit/size exceeded for query: select * from test.t4
 ```
 
-#### `debug`
+### `debug`
 
 - **Type**: number
 - **Mandatory**: No

@@ -463,7 +463,7 @@ the comparison ends.
 If the replication relationship between _main_ and _other_
 is anything else, Diff will refuse to start.
 
-## Configuration Parameters
+## Settings
 
 ### `main`
 

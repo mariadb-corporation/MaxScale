@@ -148,11 +148,11 @@ type=service
 filters=Mask-SSN
 ```
 
-### Filter Parameters
+## Settings
 
 The masking filter has one mandatory parameter - `rules`.
 
-#### `rules`
+### `rules`
 
 - **Type**: path
 - **Mandatory**: Yes
@@ -167,7 +167,7 @@ _/etc/maxscale.modules.d_.
 rules=/path/to/rules-file
 ```
 
-#### `warn_type_mismatch`
+### `warn_type_mismatch`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -182,7 +182,7 @@ allowed types.
 warn_type_mismatch=always
 ```
 
-#### `large_payload`
+### `large_payload`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -206,7 +206,7 @@ resultsets that do not contain such columns.
 large_payload=ignore
 ```
 
-#### `prevent_function_usage`
+### `prevent_function_usage`
 
 - **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
@@ -233,7 +233,7 @@ filter should be setup to allow or reject the use of certain functions.
 prevent_function_usage=false
 ```
 
-#### `require_fully_parsed`
+### `require_fully_parsed`
 
 - **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
@@ -256,7 +256,7 @@ Note that if this parameter is set to false, then `prevent_function_usage`,
 less effective, as it with a statement that cannot be fully parsed may be
 possible to bypass the protection that they are intended to provide.
 
-#### `treat_string_arg_as_field`
+### `treat_string_arg_as_field`
 
 - **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
@@ -271,7 +271,7 @@ been enabled and `"` is used instead of backtick.
 treat_string_arg_as_field=false
 ```
 
-#### `check_user_variables`
+### `check_user_variables`
 
 - **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
@@ -288,7 +288,7 @@ will be rejected if `ssn` is a column that should be masked.
 check_user_variables=false
 ```
 
-#### `check_unions`
+### `check_unions`
 
 - **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
@@ -305,7 +305,7 @@ will be rejected if `b` is a column that should be masked.
 check_unions=false
 ```
 
-#### `check_subqueries`
+### `check_subqueries`
 
 - **Type**: [bool](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No

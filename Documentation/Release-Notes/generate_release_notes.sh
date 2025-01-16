@@ -14,8 +14,8 @@ VERSION="${major}.${minor}.${patch}"
 # out or if the versioning scheme for MaxScale changes.
 upgrade_version="$major.$minor"
 
-cat <<EOF > MaxScale-$VERSION-Release-Notes.md
-# MariaDB MaxScale ${VERSION} Release Notes
+cat <<EOF > MaxScale-Enterprise-$VERSION-Release-Notes.md
+# MariaDB MaxScale Enterprise ${VERSION} Release Notes
 
 Release ${VERSION} is a ${maturity} release.
 
@@ -41,13 +41,4 @@ For more information, please refer to the [Limitations](../About/Limitations.md)
 RPM and Debian packages are provided for the supported Linux distributions.
 
 Packages can be downloaded [here](https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale).
-
-## Source Code
-
-The source code of MaxScale is tagged at GitHub with a tag, which is identical
-with the version of MaxScale. For instance, the tag of version X.Y.Z of MaxScale
-is \`maxscale-X.Y.Z\`. Further, the default branch is always the latest GA version
-of MaxScale.
-
-The source code is available [here](https://github.com/mariadb-corporation/MaxScale).
 EOF

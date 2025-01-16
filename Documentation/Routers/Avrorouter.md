@@ -1,5 +1,9 @@
 # Avrorouter
 
+The Avrorouter was deprecated in MaxScale 24.08 and will be removed
+in the next major release. [KafkaCDC](../Routers/KafkaCDC.md) can be used instead.
+
+
 The avrorouter is a MariaDB 10.0 binary log to Avro file converter. It consumes
 binary logs from a local directory and transforms them into a set of Avro files.
 These files can then be queried by clients for various purposes.
@@ -75,9 +79,9 @@ tables is not contained in the binlogs.
 For information about common service parameters, refer to the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
-### Router Parameters
+## Settings
 
-#### `gtid_start_pos`
+### `gtid_start_pos`
 
 - **Type**: string
 - **Mandatory**: No
@@ -93,7 +97,7 @@ This parameter has no effect in the traditional mode. If this parameter is
 defined, the replication will start from the implicit GTID that the primary first
 serves.
 
-#### `server_id`
+### `server_id`
 
 - **Type**: number
 - **Mandatory**: No
@@ -104,7 +108,7 @@ The
 [server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
 used when replicating from the primary in direct replication mode.
 
-#### `codec`
+### `codec`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -119,16 +123,16 @@ _deflate_. These are the mandatory compression algorithms required by the
 Avro specification. For more information about the compression types,
 refer to the [Avro specification](https://avro.apache.org/docs/current/spec.html#Required+Codecs).
 
-#### `match` and `exclude`
+### `match`
 
 - **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
 - **Mandatory**: No
 - **Dynamic**: No
 - **Default**: `""`
 
-These [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
-filter events for processing depending on table names. Avrorouter does not support the
-*options*-parameter for regular expressions.
+This and `exclude` are [regular expression settings](../Getting-Started/Configuration-Guide.md#standard-regular-expression-settings-for-filters)
+that filter events for processing depending on table names. Avrorouter does
+not support the *options*-parameter for regular expressions.
 
 To prevent excessive matching of similarly named tables, surround each table
 name with the `^` and `$` tokens. For example, to match the `test.clients` table
@@ -136,7 +140,16 @@ but not `test.clients_old` table use `match=^test[.]clients$`. For multiple
 tables, surround each table in parentheses and add a pipe character between
 them: `match=(^test[.]t1$)|(^test[.]t2$)`.
 
-#### `binlogdir`
+### `exclude`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+See [match](#match).
+
+### `binlogdir`
 
 - **Type**: path
 - **Mandatory**: No
@@ -147,7 +160,7 @@ The location of the binary log files. This is the first mandatory parameter
 and it defines where the module will read binlog files from. Read access to
 this directory is required.
 
-#### `avrodir`
+### `avrodir`
 
 - **Type**: path
 - **Mandatory**: No
@@ -165,7 +178,7 @@ files. These files are named _avro.index_ and _avro-conversion.ini_. By default,
 the default data directory, _/var/lib/maxscale/_, is used. Before version 2.1 of
 MaxScale, the value of _binlogdir_ was used as the default value for _avrodir_.
 
-##### `filestem`
+### `filestem`
 
 - **Type**: string
 - **Mandatory**: No
@@ -185,7 +198,7 @@ binlogdir=/var/lib/mysql/binlogs/
 
 The first binlog file the avrorouter would look for is `/var/lib/mysql/binlogs/mybin.000001`.
 
-#### `start_index`
+### `start_index`
 
 - **Type**: number
 - **Mandatory**: No
@@ -226,7 +239,7 @@ cluster, the replication will continue from the latest GTID processed by that
 instance. This means that if the instance hasn't replicated events that have
 been purged from the binary logs, the replication cannot continue.
 
-#### Avro File Related Parameters
+## Settings for Avro File
 
 These options control how large the Avro file data blocks can get.
 Increasing or lowering the block size could have a positive effect
@@ -243,7 +256,7 @@ It is highly recommended to keep the block sizes relatively large to allow
 larger chunks of memory to be flushed to disk at one time. This will make
 the conversion process noticeably faster.
 
-##### `group_trx`
+### `group_trx`
 
 - **Type**: number
 - **Mandatory**: No
@@ -253,7 +266,7 @@ the conversion process noticeably faster.
 Controls the number of transactions that are grouped into a single Avro
 data block.
 
-##### `group_rows`
+### `group_rows`
 
 - **Type**: number
 - **Mandatory**: No
@@ -263,7 +276,7 @@ data block.
 Controls the number of row events that are grouped into a single Avro
 data block.
 
-##### `block_size`
+### `block_size`
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
 - **Mandatory**: No
@@ -276,7 +289,7 @@ size type parameter which means that it can also be defined with an SI suffix.
 Refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md)
 for more details about size type parameters and how to use them.
 
-##### `max_file_size`
+### `max_file_size`
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
 - **Mandatory**: No
@@ -296,7 +309,7 @@ that large transactions can still cause the file size to exceed the given limit.
 File rotation only works with the direct replication mode. The legacy file based
 replication mode does not support this.
 
-##### `max_data_age`
+### `max_data_age`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
@@ -316,7 +329,7 @@ removal of stale data.
 Automatic file purging only works with the direct replication mode. The legacy
 file based replication mode does not support this.
 
-##### Example configuration
+## Example configuration
 
 ```
 [replication-router]

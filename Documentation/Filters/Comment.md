@@ -24,7 +24,7 @@ filters=MyComment
 ```
 
 
-## Filter Parameters
+## Settings
 
 The Comment filter requires one mandatory parameter to be defined.
 

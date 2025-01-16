@@ -53,7 +53,7 @@ Starting with 2.3, all router parameters can be configured at runtime. Use
 `maxctrl alter service` to modify them. The changed configuration will only be
 taken into use by new sessions.
 
-## Parameters
+## Settings
 
 ### `max_slave_connections`
 
@@ -652,6 +652,17 @@ This parameter was added in MaxScale 23.08.0 and is enabled by default. The
 older version of MaxScale always attempted to replay the transaction even if
 there was a risk of duplicating the transaction.
 
+In MaxScale 24.08.0, this parameter also disabled the replaying of individual
+DML statements that `delayed_retry` enabled. The result of this was that only
+statements done inside of an explicit transactions or with autocommit disabled
+were replayed and writes done with autocommit enabled were never replayed.
+
+In MaxScale 24.08.1 and newer versions, where `delayed_retry no longer attempts
+to retry a query if it was already sent to the database, write queries outside
+of transactions are delayed if no valid target is found but they are never
+retried. Thus `transaction_replay_safe_commit` again only affects how the
+`COMMIT` of a transaction is handled.
+
 If the data that is about to be modified is read before it is modified and it is
 locked in an appropriate manner (e.g. with `SELECT ... FOR UPDATE` or with the
 `SERIALIZABLE` isolation level), it is safe to replay a transaction that was
@@ -717,31 +728,9 @@ Possible values are:
 
 ### `optimistic_trx`
 
-- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
-- **Mandatory**: No
-- **Dynamic**: Yes
-- **Default**: false
-
-Enable optimistic transaction execution. This parameter controls whether normal
-transactions (i.e. `START TRANSACTION` or `BEGIN`) are load balanced across
-replicas. This feature is disabled by default and enabling it implicitly enables
-`transaction_replay`, `delayed_retry` and `master_reconnection` parameters.
-
-When this mode is enabled, all transactions are first attempted on replica
-servers. If the transaction contains no statements that modify data, it is
-completed on the replica. If the transaction contains statements that modify data,
-it is rolled back on the replica server and restarted on the primary. The rollback
-is initiated the moment a data modifying statement is intercepted by
-readwritesplit so only read-only statements are executed on replica servers.
-
-As with `transaction_replay` and transactions that are replayed, if the results
-returned by the primary server are not identical to the ones returned by the
-replica up to the point where the first data modifying statement was executed, the
-connection is closed. If the execution of ROLLBACK statement on the replica fails,
-the connection to that replica is closed.
-
-All limitations that apply to `transaction_replay` also apply to
-`optimistic_trx`.
+This feature has been moved into the
+[OptimisticTrx](../Filters/OptimisticTrx.md) filter in MaxScale 24.08 and the
+parameter has been removed from readwritesplit.
 
 ### `causal_reads`
 
@@ -1042,22 +1031,8 @@ primary node if one was available.
 
 ### `reuse_prepared_statements`
 
-- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
-- **Mandatory**: No
-- **Dynamic**: Yes
-- **Default**: false
-
-Reuse identical prepared statements inside the same client connection. This
-feature only applies to binary protocol prepared statements.
-
-When this parameter is enabled and the connection prepares an identical prepared
-statement multiple times, instead of preparing it on the server the existing
-prepared statement handle is reused. This also means that whenever prepared
-statements are closed by the client, they will be left open by readwritesplit.
-
-Enabling this feature will increase memory usage of a session. The amount of
-memory stored per prepared statement is proportional to the length of the
-prepared SQL statement and the number of parameters the statement has.
+This feature has been moved into the [PsReuse](../Filters/PsReuse.md) filter in
+MaxScale 24.08 and the parameter has been removed from readwritesplit.
 
 ## Router Diagnostics
 

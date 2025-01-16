@@ -200,14 +200,14 @@ where the used table names are different. Otherwise there can be unintended
 sharing.
 
 
-### Filter Parameters
+## Settings
 
 The cache filter has no mandatory parameters but a range of optional ones.
 Note that it is advisable to specify `max_size` to prevent the cache from
 using up all memory there is, in case there is very little overlap among the
 queries.
 
-#### `storage`
+### `storage`
 
 - **Type**: string
 - **Mandatory**: No
@@ -223,7 +223,7 @@ storage=storage_redis
 
 See [Storage](#storage-1) for what storage modules are available.
 
-#### `storage_options`
+### `storage_options`
 
 - **Type**: string
 - **Mandatory**: No
@@ -239,7 +239,7 @@ upon the specific module.
 From 23.02 onwards, the storage module configuration should be provided using
 nested parameters.
 
-#### `hard_ttl`
+### `hard_ttl`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
@@ -254,7 +254,7 @@ backend (and cached). See also [soft_ttl](#soft_ttl).
 hard_ttl=60s
 ```
 
-#### `soft_ttl`
+### `soft_ttl`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
@@ -276,7 +276,7 @@ soft_ttl=60s
 If the value of `soft_ttl` is larger than `hard_ttl` it will be adjusted
 down to the same value.
 
-#### `max_resultset_rows`
+### `max_resultset_rows`
 
 - **Type**: count
 - **Mandatory**: No
@@ -289,7 +289,7 @@ stored in the cache. A resultset larger than this, will not be stored.
 max_resultset_rows=1000
 ```
 
-#### `max_resultset_size`
+### `max_resultset_size`
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
 - **Mandatory**: No
@@ -306,7 +306,7 @@ max_resultset_size=128Ki
 Note that the value of `max_resultset_size` should not be larger than the
 value of `max_size`.
 
-#### `max_count`
+### `max_count`
 
 - **Type**: count
 - **Mandatory**: No
@@ -324,7 +324,7 @@ of `max_count`.
 max_count=1000
 ```
 
-#### `max_size`
+### `max_size`
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
 - **Mandatory**: No
@@ -341,7 +341,7 @@ is used, then the total size is #threads * the value of `max_size`.
 max_size=100Mi
 ```
 
-#### `rules`
+### `rules`
 
 - **Type**: path
 - **Mandatory**: No
@@ -362,7 +362,7 @@ rules, alter the rules parameter to the same value it has.
 maxctrl alter filter MyCache rules='/path/to/rules-file'
 ```
 
-#### `cached_data`
+### `cached_data`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -388,7 +388,7 @@ cached_data=shared
 Default is `thread_specific`. See `max_count` and `max_size` what implication
 changing this setting to `shared` has.
 
-#### `selects`
+### `selects`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -433,7 +433,7 @@ the following circumstances:
 Note that parsing all `SELECT` statements carries a performance
 cost. Please read [performance](#performance) for more details.
 
-#### `cache_in_transactions`
+### `cache_in_transactions`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -465,7 +465,7 @@ Default is `all_transactions`.
 The values `read_only_transactions` and `all_transactions` have roughly the
 same effect as changing the isolation level of the backend to `read_committed`.
 
-#### `debug`
+### `debug`
 
 - **Type**: number
 - **Mandatory**: No
@@ -489,7 +489,7 @@ Default is `0`. To log everything, give `debug` a value of `31`.
 debug=31
 ```
 
-#### `enabled`
+### `enabled`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
@@ -506,7 +506,7 @@ at runtime. Please see
 [Runtime Configuration](#runtime-configuration)
 for details.
 
-#### `invalidate`
+### `invalidate`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -537,7 +537,7 @@ If it is important that an application _immediately_ sees all changes, irrespect
 of who has caused them, then a combination of `invalidate=current`
 and `cached_data=shared` _must_ be used.
 
-#### `clear_cache_on_parse_errors`
+### `clear_cache_on_parse_errors`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
@@ -558,7 +558,7 @@ Changing the value to `false` may mean that stale data is returned from
 the cache, if an UPDATE/INSERT/DELETE cannot be parsed and the statement
 affects entries in the cache.
 
-#### `users`
+### `users`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
@@ -582,7 +582,7 @@ same query, then the data will be fetched twice and also stored
 twice. So, a `isolated` cache will in general use more memory and
 cause more traffic to the backend compared to a `mixed` cache.
 
-#### `timeout`
+### `timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
@@ -596,14 +596,14 @@ such as _redis_ or _memcached_.
 timeout=7000ms
 ```
 
-### Runtime Configuration
+## Runtime Configuration
 
 The cache filter can be configured at runtime by executing SQL commands. If
 there is more than one cache filter in a service, only the first cache filter
 will be able to process the variables. The remaining filters will not see them
 and thus configuring them at runtime is not possible.
 
-#### `@maxscale.cache.populate`
+### `@maxscale.cache.populate`
 
 Using the variable `@maxscale.cache.populate` it is possible to specify at
 runtime whether the cache should be populated or not. Its initial value is
@@ -630,7 +630,7 @@ SELECT @maxscale.cache.populate;
 ```
 but only _after_ it has been explicitly set once.
 
-#### `@maxscale.cache.use`
+### `@maxscale.cache.use`
 
 Using the variable `@maxscale.cache.use` it is possible to specify at
 runtime whether the cache should be used or not. Its initial value is
@@ -664,7 +664,7 @@ SELECT @maxscale.cache.use;
 ```
 but only after it has explicitly been set once.
 
-#### `@maxscale.cache.soft_ttl`
+### `@maxscale.cache.soft_ttl`
 
 Using the variable `@maxscale.cache.soft_ttl` it is possible at runtime
 to specify _in seconds_ what _soft ttl_ should be applied. Its initial
@@ -694,7 +694,7 @@ SELECT @maxscale.cache.soft_ttl;
 ```
 but only after it has explicitly been set once.
 
-#### `@maxscale.cache.hard_ttl`
+### `@maxscale.cache.hard_ttl`
 
 Using the variable `@maxscale.cache.hard_ttl` it is possible at runtime
 to specify _in seconds_ what _hard ttl_ should be applied. Its initial
@@ -721,7 +721,7 @@ SELECT @maxscale.cache.hard_ttl;
 ```
 but only after it has explicitly been set once.
 
-#### Client Driven Caching
+## Client Driven Caching
 
 With `@maxscale.cache.populate` and `@maxscale.cache.use` is it possible
 to make the caching completely client driven.

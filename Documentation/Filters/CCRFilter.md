@@ -41,7 +41,7 @@ comment. The `match`-comment typically has no effect, since write queries by
 default trigger the filter anyway. It can be used to override an ignore-type
 regular expression that would otherwise prevent triggering.
 
-## Filter Parameters
+## Settings
 
 The CCR filter has no mandatory parameters.
 
@@ -86,7 +86,7 @@ the counter reaches zero, the statements are routed normally. If a new data
 modifying SQL statement is processed, the counter is reset to the value of
 _count_.
 
-### `match`, `ignore`
+### `match`
 
 - **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
 - **Mandatory**: No
@@ -103,6 +103,15 @@ match=.*INSERT.*
 ignore=.*UPDATE.*
 options=case,extended
 ```
+
+### `ignore`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+See documentation for [match](#match).
 
 ### `options`
 

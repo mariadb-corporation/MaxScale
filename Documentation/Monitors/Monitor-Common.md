@@ -5,7 +5,7 @@ in the monitor section of the configuration file.
 
 [TOC]
 
-## Parameters
+## Settings
 
 ### `module`
 

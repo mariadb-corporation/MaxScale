@@ -4,7 +4,7 @@ The *MariaDBAuth*-module implements the client and backend authentication for th
 server plugin *mysql_native_password*. This is the default authentication
 plugin used by both MariaDB and MySQL.
 
-## Authenticator options
+## Settings
 
 The following settings may be given in the *authenticator_options* of the
 listener.
@@ -13,8 +13,7 @@ listener.
 
 Boolean, default value is "false". Activates passthrough-mode. In this mode,
 MaxScale does not check client credentials at all and defers authentication to
-the backend server. This feature is primarily meant to be used with Xpand LDAP-
-authentication, although it may be useful in any situation where MaxScale
+the backend server. It may be useful in any situation where MaxScale
 cannot check the existence of client user account nor authenticate the client.
 
 When a client connects to a listener with this setting enabled, MaxScale will

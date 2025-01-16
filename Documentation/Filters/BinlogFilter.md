@@ -24,7 +24,7 @@ The filter works with both row based and statement based replication but we
 recommend using row based replication with the binlogfilter. This guarantees
 that there are no ambiguities in the event filtering.
 
-## Configuration
+## Settings
 
 ### `match`
 

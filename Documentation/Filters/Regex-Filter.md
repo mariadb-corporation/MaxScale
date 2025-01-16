@@ -36,7 +36,7 @@ password=mypasswd
 filters=MyRegexfilter
 ```
 
-## Filter Parameters
+## Settings
 
 The Regex filter has two mandatory parameters: *match* and *replace*.
 

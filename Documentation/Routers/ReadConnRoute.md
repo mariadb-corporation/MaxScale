@@ -28,7 +28,7 @@ is fixed when the client connects also means that routing hints are ignored.
   required, the [readwritesplit](ReadWriteSplit.md) router is usually the right
   choice.
 
-## Configuration
+## Settings
 
 For more details about the standard service parameters, refer to the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md).

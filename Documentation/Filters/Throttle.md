@@ -58,9 +58,9 @@ maintain that speed for 2 seconds before throttling starts.
 If the client continues to query at high speed and throttling duration is set to
 10 seconds, Maxscale will disconnect the session 12 seconds after it started.
 
-### Filter Parameters
+## Settings
 
-#### `max_qps`
+### `max_qps`
 
 - **Type**: number
 - **Mandatory**: Yes
@@ -72,7 +72,7 @@ This is the frequency to which a session will be limited over a given time
 period. QPS is not measured as an instantaneous value but over a configurable
 sampling duration (see `sampling_duration`).
 
-#### `throttling_duration`
+### `throttling_duration`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: Yes

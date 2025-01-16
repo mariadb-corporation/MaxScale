@@ -145,7 +145,7 @@ missingok
 nocompress
 sharedscripts
 postrotate
-kill -USR1 `cat /var/run/maxscale/maxscale.pid`
+kill -USR1 `cat /run/maxscale/maxscale.pid`
 endscript
 }
 ```
