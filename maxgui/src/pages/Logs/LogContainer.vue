@@ -68,7 +68,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import VirtualList from 'vue-virtual-scroll-list'
 import LogLine from './LogLine'
 import { fromUnixTime, isToday } from 'date-fns'
@@ -102,7 +102,6 @@ export default {
             prev_logs: state => state.maxscale.prev_logs,
             log_filter: state => state.maxscale.log_filter,
         }),
-        ...mapGetters({ logDateRangeTimestamp: 'maxscale/logDateRangeTimestamp' }),
         priorities() {
             return this.log_filter.priorities
         },
@@ -256,7 +255,10 @@ export default {
          * @returns {boolean}
          */
         isBetweenTimeRange(timestamp) {
-            const [from, to] = this.logDateRangeTimestamp
+            const logDateRangeTimestamp = this.log_filter.date_range.map(v =>
+                this.$helpers.parseDateStr({ v, toTimestamp: true })
+            )
+            const [from, to] = logDateRangeTimestamp
             return timestamp >= from && (timestamp <= to || isToday(fromUnixTime(to)))
         },
         /**

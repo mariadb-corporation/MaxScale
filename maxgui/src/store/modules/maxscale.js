@@ -17,12 +17,25 @@ import { t } from 'typy'
 import { parseDateStr, genSetMutations } from '@share/utils/helpers'
 
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
+const OPTIONAL_FILTER_NAMES = [
+    'logPriorityFilter',
+    'logModuleIdsFilter',
+    'logObjIdsFilter',
+    'logSessionIdFilter',
+]
+
 function getPageCursorParam(url) {
     return t(url.match(PAGE_CURSOR_REG), '[0]').safeString
 }
 
 function genOrExpr(items) {
     return `or(${items.map(item => `eq("${item}")`).join(',')})`
+}
+
+function genLogDateRangeFilter(dateRange) {
+    const [from, to] = dateRange.map(v => parseDateStr({ v, toTimestamp: true }))
+    if (from && to) return `filter[$.attributes.unix_timestamp]=and(ge(${from}),le(${to}))`
+    return ''
 }
 
 const states = () => ({
@@ -137,7 +150,7 @@ export default {
         },
         async fetchLatestLogs({ commit, getters }) {
             const [, res] = await this.vue.$helpers.tryAsync(
-                this.vue.$http.get(`/maxscale/logs/entries?${getters.logFilters}`)
+                this.vue.$http.get('/maxscale/logs/entries?' + getters.getLogFilters())
             )
             const { data = [], links: { prev = '' } = {} } = res.data
             commit('SET_LATEST_LOGS', Object.freeze(data))
@@ -147,7 +160,11 @@ export default {
         },
         async fetchPrevLogs({ commit, getters }) {
             const [, res] = await this.vue.$helpers.tryAsync(
-                this.vue.$http.get(`/maxscale/logs/entries?${getters.prevLogsParams}`)
+                this.vue.$http.get(
+                    '/maxscale/logs/entries?' +
+                        `${getters.prevPageCursorParam}&` +
+                        getters.getLogFilters()
+                )
             )
             const {
                 data,
@@ -243,13 +260,7 @@ export default {
                     return []
             }
         },
-        logDateRangeTimestamp: state =>
-            state.log_filter.date_range.map(v => parseDateStr({ v, toTimestamp: true })),
-        logDateRangeFilter: (state, getters) => {
-            const [from, to] = getters.logDateRangeTimestamp
-            if (from && to) return `filter[$.attributes.unix_timestamp]=and(ge(${from}),le(${to}))`
-            return ''
-        },
+        logPageSize: ({ logs_page_size }) => `page[size]=${logs_page_size}`,
         logPriorityFilter: ({ log_filter: { priorities } }) =>
             priorities.length ? `filter[$.attributes.priority]=${genOrExpr(priorities)}` : '',
         logModuleIdsFilter: ({ log_filter: { module_ids } }) =>
@@ -258,29 +269,26 @@ export default {
             obj_ids.length ? `filter[$.attributes.object]=${genOrExpr(obj_ids)}` : '',
         logSessionIdFilter: ({ log_filter: { session_ids } }) =>
             session_ids.length ? `filter[$.attributes.session]=${genOrExpr(session_ids)}` : '',
-        logFilters: (
-            { logs_page_size },
-            {
-                logDateRangeFilter,
-                logPriorityFilter,
-                logModuleIdsFilter,
-                logObjIdsFilter,
-                logSessionIdFilter,
-            }
-        ) => {
-            let params = [`page[size]=${logs_page_size}`, logDateRangeFilter]
-            const optionalFilters = [
-                logPriorityFilter,
-                logModuleIdsFilter,
-                logObjIdsFilter,
-                logSessionIdFilter,
-            ]
-            optionalFilters.forEach(filter => {
-                if (filter) params.push(filter)
-            })
-            return params.join('&')
-        },
+        optionalLogFilters: (state, getters) =>
+            OPTIONAL_FILTER_NAMES.reduce((acc, name) => {
+                if (getters[name]) acc.push(getters[name])
+                return acc
+            }, []),
+        /**
+         * This getter is implemented as a function to bypass the default caching behavior of Vuex getters,
+         * ensuring that the log filters are always recalculated. Normally, Vuex getters are cached based on
+         * their dependencies, and they only recompute when those dependencies change. By using a function getter,
+         * we force the getter to execute every time it is accessed, ensuring that `genLogDateRangeFilter` is
+         * called with the most up-to-date `date_range`. The `date_range` can either be a string representing
+         * a date or a TIME_REF_POINT. If the `end` value of the `date_range` is `NOW`, the timestamp will be
+         * recalculated to reflect the current time.
+         */
+        getLogFilters: ({ log_filter: { date_range } }, getters) => () =>
+            [
+                getters.logPageSize,
+                genLogDateRangeFilter(date_range),
+                ...getters.optionalLogFilters,
+            ].join('&'),
         prevPageCursorParam: state => getPageCursorParam(decodeURIComponent(state.prev_log_link)),
-        prevLogsParams: (state, getters) => `${getters.prevPageCursorParam}&${getters.logFilters}`,
     },
 }
