@@ -401,6 +401,7 @@ MariaDBUserManager::UserLoadRes
 MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_pw,
                                              std::vector<SERVER*>&& backends, UserDatabase& temp_userdata)
 {
+    mxb::LogScope scope(service()->name());
     mxq::MariaDB con;
     auto& sett = con.connection_settings();
     sett.user = move(conn_user);
