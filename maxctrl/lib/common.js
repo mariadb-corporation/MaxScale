@@ -21,6 +21,7 @@ var fs = require("fs");
 var https = require("https");
 var readlineSync = require("readline-sync");
 var utils = require("./utils.js");
+const child_process = require("child_process");
 
 function normalizeWhitespace(table) {
   table.forEach((v) => {
@@ -58,6 +59,20 @@ module.exports = function () {
       } else {
         var line = fs.readFileSync(0);
         argv.p = line.toString().trim();
+      }
+    }
+
+    if (argv.k && /^[0-9A-F]+$/.test(argv.p)) {
+      try {
+        var decrypted = child_process.execSync("maxpasswd -di " + argv.k, {
+          input: argv.p,
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+
+        // The output has a trailing newline
+        argv.p = decrypted.toString().trim();
+      } catch (e) {
+        // Something went wrong, just ignore it
       }
     }
 
