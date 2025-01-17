@@ -2614,18 +2614,15 @@ bool runtime_save_config(const char* name, const std::string& config)
             {
                 mxs::Config::set_object_source_file(name, final_filename);
 
-                if (mxs::Config::is_static_object(name))
+                if (mxs::Config::is_static_object(name) && new_file)
                 {
                     auto msg = mxb::string_printf("Saving runtime modifications to '%s' in '%s'. "
                                                   "The modified values will override the values found "
                                                   "in the static configuration files.",
                                                   name, final_filename.c_str());
-                    runtime_add_warning(msg);
 
-                    if (new_file)
-                    {
-                        MXS_WARNING("%s", msg.c_str());
-                    }
+                    runtime_add_warning(msg);
+                    MXS_WARNING("%s", msg.c_str());
                 }
             }
 

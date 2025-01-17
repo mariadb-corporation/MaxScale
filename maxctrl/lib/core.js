@@ -270,8 +270,14 @@ function program() {
     .command(require("./api.js"))
     .command(require("./classify.js"))
     .epilog(
-      "If no commands are given, maxctrl is started in interactive mode. " +
-        "Use `exit` to exit the interactive mode."
+      `
+To hide all warnings from maxctrl, run:
+
+    export MAXCTRL_WARNINGS=0
+
+If no commands are given, maxctrl is started in interactive mode.
+Use 'exit' to exit the interactive mode.
+`
     )
     .help()
     .scriptName("maxctrl")
