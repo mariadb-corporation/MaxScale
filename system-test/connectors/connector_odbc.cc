@@ -46,7 +46,7 @@ void test_main(TestConnections& test)
            << " && export ODBCSYSINI=$PWD"
            << " && mkdir -p " << log_dir
            << " && echo Test output stored in: " << log_dir << "/" << file_name
-           << " && ctest -Q -O " << log_dir << "/" << file_name;
+           << " && ctest --output-on-failure -Q -O " << log_dir << "/" << file_name;
 
         test.run_shell_command(ss.str(), "Running test suite");
     }
