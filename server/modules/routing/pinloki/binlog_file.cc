@@ -120,4 +120,9 @@ bool BinlogFile::check_status()
 
     return m_local_stat == DECOMPRESSING;
 }
+
+bool BinlogFile::is_shareable() const
+{
+    return m_local_stat == DECOMPRESSING || m_local_stat == DECOMPRESS_DONE;
+}
 }

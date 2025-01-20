@@ -58,9 +58,12 @@ public:
     // is ongoing.
     const std::string& file_name() const;
 
+    // The contents is the result of decompression. This is needed by the
+    // optimization that shares a file if decompression is ongoing or done.
+    bool is_shareable() const;
+
 private:
     LocalStat     m_local_stat = FAILED;
-    bool          m_is_compressed = false;
     std::string   m_input_file;
     std::string   m_output_file;
     mxb::TempFile m_temp_file;
