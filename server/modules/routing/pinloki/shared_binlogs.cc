@@ -35,7 +35,11 @@ std::shared_ptr<BinlogFile> SharedBinlogFile::binlog_file(const std::string& fil
     if (!ret)
     {
         ret = std::make_shared<BinlogFile>(file_name);
-        m_binlog_map.emplace(file_name, ret);
+
+        if (ret->is_shareable())
+        {
+            m_binlog_map.emplace(file_name, ret);
+        }
     }
 
     // Simple eviction. The m_binlog_map contains just std::weak_ptr:s, so is small.
