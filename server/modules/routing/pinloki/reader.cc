@@ -53,25 +53,29 @@ Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
 {
 }
 
-void Reader::start()
+bool Reader::start()
 {
     /* Reader-as-a-seprate process. This and the other spot with
      * a comment "Reader-as-a-separate process", should be configurable
      * to use find_last_gtid_list() instead of config().rpl_state()
      * in order for the Readers to run without a Writer. Some other
-     * code would need to change as well. See pinloki/test/main.cc.
-     *
-     * Alternatively, the Reader could
-     * simply reply with an error if the requested gtid does not
-     * (yet) exist, like the master does.
+     * code might need to change as well. See pinloki/test/main.cc.
      */
+
+    bool continue_poll = true;
     auto gtid_list = m_inventory.config().rpl_state();
 
     if (gtid_list.is_included(m_start_gtid_list))
     {
+        if (m_startup_poll_dcid)
+        {
+            MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader at " << m_start_gtid_list);
+        }
+
         try
         {
             start_reading();
+            continue_poll = false;
         }
         catch (const mxb::Exception& err)
         {
@@ -79,12 +83,25 @@ void Reader::start()
             m_abort_cb();
         }
     }
+    else if (m_timer.alarm())
+    {
+        MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
+                  << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
+    }
+
+    if (continue_poll)
+    {
+        if (!m_startup_poll_dcid)
+        {
+            m_startup_poll_dcid = dcall(1000ms, &Reader::start, this);
+        }
+    }
     else
     {
-        MXB_SINFO("ReplSYNC: reader waiting for primary to synchronize "
-                  << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
-        m_startup_poll_dcid = dcall(1000ms, &Reader::poll_start_reading, this);
+        m_startup_poll_dcid = 0;
     }
+
+    return continue_poll;
 }
 
 void Reader::start_reading()
@@ -100,46 +117,6 @@ void Reader::start_reading()
     {
         m_heartbeat_dcid = dcall(1000ms, &Reader::generate_heartbeats, this);
     }
-}
-
-bool Reader::poll_start_reading()
-{
-    // This version waits for ever.
-    // Is there reason to timeout and send an error message?
-
-    /* Reader-as-a-seprate process. See comment in Reader::start() */
-    bool continue_poll = true;
-    auto gtid_list = m_inventory.config().rpl_state();
-    if (gtid_list.is_included(maxsql::GtidList({m_start_gtid_list})))
-    {
-        MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader");
-
-        try
-        {
-            start_reading();
-            continue_poll = false;
-        }
-        catch (const mxb::Exception& err)
-        {
-            MXB_ERROR("Failed to start reading: %s", err.what());
-            m_abort_cb();
-        }
-    }
-    else
-    {
-        if (m_timer.alarm())
-        {
-            MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
-                      << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
-        }
-    }
-
-    if (!continue_poll)
-    {
-        m_startup_poll_dcid = 0;
-    }
-
-    return continue_poll;
 }
 
 Reader::~Reader()
