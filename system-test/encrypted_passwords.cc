@@ -21,37 +21,29 @@
 #include <maxtest/testconnections.hh>
 
 /** Remove old keys and create a new one */
-int create_key(TestConnections* test)
+void create_key(TestConnections& test)
 {
     int res = 0;
-    test->tprintf("Creating new encryption keys\n");
-    test->maxscale->ssh_node(
+    test.tprintf("Creating new encryption keys");
+    test.maxscale->ssh_node(
         "test -f /var/lib/maxscale/.secrets && sudo rm /var/lib/maxscale/.secrets",
         true);
-    test->maxscale->ssh_node("maxkeys", true);
-    auto result = test->maxscale->ssh_output("sudo test -f /var/lib/maxscale/.secrets && echo SUCCESS",
-                                             false);
+    test.maxscale->ssh_node("maxkeys", true);
+    auto result = test.maxscale->ssh_output("sudo test -f /var/lib/maxscale/.secrets && echo SUCCESS",
+                                            false);
 
-    if (strncmp(result.output.c_str(), "SUCCESS", 7) != 0)
-    {
-        test->tprintf("FAILURE: /var/lib/maxscale/.secrets was not created\n");
-        res = 1;
-    }
-    else
-    {
-        test->maxscale->ssh_node("sudo chown maxscale:maxscale /var/lib/maxscale/.secrets", true);
-    }
-    return res;
+    test.expect(result.output == "SUCCESS", "/var/lib/maxscale/.secrets was not created");
+    test.maxscale->ssh_node("sudo chown maxscale:maxscale /var/lib/maxscale/.secrets", true);
 }
 
 
 /** Hash a new password and start MaxScale */
-int hash_password(TestConnections* test)
+void hash_password(TestConnections& test)
 {
-    test->maxscale->stop();
+    test.maxscale->stop();
 
-    test->tprintf("Creating a new encrypted password\n");
-    auto res = test->maxscale->ssh_output("maxpasswd /var/lib/maxscale/ skysql");
+    test.tprintf("Creating a new encrypted password");
+    auto res = test.maxscale->ssh_output("maxpasswd /var/lib/maxscale/ skysql");
 
     std::string enc_pw = res.output;
     auto pos = enc_pw.find('\n');
@@ -60,28 +52,25 @@ int hash_password(TestConnections* test)
         enc_pw = enc_pw.substr(0, pos);
     }
 
-    test->tprintf("Encrypted password is: %s\n", enc_pw.c_str());
-    test->maxscale->ssh_node_f(true,
-                               "sed -i -e 's/password[[:space:]]*=[[:space:]]*skysql/password=%s/' /etc/maxscale.cnf",
-                               enc_pw.c_str());
+    test.tprintf("Encrypted password is: %s", enc_pw.c_str());
+    test.maxscale->ssh_node_f(true,
+                              "sed -i -e 's/password[[:space:]]*=[[:space:]]*skysql/password=%s/' /etc/maxscale.cnf",
+                              enc_pw.c_str());
 
-    test->tprintf("Starting MaxScale\n");
-    test->maxscale->start_maxscale();
+    test.tprintf("Starting MaxScale");
+    test.maxscale->start_maxscale();
 
-    test->tprintf("Checking if MaxScale is alive\n");
-    return test->check_maxscale_alive();
+    test.tprintf("Checking if MaxScale is alive");
+    test.expect(test.check_maxscale_alive() == 0, "MaxScale is not alive");
 }
 
-
+void test_main(TestConnections& test)
+{
+    create_key(test);
+    hash_password(test);
+}
 
 int main(int argc, char* argv[])
 {
-    TestConnections* test = new TestConnections(argc, argv);
-
-    test->global_result += create_key(test);
-    test->global_result += hash_password(test);
-
-    int rval = test->global_result;
-    delete test;
-    return rval;
+    return TestConnections().run_test(argc, argv, test_main);
 }
