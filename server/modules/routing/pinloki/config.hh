@@ -53,6 +53,7 @@ static const std::string COMPRESSION_DIR = "compression";
 
 DEFINE_EXCEPTION(BinlogReadError);
 DEFINE_EXCEPTION(GtidNotFoundError);
+DEFINE_EXCEPTION(GtidSearchTimeout);
 
 enum class ExpirationMode
 {

@@ -100,8 +100,7 @@ maxsql::GtidList get_gtid_list(const std::string& file_name,
     auto nbytes = file.advance_for(MAGIC_SIZE, 10ms);
     if (nbytes != MAGIC_SIZE)
     {
-        MXB_THROW(BinlogReadError, "Failed to read '" << file_name
-                                                      << "' :" << errno << ", " << mxb_strerror(errno));
+        MXB_THROW(GtidSearchTimeout, "Timeout reading " << file_name);
     }
 
     maxsql::GtidList gtid_list;
