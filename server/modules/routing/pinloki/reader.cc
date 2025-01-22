@@ -63,9 +63,22 @@ bool Reader::start()
 
     if (m_find_gtid_fut.wait_for(10ms) == std::future_status::ready)
     {
-        m_catch_up = m_find_gtid_fut.get();
         continue_poll = false;
-        sync_to_primary();
+        try
+        {
+            m_catch_up = m_find_gtid_fut.get();
+            sync_to_primary();
+        }
+        catch (const GtidSearchTimeout& ex)
+        {
+            MXB_ERROR("%s", ex.what());
+            m_abort_cb();
+        }
+        catch (const mxb::Exception& err)
+        {
+            MXB_ERROR("Failed in startup: %s", err.what());
+            m_abort_cb();
+        }
     }
 
     if (continue_poll)
