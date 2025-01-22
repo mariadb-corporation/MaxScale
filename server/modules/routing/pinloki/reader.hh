@@ -53,7 +53,8 @@ public:
 
 private:
     static uint32_t epoll_update(class mxb::Pollable* data, mxb::Worker* worker, uint32_t events);
-    void start_reading();
+    bool sync_to_primary();
+    void start_file_reader();
     void notify_concrete_reader(uint32_t events);
 
     bool generate_heartbeats();
@@ -87,8 +88,9 @@ private:
     maxbase::Timer  m_timer {10s};
 
     // Related to delayed start
-    maxsql::GtidList  m_start_gtid_list;
-    mxb::Worker::DCId m_startup_poll_dcid = 0;
+    maxsql::GtidList          m_start_gtid_list;
+    std::vector<GtidPosition> m_catch_up;
+    mxb::Worker::DCId         m_startup_poll_dcid = 0;
 
     // Heartbeat related variables
     mxb::Worker::DCId                     m_heartbeat_dcid = 0;

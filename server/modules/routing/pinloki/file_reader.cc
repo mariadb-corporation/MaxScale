@@ -34,7 +34,6 @@ using namespace std::literals::chrono_literals;
 
 // Searching for read-position based on a gtid, not gtid-list. Each domain inside a binary log is an
 // independent stream.
-
 // Events. Search for gtid 1-1-1000, which is in the binlog file 4:
 // 1. Artificial rotate to binlog 4
 // 2. Format desc from the file
@@ -48,20 +47,18 @@ namespace pinloki
 
 constexpr int HEADER_LEN = 19;
 
-FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader* inv)
+FileReader::FileReader(const std::vector<GtidPosition>& catch_up, const InventoryReader* inv)
     : m_inotify_fd{inotify_init1(IN_NONBLOCK)}
     , m_inventory(*inv)
+    , m_catchup(catch_up)
 {
     if (m_inotify_fd == -1)
     {
         MXB_THROW(BinlogReadError, "inotify_init failed: " << errno << ", " << mxb_strerror(errno));
     }
 
-    if (!gtid_list.gtids().empty())
+    if (!m_catchup.empty())
     {
-        // Get a sorted list of GtidPositions
-        m_catchup = find_gtid_position(gtid_list.gtids(), inv->config());
-
         // The first one is the position from which to start reading.
         const auto& gtid_pos = m_catchup.front();
 

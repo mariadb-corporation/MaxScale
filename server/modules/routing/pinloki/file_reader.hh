@@ -40,7 +40,7 @@ namespace pinloki
 class FileReader    // : public Storage
 {
 public:
-    FileReader(const maxsql::GtidList& gtid_list, const InventoryReader* inv);
+    FileReader(const std::vector<GtidPosition>& catch_up, const InventoryReader* inv);
     ~FileReader();
 
     maxsql::RplEvent fetch_event(const maxbase::Timer& timer);

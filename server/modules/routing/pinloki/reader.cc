@@ -55,13 +55,17 @@ Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
 
 bool Reader::start()
 {
-    /* Reader-as-a-seprate process. This and the other spot with
-     * a comment "Reader-as-a-separate process", should be configurable
-     * to use find_last_gtid_list() instead of config().rpl_state()
-     * in order for the Readers to run without a Writer. Some other
-     * code might need to change as well. See pinloki/test/main.cc.
-     */
+    // TODO find_gtid_position() needs to run in a separate thread
+    if (!m_start_gtid_list.gtids().empty())
+    {
+        m_catch_up = find_gtid_position(m_start_gtid_list.gtids(), m_inventory.config());
+    }
 
+    return sync_to_primary();
+}
+
+bool Reader::sync_to_primary()
+{
     bool continue_poll = true;
     auto gtid_list = m_inventory.config().rpl_state();
 
@@ -74,7 +78,7 @@ bool Reader::start()
 
         try
         {
-            start_reading();
+            start_file_reader();
             continue_poll = false;
         }
         catch (const mxb::Exception& err)
@@ -93,7 +97,7 @@ bool Reader::start()
     {
         if (!m_startup_poll_dcid)
         {
-            m_startup_poll_dcid = dcall(1000ms, &Reader::start, this);
+            m_startup_poll_dcid = dcall(1000ms, &Reader::sync_to_primary, this);
         }
     }
     else
@@ -104,9 +108,9 @@ bool Reader::start()
     return continue_poll;
 }
 
-void Reader::start_reading()
+void Reader::start_file_reader()
 {
-    m_sFile_reader.reset(new FileReader(m_start_gtid_list, &m_inventory));
+    m_sFile_reader.reset(new FileReader(m_catch_up, &m_inventory));
     m_reader_poll_data.reader = this;
     m_reader_poll_data.fd = m_sFile_reader->fd();
     m_get_worker().add_pollable(EPOLLIN, &m_reader_poll_data);
