@@ -88,9 +88,11 @@ private:
     maxbase::Timer  m_timer {10s};
 
     // Related to delayed start
-    maxsql::GtidList          m_start_gtid_list;
-    std::vector<GtidPosition> m_catch_up;
-    mxb::Worker::DCId         m_startup_poll_dcid = 0;
+    maxsql::GtidList                       m_start_gtid_list;
+    std::vector<GtidPosition>              m_catch_up;
+    mxb::Worker::DCId                      m_start_poll_dcid = 0;
+    mxb::Worker::DCId                      m_sync_poll_dcid = 0;
+    std::future<std::vector<GtidPosition>> m_find_gtid_fut;
 
     // Heartbeat related variables
     mxb::Worker::DCId                     m_heartbeat_dcid = 0;

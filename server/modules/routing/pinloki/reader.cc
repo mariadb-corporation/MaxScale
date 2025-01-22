@@ -47,6 +47,10 @@ Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
     , m_abort_cb(abort_cb)
     , m_inventory(conf)
     , m_start_gtid_list(start_gl)
+    , m_find_gtid_fut(std::async(std::launch::async,
+                                 find_gtid_position,
+                                 std::ref(m_start_gtid_list.gtids()),
+                                 std::ref(m_inventory.config())))
     , m_heartbeat_interval(heartbeat_interval)
     , m_last_event(std::chrono::steady_clock::now())
     , m_ref(std::make_shared<bool>(true))
@@ -55,13 +59,28 @@ Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
 
 bool Reader::start()
 {
-    // TODO find_gtid_position() needs to run in a separate thread
-    if (!m_start_gtid_list.gtids().empty())
+    bool continue_poll = true;
+
+    if (m_find_gtid_fut.wait_for(10ms) == std::future_status::ready)
     {
-        m_catch_up = find_gtid_position(m_start_gtid_list.gtids(), m_inventory.config());
+        m_catch_up = m_find_gtid_fut.get();
+        continue_poll = false;
+        sync_to_primary();
     }
 
-    return sync_to_primary();
+    if (continue_poll)
+    {
+        if (!m_start_poll_dcid)
+        {
+            m_start_poll_dcid = dcall(100ms, &Reader::start, this);
+        }
+    }
+    else
+    {
+        m_start_poll_dcid = 0;
+    }
+
+    return continue_poll;
 }
 
 bool Reader::sync_to_primary()
@@ -71,7 +90,7 @@ bool Reader::sync_to_primary()
 
     if (gtid_list.is_included(m_start_gtid_list))
     {
-        if (m_startup_poll_dcid)
+        if (m_sync_poll_dcid)
         {
             MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader at " << m_start_gtid_list);
         }
@@ -95,14 +114,14 @@ bool Reader::sync_to_primary()
 
     if (continue_poll)
     {
-        if (!m_startup_poll_dcid)
+        if (!m_sync_poll_dcid)
         {
-            m_startup_poll_dcid = dcall(1000ms, &Reader::sync_to_primary, this);
+            m_sync_poll_dcid = dcall(1000ms, &Reader::sync_to_primary, this);
         }
     }
     else
     {
-        m_startup_poll_dcid = 0;
+        m_sync_poll_dcid = 0;
     }
 
     return continue_poll;
@@ -125,15 +144,7 @@ void Reader::start_file_reader()
 
 Reader::~Reader()
 {
-    if (m_startup_poll_dcid)
-    {
-        cancel_dcall(m_startup_poll_dcid);
-    }
-
-    if (m_heartbeat_dcid)
-    {
-        cancel_dcall(m_heartbeat_dcid);
-    }
+    cancel_dcalls(false);
 }
 
 void Reader::set_in_high_water(bool in_high_water)

@@ -53,8 +53,6 @@ std::vector<GtidPosition> search_file(const std::string& file_name,
 std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
                                              const Config& cnf)
 {
-    mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
-
     std::vector<GtidPosition> ret;
     // Simple linear search. If there can be a lot of files, make this a binary search, or
     // if it really becomes slow, create an index
@@ -62,6 +60,7 @@ std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
 
     // Search files in reverse because the gtids are likely be in one of the latest files,
     // and the search can stop as soon as the gtid is greater than the gtid list in the file.
+    // TODO change this to a binary search.
 
     for (auto ite = rbegin(file_names); ite != rend(file_names); ++ite)
     {
@@ -97,7 +96,7 @@ maxsql::GtidList get_gtid_list(const std::string& file_name,
 {
     auto sBinlog = cnf.shared_binlog_file().binlog_file(file_name);
     IFStreamReader file(sBinlog->make_ifstream());
-    auto nbytes = file.advance_for(MAGIC_SIZE, 10ms);
+    auto nbytes = file.advance_for(MAGIC_SIZE, 5s);
     if (nbytes != MAGIC_SIZE)
     {
         MXB_THROW(GtidSearchTimeout, "Timeout reading " << file_name);
