@@ -133,7 +133,7 @@ function program() {
     .strict()
     .exitProcess(false)
     .showHelpOnFail(false)
-    .group(["c", "u", "p", "h", "t", "q", "tsv", "skip-sync"], "Global Options:")
+    .group(["c", "u", "p", "k", "h", "t", "q", "tsv", "skip-sync"], "Global Options:")
     .option("c", {
       alias: "config",
       global: true,
@@ -211,6 +211,12 @@ function program() {
       default: false,
       type: "boolean",
     })
+    .option("k", {
+      alias: "secretsdir",
+      describe: "Directory where the .secrets file is stored for passwords encrypted with maxpasswd.",
+      type: "string",
+      requiresArg: true,
+    })
     .option("tsv", {
       describe: "Print tab separated output",
       default: false,
@@ -272,8 +278,25 @@ function program() {
     .command(require("./api.js"))
     .command(require("./classify.js"))
     .epilog(
-      "If no commands are given, maxctrl is started in interactive mode. " +
-        "Use `exit` to exit the interactive mode."
+      `
+MaxCtrl supports passwords encrypted with maxpasswd. In order to use them,
+the encryption key used by MaxScale must be copied to a directory where it
+can be access and the ownership of the file must be changed to the current
+user. The file must be readable by only the owner of the file.
+
+For example, to copy the encryption key from the default location to
+the current user's home directory, the following commands can be used:
+
+  sudo cp /var/lib/maxscale/.secrets $HOME/.secrets
+  sudo chown $(whoami) $HOME/.secrets
+
+To hide all warnings from maxctrl, run:
+
+    export MAXCTRL_WARNINGS=0
+
+If no commands are given, maxctrl is started in interactive mode.
+Use 'exit' to exit the interactive mode.
+`
     )
     .help()
     .scriptName("maxctrl")
