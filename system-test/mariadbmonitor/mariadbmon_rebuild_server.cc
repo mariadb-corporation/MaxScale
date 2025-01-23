@@ -23,9 +23,7 @@ using mxt::MaxScale;
 
 namespace
 {
-void test_main(TestConnections& test);
-bool wait_for_completion(TestConnections& test);
-
+const string keypath = "/tmp/sshkey.pem";
 const char alt_datadir[] = "/tmp/test_datadir";
 const string alt_datadir_setting = string("datadir=") + alt_datadir;
 const string alt_datadir_expected = string(alt_datadir) + "/";
@@ -34,52 +32,14 @@ const char normal_datadir[] = "/var/lib/mysql/";
 const char select_datadir[] = "select @@datadir;";
 const char wrong_datadir_fmt[] = "Wrong datadir. Got '%s', expected '%s'.";
 
-void check_value(TestConnections& test, mxt::MariaDB* conn, int expected)
-{
-    std::this_thread::sleep_for(100ms);     // Sleep a little to let update propagate.
-    string query = "select * from test.t1;";
-    auto res = conn->query(query);
-    if (res && res->next_row() && res->get_col_count() == 1)
-    {
-        int found = res->get_int(0);
-        test.tprintf("Found value %i.", found);
-        test.expect(found == expected, "Found wrong value in test.t1. Got %i, expected %i",
-                    found, expected);
-    }
-    else
-    {
-        test.add_failure("Query '%s' failed or returned invalid data.", query.c_str());
-    }
-}
+void copy_ssh_keyfile(TestConnections& test, mxt::MariaDBServer* target1, mxt::MariaDBServer* target2);
+void install_tools(TestConnections& test, int ind);
+void run_rebuild(TestConnections& test, const string& rebuild_cmd, int target_ind, int master_ind);
+void test_special_characters(TestConnections& test, int target_ind, int master_ind);
+bool wait_for_cmd_completion(TestConnections& test);
+void check_value(TestConnections& test, mxt::MariaDB* conn, int expected);
+bool command_ok(TestConnections& test, mxt::CmdResult& res, bool cmd_success, const string& backup_cmd);
 
-bool command_ok(TestConnections& test, mxt::CmdResult& res, bool cmd_success, const string& backup_cmd)
-{
-    bool rval = true;
-    if (res.rc != 0)
-    {
-        test.add_failure("Command '%s' startup failed. Error %i: %s", backup_cmd.c_str(),
-                         res.rc, res.output.c_str());
-        rval = false;
-    }
-    else if (!cmd_success)
-    {
-        test.add_failure("Command '%s' failed. Check MaxScale log for more info.",
-                         backup_cmd.c_str());
-        rval = false;
-    }
-    return rval;
-}
-}
-
-int main(int argc, char* argv[])
-{
-    TestConnections test;
-    TestConnections::skip_maxscale_start(true);
-    return test.run_test(argc, argv, test_main);
-}
-
-namespace
-{
 void test_main(TestConnections& test)
 {
     const int source_ind = 1;
@@ -89,50 +49,11 @@ void test_main(TestConnections& test)
     const auto down = mxt::ServerInfo::DOWN;
     const auto running = mxt::ServerInfo::RUNNING;
 
-    const string reset_repl = "call command mariadbmon reset-replication MariaDB-Monitor server1";
     auto& mxs = *test.maxscale;
     auto& repl = *test.repl;
     auto* source_be = repl.backend(source_ind);
     auto* target_be = repl.backend(target_ind);
-    // Copy ssh keyfile to maxscale VM from server1.
-    const string keypath = "/tmp/sshkey.pem";
-    mxs.vm_node().delete_from_node(keypath);
-    mxt::Node& key_source = repl.backend(0)->vm_node();
-
-    mxs.copy_to_node(key_source.sshkey(), keypath.c_str());
-    auto chmod = mxb::string_printf("chmod a+rx %s", keypath.c_str());
-    mxs.vm_node().run_cmd(chmod);
-    // Read the contents of authorized_keys on server1. Check that the same line exists on server2 & 4.
-    // If not, edit the other files.
-    const string authorized_keys_path = mxb::string_printf("%s/.ssh/authorized_keys",
-                                                           key_source.access_homedir());
-    const string read_pubkey_cmd = mxb::string_printf("head -n1 %s", authorized_keys_path.c_str());
-    auto pubkey_res = key_source.run_cmd_output(read_pubkey_cmd);
-
-    if (pubkey_res.rc == 0 && !pubkey_res.output.empty())
-    {
-        test.tprintf("Expecting authorized_keys to contain line '%s'.", pubkey_res.output.c_str());
-        string grep_cmd = mxb::string_printf("cat %s | grep \"%s\"", authorized_keys_path.c_str(),
-                                             pubkey_res.output.c_str());
-        string concat_cmd = mxb::string_printf("echo \"%s\" >> %s", pubkey_res.output.c_str(),
-                                               authorized_keys_path.c_str());
-        for (auto* be : {source_be, target_be})
-        {
-            auto grep_res = be->vm_node().run_cmd_output(grep_cmd);
-            if (grep_res.rc != 0)
-            {
-                test.tprintf("Public key not found on %s, adding it.", be->vm_node().name());
-                be->vm_node().run_cmd_output(concat_cmd);
-                grep_res = be->vm_node().run_cmd_output(grep_cmd);
-                test.expect(grep_res.rc == 0, "Failed to add public key to %s.", be->vm_node().name());
-            }
-        }
-    }
-    else
-    {
-        test.add_failure("Command '%s' failed or gave no results. Error: %s",
-                         read_pubkey_cmd.c_str(), pubkey_res.output.c_str());
-    }
+    copy_ssh_keyfile(test, source_be, target_be);
 
     mxs.start();
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
@@ -144,17 +65,15 @@ void test_main(TestConnections& test)
         repl.backend(i)->vm_node().run_cmd_output_sudo(stop_firewall);
     }
 
-    // Need to install some packages.
-    auto install_tools = [&repl](int ind) {
-        auto be = repl.backend(ind);
-        const char install_fmt[] = "yum -y install %s";
-        be->vm_node().run_cmd_output_sudof(install_fmt, "pigz");
-        be->vm_node().run_cmd_output_sudof(install_fmt, "MariaDB-backup");
-    };
+    if (test.ok())
+    {
+        install_tools(test, source_ind);
+        install_tools(test, target_ind);
+    }
 
     auto check_rebuild_success = [&test, &repl, &mxs]() {
         // The op is async, so wait.
-        bool op_success = wait_for_completion(test);
+        bool op_success = wait_for_cmd_completion(test);
         test.expect(op_success, "Rebuild operation failed.");
 
         if (test.ok())
@@ -173,9 +92,6 @@ void test_main(TestConnections& test)
 
     if (test.ok())
     {
-        install_tools(source_ind);
-        install_tools(target_ind);
-
         const int target_rows = 100;
         const int cluster_rows = 300;
 
@@ -184,24 +100,21 @@ void test_main(TestConnections& test)
         target_conn->cmd("stop slave;");
         target_conn->cmd("reset slave all;");
 
+        test.tprintf("Replication on server4 stopped, adding events to it.");
+        target_conn->cmd("create or replace database test;");
+        target_conn->cmd("create table test.t1 (c1 varchar(100), c2 int);");
+        target_conn->cmd("use test;");
+
         if (test.ok())
         {
-            test.tprintf("Replication on server4 stopped, adding events to it.");
-            target_conn->cmd("create or replace database test;");
-            target_conn->cmd("create table test.t1 (c1 varchar(100), c2 int);");
-            target_conn->cmd("use test;");
-
-            if (test.ok())
+            for (int i = 0; i < target_rows; i++)
             {
-                for (int i = 0; i < target_rows; i++)
-                {
-                    target_conn->cmd("insert into t1 values (md5(rand()), rand());");
-                }
+                target_conn->cmd("insert into t1 values (md5(rand()), rand());");
             }
-            mxs.wait_for_monitor(1);
-            auto data = mxs.get_servers();
-            data.print();
         }
+        mxs.wait_for_monitor(1);
+        auto data = mxs.get_servers();
+        data.print();
 
         test.tprintf("Adding events to remaining cluster.");
         auto rwsplit_conn = mxs.open_rwsplit_connection2();
@@ -217,7 +130,7 @@ void test_main(TestConnections& test)
             }
             repl.sync_slaves();
             mxs.wait_for_monitor(1);
-            auto data = mxs.get_servers();
+            data = mxs.get_servers();
             data.print();
         }
 
@@ -232,9 +145,10 @@ void test_main(TestConnections& test)
         test.expect(target_rowcount == target_rows, rows_mismatch, "Target", cluster_rowcount,
                     cluster_rows);
 
+        int master_ind = 0;
         auto server_info = mxs.get_servers();
         server_info.check_servers_status({master_st, slave_st, slave_st, mxt::ServerInfo::RUNNING});
-        auto master_gtid = server_info.get(0).gtid;
+        auto master_gtid = server_info.get(master_ind).gtid;
         auto target_gtid = server_info.get(target_ind).gtid;
         test.expect(master_gtid != target_gtid, "Gtids should have diverged");
         auto master_gtid_parts = mxb::strtok(master_gtid, "-");
@@ -242,93 +156,51 @@ void test_main(TestConnections& test)
         test.expect(master_gtid_parts.size() == 3, "Invalid master gtid");
         test.expect(target_gtid_parts.size() == 3, "Invalid target gtid");
 
+        test.expect(master_gtid_parts[1] != target_gtid_parts[1], "Gtid server_ids should be different");
         if (test.ok())
         {
-            test.expect(master_gtid_parts[1] != target_gtid_parts[1], "Gtid server_ids should be different");
+            string rebuild_cmd = "call command mariadbmon async-rebuild-server MariaDB-Monitor "
+                                 "server4 server2";
+            run_rebuild(test, rebuild_cmd, target_ind, master_ind);
+
             if (test.ok())
             {
-                auto run_rebuild = [&test, &mxs, &check_rebuild_success](){
-                    auto res = mxs.maxctrl("call command mariadbmon async-rebuild-server MariaDB-Monitor "
-                                           "server4 server2");
-                    if (res.rc == 0)
-                    {
-                        check_rebuild_success();
-                    }
-                    else
-                    {
-                        test.add_failure("Failed to start rebuild: %s", res.output.c_str());
-                    }
-                };
-                run_rebuild();
-
-                if (test.ok())
-                {
-                    // MXS-5366 Test username/password with special characters. This still does not test
-                    // a single quote ('), but perhaps that is rare enough to ignore for now. Supporting '
-                    // would require some extra string processing.
-                    auto change_monitor_user = [&](const string& user, const string& pw) {
-                        string cmd = mxb::string_printf("maxctrl alter monitor MariaDB-Monitor "
-                                                        "user='%s' password='%s'",
-                                                        user.c_str(), pw.c_str());
-                        auto rc = mxs.vm_node().run_cmd(cmd);
-                        test.expect(rc == 0, "Alter monitor command '%s' failed.", cmd.c_str());
-                        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
-                    };
-
-                    string tricky_user_str = "\"#¤%&/\\()=?";
-                    // The backslashes have to be doubled for mariadb client.
-                    string tricky_user_client = "\"#¤%&/\\\\()=?";
-                    string tricky_user_pw = "åÄÖ*,.-_";
-                    auto user = repl.backend(0)->admin_connection()->create_user(
-                        tricky_user_client, "%", tricky_user_pw);
-                    user.grant("all privileges on *.*");
-                    test.tprintf("User '%s' created. Testing monitor and rebuild-server with it.",
-                                 tricky_user_str.c_str());
-                    repl.sync_slaves();
-                    change_monitor_user(tricky_user_str, tricky_user_pw);
-
-                    target_be->admin_connection()->cmd("stop slave;");
-                    mxs.wait_for_monitor();
-                    run_rebuild();
-
-                    test.tprintf("Resetting monitor user and password.");
-                    change_monitor_user("mariadbmon", "mariadbmon");
-                }
+                test_special_characters(test, target_ind, master_ind);
             }
+        }
 
-            if (test.ok())
+        if (test.ok())
+        {
+            test.tprintf("Stop server3 and server4. Rebuild server4 without defining source server. "
+                         "server2 should be used as source.");
+            repl.backend(2)->stop_database();
+            auto conn = repl.backend(target_ind)->open_connection();
+            conn->cmd("stop slave;");
+            conn->cmd("flush tables;");
+            mxs.wait_for_monitor();
+            server_info = mxs.get_servers();
+            server_info.print();
+            master_gtid = server_info.get(0).gtid;
+            target_gtid = server_info.get(target_ind).gtid;
+            test.expect(master_gtid != target_gtid, "Gtids should have diverged");
+            repl.backend(target_ind)->stop_database();
+            mxs.wait_for_monitor();
+
+            auto res = mxs.maxctrl("call command mariadbmon async-rebuild-server MariaDB-Monitor "
+                                   "server4");
+            if (res.rc == 0)
             {
-                test.tprintf("Stop server3 and server4. Rebuild server4 without defining source server. "
-                             "server2 should be used as source.");
-                repl.backend(2)->stop_database();
-                auto conn = repl.backend(target_ind)->open_connection();
-                conn->cmd("stop slave;");
-                conn->cmd("flush tables;");
-                mxs.wait_for_monitor();
+                bool op_success = wait_for_cmd_completion(test);
+                test.expect(op_success, "Rebuild operation failed.");
                 server_info = mxs.get_servers();
+                server_info.check_servers_status({master_st, slave_st, down, slave_st});
                 server_info.print();
-                master_gtid = server_info.get(0).gtid;
                 target_gtid = server_info.get(target_ind).gtid;
-                test.expect(master_gtid != target_gtid, "Gtids should have diverged");
-                repl.backend(target_ind)->stop_database();
-                mxs.wait_for_monitor();
-
-                auto res = mxs.maxctrl("call command mariadbmon async-rebuild-server MariaDB-Monitor "
-                                       "server4");
-                if (res.rc == 0)
-                {
-                    bool op_success = wait_for_completion(test);
-                    test.expect(op_success, "Rebuild operation failed.");
-                    server_info = mxs.get_servers();
-                    server_info.check_servers_status({master_st, slave_st, down, slave_st});
-                    server_info.print();
-                    target_gtid = server_info.get(target_ind).gtid;
-                    test.expect(master_gtid == target_gtid, "Gtids should be equal.");
-                }
-                repl.backend(2)->start_database();
-                repl.backend(target_ind)->start_database();
-                mxs.wait_for_monitor();
+                test.expect(master_gtid == target_gtid, "Gtids should be equal.");
             }
+            repl.backend(2)->start_database();
+            repl.backend(target_ind)->start_database();
+            mxs.wait_for_monitor();
         }
 
         if (test.ok())
@@ -341,7 +213,7 @@ void test_main(TestConnections& test)
             target_conn->cmd("stop slave;");
             target_conn->cmd("insert into test.t1 values (rand(), md5(rand()));");
             mxs.wait_for_monitor(1);
-            auto data = mxs.get_servers();
+            data = mxs.get_servers();
             data.print();
             target_gtid = data.get(target_ind).gtid;
             auto source_gtid = data.get(source_ind).gtid;
@@ -411,6 +283,7 @@ void test_main(TestConnections& test)
             conn->cmd("reset master;");
         }
         // Reset replication to sync gtids.
+        const string reset_repl = "call command mariadbmon reset-replication MariaDB-Monitor server1";
         mxs.maxctrl(reset_repl);
         mxs.wait_for_monitor(2);
         mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
@@ -448,7 +321,7 @@ void test_main(TestConnections& test)
             bu_vm.run_cmd_output_sudof("sudo chown %s:%s %s", ssh_user, ssh_user, bu_dir);
 
             const int bu_target_ind = 0;
-            install_tools(bu_target_ind);   // Backup tools may be missing from server1.
+            install_tools(test, bu_target_ind);     // Backup tools may be missing from server1.
 
             if (test.ok())
             {
@@ -465,7 +338,7 @@ void test_main(TestConnections& test)
                 {
                     string backup_cmd = mxb::string_printf(create_backup_fmt, i);
                     auto res = mxs.maxctrl(backup_cmd);
-                    bool bu_ok = wait_for_completion(test);
+                    bool bu_ok = wait_for_cmd_completion(test);
 
                     if (command_ok(test, res, bu_ok, backup_cmd))
                     {
@@ -503,7 +376,7 @@ void test_main(TestConnections& test)
                     string restore_cmd = "call command mariadbmon async-restore-from-backup "
                                          "MariaDB-Monitor server1 bu2";
                     auto res = mxs.maxctrl(restore_cmd);
-                    bool restore_ok = wait_for_completion(test);
+                    bool restore_ok = wait_for_cmd_completion(test);
                     mxs.wait_for_monitor();
 
                     if (command_ok(test, res, restore_ok, restore_cmd))
@@ -540,7 +413,7 @@ void test_main(TestConnections& test)
 
                                 auto check_restore_ok = [&test, &mxs, &repl](mxt::CmdResult& cmd_res,
                                                                              const string& cmd_str) {
-                                    bool restore_success = wait_for_completion(test);
+                                    bool restore_success = wait_for_cmd_completion(test);
                                     mxs.wait_for_monitor();
 
                                     if (command_ok(test, cmd_res, restore_success, cmd_str))
@@ -639,7 +512,88 @@ void test_main(TestConnections& test)
     mxs.vm_node().delete_from_node(keypath);
 }
 
-bool wait_for_completion(TestConnections& test)
+void copy_ssh_keyfile(TestConnections& test, mxt::MariaDBServer* target1, mxt::MariaDBServer* target2)
+{
+    // Copy ssh keyfile to maxscale VM from server1.
+    auto& mxs = *test.maxscale;
+    mxs.vm_node().delete_from_node(keypath);
+    mxt::Node& key_source = test.repl->backend(0)->vm_node();
+
+    mxs.copy_to_node(key_source.sshkey(), keypath.c_str());
+    auto chmod = mxb::string_printf("chmod a+rx %s", keypath.c_str());
+    mxs.vm_node().run_cmd(chmod);
+    // Read the contents of authorized_keys on server1. Check that the same line exists on server2 & 4.
+    // If not, edit the other files.
+    const string authorized_keys_path = mxb::string_printf("%s/.ssh/authorized_keys",
+                                                           key_source.access_homedir());
+    const string read_pubkey_cmd = mxb::string_printf("head -n1 %s", authorized_keys_path.c_str());
+    auto pubkey_res = key_source.run_cmd_output(read_pubkey_cmd);
+
+    if (pubkey_res.rc == 0 && !pubkey_res.output.empty())
+    {
+        test.tprintf("Expecting authorized_keys to contain line '%s'.", pubkey_res.output.c_str());
+        string grep_cmd = mxb::string_printf("cat %s | grep \"%s\"", authorized_keys_path.c_str(),
+                                             pubkey_res.output.c_str());
+        string concat_cmd = mxb::string_printf("echo \"%s\" >> %s", pubkey_res.output.c_str(),
+                                               authorized_keys_path.c_str());
+        for (auto* be : {target1, target2})
+        {
+            auto grep_res = be->vm_node().run_cmd_output(grep_cmd);
+            if (grep_res.rc != 0)
+            {
+                test.tprintf("Public key not found on %s, adding it.", be->vm_node().name());
+                be->vm_node().run_cmd_output(concat_cmd);
+                grep_res = be->vm_node().run_cmd_output(grep_cmd);
+                test.expect(grep_res.rc == 0, "Failed to add public key to %s.", be->vm_node().name());
+            }
+        }
+    }
+    else
+    {
+        test.add_failure("Command '%s' failed or gave no results. Error: %s",
+                         read_pubkey_cmd.c_str(), pubkey_res.output.c_str());
+    }
+}
+
+void install_tools(TestConnections& test, int ind)
+{
+    auto be = test.repl->backend(ind);
+    test.tprintf("Installing tools to %s", be->cnf_name().c_str());
+    const char install_fmt[] = "yum -y install %s";
+    be->vm_node().run_cmd_output_sudof(install_fmt, "pigz");
+    be->vm_node().run_cmd_output_sudof(install_fmt, "MariaDB-backup");
+}
+
+void run_rebuild(TestConnections& test, const string& rebuild_cmd, int target_ind, int master_ind)
+{
+    auto& mxs = *test.maxscale;
+    auto res = mxs.maxctrl(rebuild_cmd);
+    if (res.rc == 0)
+    {
+        bool op_success = wait_for_cmd_completion(test);
+        test.expect(op_success, "Rebuild operation failed.");
+
+        if (op_success)
+        {
+            // Target should now be a slave and have same gtid as master.
+            test.repl->sync_slaves();
+            mxs.wait_for_monitor();
+            auto server_info = mxs.get_servers();
+            server_info.print();
+            auto& master = server_info.get(master_ind);
+            auto& target = server_info.get(target_ind);
+            test.expect(master.is_master(), "%s is not master.", master.name.c_str());
+            test.expect(target.is_slave(), "%s is not slave.", target.name.c_str());
+            test.expect(master.gtid == target.gtid, "Gtids should be equal");
+        }
+    }
+    else
+    {
+        test.add_failure("Failed to start rebuild: %s", res.output.c_str());
+    }
+}
+
+bool wait_for_cmd_completion(TestConnections& test)
 {
     bool op_success = false;
     mxb::StopWatch timer;
@@ -675,4 +629,86 @@ bool wait_for_completion(TestConnections& test)
     }
     return op_success;
 }
+
+void test_special_characters(TestConnections& test, int target_ind, int master_ind)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    // MXS-5366 Test username/password with special characters. This still does not test
+    // a single quote ('), but perhaps that is rare enough to ignore for now. Supporting '
+    // would require some extra string processing.
+    auto change_monitor_user = [&](const string& user, const string& pw){
+        string cmd = mxb::string_printf("maxctrl alter monitor MariaDB-Monitor "
+                                        "user='%s' password='%s'",
+                                        user.c_str(), pw.c_str());
+        auto rc = mxs.vm_node().run_cmd(cmd);
+        test.expect(rc == 0, "Alter monitor command '%s' failed.", cmd.c_str());
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    };
+
+    string tricky_user_str = "\"#¤%&/\\()=?";
+    // The backslashes have to be doubled for mariadb client.
+    string tricky_user_client = "\"#¤%&/\\\\()=?";
+    string tricky_user_pw = "åÄÖ*,.-_";
+    auto user = repl.backend(master_ind)->admin_connection()->create_user(
+        tricky_user_client, "%", tricky_user_pw);
+    user.grant("all privileges on *.*");
+    test.tprintf("User '%s' created. Changing monitor user and testing rebuild-server.",
+                 tricky_user_str.c_str());
+    repl.sync_slaves();
+    change_monitor_user(tricky_user_str, tricky_user_pw);
+
+    auto* target_be = repl.backend(target_ind);
+    target_be->admin_connection()->cmd("stop slave;");
+    mxs.wait_for_monitor();
+    string rebuild_cmd = "call command mariadbmon async-rebuild-server MariaDB-Monitor "
+                         "server4 server2";
+    run_rebuild(test, rebuild_cmd, target_ind, master_ind);
+
+    test.tprintf("Resetting monitor user and password.");
+    change_monitor_user("mariadbmon", "mariadbmon");
+}
+
+void check_value(TestConnections& test, mxt::MariaDB* conn, int expected)
+{
+    std::this_thread::sleep_for(100ms);     // Sleep a little to let update propagate.
+    string query = "select * from test.t1;";
+    auto res = conn->query(query);
+    if (res && res->next_row() && res->get_col_count() == 1)
+    {
+        int found = res->get_int(0);
+        test.tprintf("Found value %i.", found);
+        test.expect(found == expected, "Found wrong value in test.t1. Got %i, expected %i",
+                    found, expected);
+    }
+    else
+    {
+        test.add_failure("Query '%s' failed or returned invalid data.", query.c_str());
+    }
+}
+
+bool command_ok(TestConnections& test, mxt::CmdResult& res, bool cmd_success, const string& backup_cmd)
+{
+    bool rval = true;
+    if (res.rc != 0)
+    {
+        test.add_failure("Command '%s' startup failed. Error %i: %s", backup_cmd.c_str(),
+                         res.rc, res.output.c_str());
+        rval = false;
+    }
+    else if (!cmd_success)
+    {
+        test.add_failure("Command '%s' failed. Check MaxScale log for more info.",
+                         backup_cmd.c_str());
+        rval = false;
+    }
+    return rval;
+}
+}
+
+int main(int argc, char* argv[])
+{
+    TestConnections test;
+    TestConnections::skip_maxscale_start(true);
+    return test.run_test(argc, argv, test_main);
 }
