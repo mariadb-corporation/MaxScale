@@ -815,7 +815,8 @@ namespace
 void get_cmd_and_stmt(const mxs::Parser::Helper& helper,
                       const GWBUF& buffer, const char** ppCmd, const char** ppStmt, int* pLen)
 {
-    *ppCmd = nullptr;
+    auto cmd = helper.get_command(buffer);
+    *ppCmd = helper.client_command_to_string(cmd);
     *ppStmt = nullptr;
     *pLen = 0;
 
@@ -823,8 +824,6 @@ void get_cmd_and_stmt(const mxs::Parser::Helper& helper,
 
     if (!sql.empty())
     {
-        auto cmd = helper.get_command(buffer);
-        *ppCmd = helper.client_command_to_string(cmd);
         *ppStmt = sql.data();
         *pLen = sql.length();
     }
