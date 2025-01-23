@@ -21,6 +21,7 @@ var https = require("https");
 var readlineSync = require("readline-sync");
 var utils = require("./utils.js");
 const _ = require("lodash-getpath");
+const child_process = require("child_process");
 
 // The program arguments, used by multiple functions
 let argv = {};
@@ -64,6 +65,20 @@ async function maxctrl(argv_in, cb) {
     } else {
       var line = fs.readFileSync(0);
       argv.p = line.toString().trim();
+    }
+  }
+
+  if (argv.k && /^[0-9A-F]+$/.test(argv.p)) {
+    try {
+      var decrypted = child_process.execSync("maxpasswd -di " + argv.k, {
+        input: argv.p,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+
+      // The output has a trailing newline
+      argv.p = decrypted.toString().trim();
+    } catch (e) {
+      // Something went wrong, just ignore it
     }
   }
 
@@ -399,10 +414,6 @@ async function doRequest(host, resource, obj) {
       for (const w of res.headers["mxs-warning"].split(";")){
         console.log(colors.yellow("Warning: ") + w);
       }
-      console.log(`To hide these warnings, run:
-
-    export MAXCTRL_WARNINGS=0
-`);
     }
 
     return res.data ? res.data : OK();
