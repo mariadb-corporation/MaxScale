@@ -559,7 +559,9 @@ exports.builder = function (yargs) {
 
             const width = argv["max-length"];
             var stmt = s.attributes.queries[0].statement;
-            if (stmt.length > width && width > 0) {
+            if (!stmt) {
+              s.attributes.queries[0].statement = s.attributes.queries[0].command;
+            } else if (stmt.length > width && width > 0) {
               s.attributes.queries[0].statement = stmt.substring(0, width) + "...";
             }
           }
