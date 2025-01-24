@@ -332,7 +332,10 @@ FileTransformer::~FileTransformer()
     if (m_watch != -1)
     {
         inotify_rm_watch(m_inotify_fd, m_watch);
-        m_update_thread.join();
+        if (m_update_thread.joinable())
+        {
+            m_update_thread.join();
+        }
     }
 }
 

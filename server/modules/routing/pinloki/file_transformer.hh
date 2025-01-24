@@ -52,7 +52,7 @@ public:
 
 private:
     int                      m_inotify_fd;
-    int                      m_watch;
+    int                      m_watch = -1;
     maxsql::GtidList         m_rpl_state;
     const Config&            m_config;
     std::vector<std::string> m_file_names;
