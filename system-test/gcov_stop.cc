@@ -13,6 +13,7 @@
 #include <maxtest/testconnections.hh>
 #include <maxbase/string.hh>
 #include <sstream>
+#include <filesystem>
 
 #include "gcov_common.hh"
 
@@ -33,8 +34,10 @@ void test_main(TestConnections& test)
 
     // The 000_ prefix makes it sort as the first item in the directory list. Makes it easier to find it.
     // TODO: Move them to a separate directory, currently they're only visible if it's inside LOGS.
-    test.maxscale->copy_from_node(cnf.build_root + "/gcov-report/",
-                                  mxb::cat(mxt::BUILD_DIR, "/LOGS/000_coverage"));
+    auto dest = mxb::cat(mxt::BUILD_DIR, "/LOGS/000_coverage");
+    // Remove any old files first, otherwise they aren't copied correctly.
+    std::filesystem::remove_all(dest);
+    test.maxscale->copy_from_node(cnf.build_root + "/gcov-report/", dest);
     test.tprintf("Coverage report: file://%s",
                  mxb::cat(mxt::BUILD_DIR, "/LOGS/000_coverage/index.html").c_str());
 }
