@@ -641,8 +641,9 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
 
         if (m_leak_check)
         {
+            const char* sanitizers = "LeakSanitizer|AddressSanitizer|UndefinedBehaviorSanitizer";
             remote_cmd += mxb::string_printf(
-                "; if grep LeakSanitizer %s/* 1> /dev/null 2>&1; then exit 43; fi", temp_logdirc);
+                "; if grep -P \"%s\" %s/* 1> /dev/null 2>&1; then exit 43; fi", sanitizers, temp_logdirc);
         }
 
         int rc = ssh_node(remote_cmd, true);
