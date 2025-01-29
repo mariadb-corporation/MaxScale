@@ -201,7 +201,7 @@ bool GaleraCluster::create_users(int i)
     if (create_base_users(i))
     {
         mxt::MariaDBUserDef galmon_user = {"galeramon", "%", "galeramon"};
-        galmon_user.grants = {"SUPER, REPLICATION CLIENT ON *.*"};
+        galmon_user.grants = {"REPLICA MONITOR ON *.*"};
 
         auto be = backend(i);
         bool sr = supports_require();
