@@ -117,8 +117,11 @@ class GaleraServer : public mxs::MariaServer
 public:
     GaleraServer(SERVER* server, const SharedSettings& shared);
 
+    void get_slave_status(GaleraNode* info);
     void report_query_error();
+    void reset_error_print_flag();
 
 private:
     const std::string& permission_test_query() const override;
+    bool m_print_access_denied_error {true};
 };
