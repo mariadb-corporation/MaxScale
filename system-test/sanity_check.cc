@@ -521,6 +521,18 @@ void test_mxs5256(TestConnections& test)
             "session_track_system_variables=CONCAT(@@session_track_system_variables,',autocommit,tx_isolation')");
 }
 
+void test_mxs5480(TestConnections& test)
+{
+    test.check_maxctrl("alter service RW-Split-Router disable_sescmd_history=true");
+
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+    test.expect(c.query("SET @foo='bar'"), "SET failed: %s", c.error());
+    test.expect(c.query("SELECT 1"), "SELECT failed: %s", c.error());
+
+    test.check_maxctrl("alter service RW-Split-Router disable_sescmd_history=false");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -569,6 +581,9 @@ int main(int argc, char** argv)
 
     // MXS-5256: TrxBoundaryParser doesn't detect autocommit=0 and hits a debug assertion
     test_mxs5256(test);
+
+    // MXS-5480: disable_sescmd_history is broken
+    test_mxs5480(test);
 
     return test.global_result;
 }
