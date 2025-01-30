@@ -46,15 +46,18 @@ increasing the size of the Galera cluster.
 
 ## Required Grants
 
-The Galera Monitor requires the `REPLICATION CLIENT` grant to work:
-
+The Galera Monitor requires the `REPLICA MONITOR` grant to work:
 ```
 CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
+GRANT REPLICA MONITOR ON *.* TO 'maxscale-user'@'maxscalehost';
+```
+
+With MariaDB Server 10.4 and earlier, `REPLICATION CLIENT` is required instead.
+```
 GRANT REPLICATION CLIENT ON *.* TO 'maxscale-user'@'maxscalehost';
 ```
 
-if `set_donor_nodes` is configured, the `SUPER` grant is required:
-
+If `set_donor_nodes` is configured, the `SUPER` grant is required:
 ```
 GRANT SUPER ON *.* TO 'maxscale'@'maxscalehost';
 ```
