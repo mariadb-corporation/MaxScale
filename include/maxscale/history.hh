@@ -300,7 +300,7 @@ private:
      */
     void remove(Subscriber* subscriber);
 
-    void prune_responses();
+    void prune_responses(uint32_t min_id);
 
     bool still_in_history(uint32_t id) const;
 

@@ -149,7 +149,8 @@ void History::add(GWBUF&& buffer, bool ok, bool deduplicate)
         }
     }
 
-    m_history_responses.emplace(buffer.id(), ok);
+    uint32_t newest_id = buffer.id();
+    m_history_responses.emplace(newest_id, ok);
     m_history.emplace_back(std::move(buffer));
 
     if (m_history.size() > m_max_sescmd_history)
@@ -170,7 +171,7 @@ void History::add(GWBUF&& buffer, bool ok, bool deduplicate)
         }
     }
 
-    prune_responses();
+    prune_responses(newest_id);
 }
 
 bool History::erase(uint32_t id)
@@ -216,7 +217,7 @@ void History::clear()
     }
 }
 
-void History::prune_responses()
+void History::prune_responses(uint32_t min_id)
 {
     // Using the latest added command as the minimum ID prevents the removal of responses that are still
     // needed when the ID overflows. If only the stored positions were used, the whole history would be
@@ -227,7 +228,6 @@ void History::prune_responses()
     // is executed once and then a cyclical pattern of commands occurs, the lowest ID would always be 1 and
     // the response history would never shrink. When the 32-bit unsigned integer overflows, some unpruned
     // responses will remain that only get overwritten and/or pruned once the ID is about to overflow again.
-    uint32_t min_id = m_history.back().id();
 
     for (const auto& [sub, info] : m_history_info)
     {
@@ -341,7 +341,7 @@ bool History::can_recover_state() const
 {
     bool rval = false;
 
-    if (m_history.empty())
+    if (m_history.empty() && m_history_responses.empty())
     {
         // Connections can always be recovered if no session commands have been executed
         rval = true;
