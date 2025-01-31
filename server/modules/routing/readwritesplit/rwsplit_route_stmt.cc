@@ -208,7 +208,7 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
             return mxb::string_printf("A transaction is open that could not be retried: %s", e.what());
         }
     }
-    else if (can_retry_query())
+    else if (can_retry_query() || can_retry_readonly_query(plan))
     {
         MXB_INFO("Delaying routing: %s", get_sql_string(buffer).c_str());
         retry_query(std::move(buffer));

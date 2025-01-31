@@ -298,6 +298,13 @@ private:
                && !trx_is_open();
     }
 
+    inline bool can_retry_readonly_query(const RoutingPlan& plan) const
+    {
+        return plan.route_target != TARGET_MASTER
+               && m_config->retry_failed_reads
+               && retry_duration_below_timeout();
+    }
+
     /**
      * Checks whether a new transaction replay can be started
      *

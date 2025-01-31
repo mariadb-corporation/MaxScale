@@ -1006,6 +1006,9 @@ add_test_executable(mxs5415_retry_failed_reads_timeout.cc mxs5415_retry_failed_r
 # MXS-5432: Executing prepared statements too fast may stall query execution
 add_test_executable(mxs5432_queued_ps.cc mxs5432_queued_ps mxs5432_queued_ps LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5485: Read is not retried if Endpoint::connect() fails
+add_test_executable(mxs5485_failed_read_retry.cc mxs5485_failed_read_retry mxs5485_failed_read_retry LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
