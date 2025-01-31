@@ -16,7 +16,7 @@ def find_cves(issues):
         if labels_field:
             labels=labels_field.split(',')
             for label in labels:
-                if label[0:4] == 'CVE-':
+                if label[0:4].upper() == 'CVE-':
                     cve = {};
                     cve['Id'] = label
                     cve['Issue'] = i
