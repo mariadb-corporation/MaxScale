@@ -37,7 +37,7 @@ inline bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
     }
 
     auto lhs_pos = lhs.file_name.find_last_of(".");
-    auto rhs_pos = lhs.file_name.find_last_of(".");
+    auto rhs_pos = rhs.file_name.find_last_of(".");
 
     auto lhs_num = std::atoi(&lhs.file_name[lhs_pos + 1]);
     auto rhs_num = std::atoi(&rhs.file_name[rhs_pos + 1]);
