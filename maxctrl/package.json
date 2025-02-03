@@ -19,7 +19,6 @@
   "author": "MariaDB Corporation Ab",
   "license": "SEE LICENSE IN ../LICENSE.TXT",
   "dependencies": {
-    "assert": "^2.1.0",
     "axios": "^0.28.0",
     "cli-table": "^0.3.1",
     "colors": "^1.4.0",
@@ -27,32 +26,27 @@
     "ini": "^2.0.0",
     "inquirer": "^8.2.0",
     "inquirer-command-prompt": "^0.1.0",
-    "js-beautify": "^1.11.0",
     "lodash": "^4.17.21",
     "lodash-getpath": "^0.2.4",
-    "path-browserify": "^1.0.1",
     "readline-sync": "^1.4.9",
     "shell-quote": "^1.7.2",
     "tar-stream": "^3.1.7",
-    "webpack": "^5.94.0",
-    "webpack-cli": "^5.1.4",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
+    "assert": "^2.1.0",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "eslint": "^8.14.0",
     "mariadb": "^2.5.5",
-    "mocha": "^9.2.0",
-    "nyc": "^15.1.0",
-    "prettier": "^2.0.4"
-  },
-  "nyc": {
-    "include": [
-      "lib/*.js"
-    ]
+    "mocha": "^11.0.1",
+    "path-browserify": "^1.0.1",
+    "prettier": "^3.4.2",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
   },
   "prettier": {
-    "printWidth": 110
+    "printWidth": 110,
+    "trailingComma": "es5"
   }
 }
