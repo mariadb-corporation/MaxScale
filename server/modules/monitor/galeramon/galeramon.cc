@@ -294,9 +294,11 @@ void get_gtid(GaleraServer* srv, GaleraNode* info)
     }
 }
 
-void get_slave_status(GaleraServer* srv, GaleraNode* info)
+void GaleraServer::get_slave_status(GaleraNode* info)
 {
-    if (mxs_mysql_query(srv->con, "SHOW SLAVE STATUS") == 0)
+    auto srv = this;
+    const char query[] = "SHOW SLAVE STATUS";
+    if (mxs_mysql_query(srv->con, query) == 0)
     {
         if (auto result = mysql_store_result(srv->con))
         {
@@ -307,6 +309,24 @@ void get_slave_status(GaleraServer* srv, GaleraNode* info)
                 info->master_id = res.get_int("Master_Server_Id");
                 srv->server->set_replication_lag(res.get_int("Seconds_Behind_Master"));
             }
+        }
+    }
+    else
+    {
+        if (mysql_errno(con) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
+        {
+            // This is a persistent cause so only print the error once.
+            if (m_print_access_denied_error)
+            {
+                MXB_ERROR("Failed to execute query '%s' on server '%s' ([%s]:%d): %s. "
+                          "Replication may not be correctly detected.",
+                          query, server->name(), server->address(), server->port(), mysql_error(con));
+                m_print_access_denied_error = false;
+            }
+        }
+        else
+        {
+            report_query_error();
         }
     }
 }
@@ -468,7 +488,7 @@ void GaleraMonitor::update_server_status(MonitorServer* mon_server)
     }
 
     get_gtid(monitored_server, &info);
-    get_slave_status(monitored_server, &info);
+    monitored_server->get_slave_status(&info);
     monitored_server->node_id = info.joined ? info.local_index : -1;
 
     m_info[monitored_server] = info;
@@ -1023,6 +1043,10 @@ void GaleraMonitor::configured_servers_updated(const std::vector<SERVER*>& serve
 void GaleraMonitor::pre_loop()
 {
     m_master = nullptr;
+    for (auto* srv : m_servers)
+    {
+        srv->reset_error_print_flag();
+    }
     SimpleMonitor::pre_loop();
 }
 
@@ -1040,6 +1064,11 @@ void GaleraServer::report_query_error()
 const std::string& GaleraServer::permission_test_query() const
 {
     return grant_test_query;
+}
+
+void GaleraServer::reset_error_print_flag()
+{
+    m_print_access_denied_error = true;
 }
 
 /**
