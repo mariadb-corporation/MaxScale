@@ -332,7 +332,7 @@ event::result_t action(const char* zName,
             }
             else
             {
-                MXB_ERROR("%s does not refer to a known event.", zValue);
+                MXB_ERROR("%s does not refer to a known event.", event.c_str());
             }
         }
         else
