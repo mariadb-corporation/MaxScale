@@ -22,11 +22,6 @@
 #include <iostream>
 #include <iomanip>
 
-// TODO The reader is single domain. Keep it that way until most other things
-// are in place. I have a feeling, that instantiating one reader per domain
-// will be the cleanest implementation. See comments in file_reader.cc
-
-// This is setup for a single slave/reader for testing, PinlokiSession will actually instantiate Readers
 namespace pinloki
 {
 
@@ -67,6 +62,20 @@ bool Reader::start()
         try
         {
             m_catch_up = m_find_gtid_fut.get();
+            for (const auto& gpos : m_catch_up)
+            {
+                if (gpos.file_name.empty())
+                {
+                    MXB_SWARNING("Domain of requested gtid "
+                                 << gpos.gtid << " not in binlog file. Assuming domain"
+                                                 " will start in the current file ("
+                                 << m_catch_up.front().file_name << ") or a later file");
+                }
+                else
+                {
+                    break;
+                }
+            }
             sync_to_primary();
         }
         catch (const GtidSearchTimeout& ex)

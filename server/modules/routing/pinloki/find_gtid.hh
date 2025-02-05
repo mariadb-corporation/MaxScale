@@ -24,6 +24,7 @@ class Config;
 
 struct GtidPosition
 {
+    GtidPosition() = default;   // this->gtid.is_valid() will return false
     GtidPosition(maxsql::Gtid gtid, const std::string& file_name, long file_pos)
         : gtid(gtid)
         , file_name(file_name)

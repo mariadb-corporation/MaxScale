@@ -57,30 +57,32 @@ FileReader::FileReader(const std::vector<GtidPosition>& catch_up, const Inventor
         MXB_THROW(BinlogReadError, "inotify_init failed: " << errno << ", " << mxb_strerror(errno));
     }
 
-    if (!m_catchup.empty())
+    GtidPosition start_position;
+
+    for (const auto& gpos : m_catchup)
     {
-        // The first one is the position from which to start reading.
-        const auto& gtid_pos = m_catchup.front();
-
-        if (gtid_pos.file_name.empty())
+        if (!gpos.file_name.empty())
         {
-            MXB_THROW(GtidNotFoundError,
-                      "Could not find '" << gtid_pos.gtid << "' in any of the binlogs");
+            start_position = gpos;
+            break;
         }
+    }
 
-        open(gtid_pos.file_name);
+    if (start_position.gtid.is_valid())
+    {
+        open(start_position.file_name);
 
         // Generate initial rotate and read format description, gtid list and any
         // binlog checkpoints from the file before jumping to the gtid.
-        m_generate_rotate_to = gtid_pos.file_name;
+        m_generate_rotate_to = start_position.file_name;
         strip_extension(m_generate_rotate_to, COMPRESSION_EXTENSION);
         m_read_pos.next_pos = PINLOKI_MAGIC.size();
 
         // Once the preamble is done, jump to this file position. If the position is
         // at the beginning of the file, this does the same as the 'else' below.
-        if (gtid_pos.file_pos != long(PINLOKI_MAGIC.size()))
+        if (start_position.file_pos != long(PINLOKI_MAGIC.size()))
         {
-            m_initial_gtid_file_pos = gtid_pos.file_pos;
+            m_initial_gtid_file_pos = start_position.file_pos;
         }
     }
     else
