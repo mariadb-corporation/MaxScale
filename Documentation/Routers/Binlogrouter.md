@@ -634,7 +634,7 @@ START SLAVE;
 
 When replicating from a Galera cluster, [select_master](#select_master) must be
 set to true, and the servers must be monitored by the
-[Galera Monitor](https://mariadb.com/kb/en/mariadb-maxscale-25-monitor/).
+[Galera Monitor](../Monitors/Galera-Monitor.md).
 Configuring binlogrouter is the same as described above.
 
 The Galera cluster must be configured to use [Wsrep GTID Mode](https://mariadb.com/kb/en/using-mariadb-gtids-with-mariadb-galera-cluster/).
