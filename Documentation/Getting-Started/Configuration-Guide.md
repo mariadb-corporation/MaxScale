@@ -684,7 +684,7 @@ even if the duration is longer than a second.
 - **Default**: `false`
 
 Deprecated since MariaDB MaxScale 25.01. Use
-[cooperative monitoring](Monitors/MariaDB-Monitor.md#cooperative-monitoring)
+[cooperative monitoring](../Monitors/MariaDB-Monitor.md#cooperative-monitoring)
 instead.
 
 Controls whether MaxScale is a passive node in a cluster of multiple MaxScale
