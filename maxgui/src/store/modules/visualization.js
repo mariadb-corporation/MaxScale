@@ -180,8 +180,7 @@ export default {
                 }
                 if (masterName) {
                     const nodes = server_info.reduce((nodes, server) => {
-                        if (server.slave_connections.length === 0)
-                            nodes.push(getters.genNode({ server }))
+                        if (server.name === masterName) nodes.push(getters.genNode({ server }))
                         else
                             server.slave_connections.forEach(conn => {
                                 nodes.push(
