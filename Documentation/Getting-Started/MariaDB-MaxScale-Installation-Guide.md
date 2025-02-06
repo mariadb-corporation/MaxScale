@@ -1,5 +1,9 @@
 # MariaDB MaxScale Installation Guide
 
+We recommend to install MaxScale on a separate server, to ensure that there
+can be no competition of resources between MaxScale and a MariaDB Server that
+it manages.
+
 ## Install MariaDB MaxScale From MariaDB Repositories
 
 The recommended approach is to use [the MariaDB package
