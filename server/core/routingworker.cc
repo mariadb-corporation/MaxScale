@@ -2615,7 +2615,7 @@ void RoutingWorker::notify_connection_available(SERVER* server)
             };
 
             // The check will run once execution returns to the event loop.
-            execute(func, execute_mode_t::EXECUTE_QUEUED);
+            lcall(func);
             m_ep_activation_scheduled = true;
         }
     }
