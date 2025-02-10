@@ -1473,6 +1473,17 @@ void Session::tick(int64_t idle)
         MXB_WARNING("Killing session %lu, session TTL exceeded.", id());
         kill();
     }
+
+    // If idle connection pooling has been enabled and the session is idle, try to
+    // pool the connections. Doing this helps avoid starvation issues that could potentially
+    // happen with idle_session_pool_time=0s.
+    if (idle_pooling_enabled()
+        && std::chrono::seconds(idle) > m_pooling_time
+        && m_can_pool_backends
+        && m_idle_pool_call_id == mxb::Worker::NO_CALL)
+    {
+        pool_backends_cb(mxb::Worker::Callable::Action::EXECUTE);
+    }
 }
 
 void Session::set_ttl(int64_t ttl)
@@ -1905,7 +1916,7 @@ bool Session::pool_backends_cb(mxb::Worker::Callable::Action action)
             // Need to remove this manually as cancel-mode is not called.
             m_idle_pool_call_id = mxb::Worker::NO_CALL;
         }
-        else if (m_pooling_time < 1s)
+        else if (m_pooling_time < 1s && m_pooling_time > 0s)
         {
             // Returning true means the delayed call will run again after 'm_pooling_time'.
             // This is ok if the time is several seconds, as some connections may not yet have
