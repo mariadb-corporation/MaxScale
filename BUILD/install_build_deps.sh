@@ -220,7 +220,7 @@ then
     fi
 
     # Install a newer compiler
-    for version in 13 12 11 10 9
+    for version in 14 13 12 11 10 9
     do
         sudo zypper -n install gcc${version} gcc${version}-c++
         if [ $? == 0 ]
