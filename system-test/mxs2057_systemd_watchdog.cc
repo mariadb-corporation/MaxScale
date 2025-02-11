@@ -42,41 +42,23 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
 {
     test.log_includes("The systemd watchdog is Enabled");
 
-    // Wait for one watchdog interval, systemd should have been notified in that time.
+    test.log_printf("Wait for one watchdog interval, systemd should have been notified in that time");
     staying_alive(test, watchdog_interval);
 
     test.reset_timeout();
 
-    /**
-     * This query will cause catastrophic backtracing with the following pattern:
-     *
-     *    SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-     *
-     * The worst-case complexity for PCRE2 is exponential and with about 100k characters the time it takes to
-     * fail the match is about a minute. This should be long enough to cause the systemd watchdog to kick in
-     * when it's repeated five times.
-     */
-    std::string query = "SELECT id FROM t1 where id = '";
+    test.log_printf("Make the first thread sleep for 24 hours");
+    auto res = test.maxctrl("api get maxscale/debug/hang");
 
-    // Making the query 750 bytes long keeps it short enough that it doesn't hit the PCRE2 match limit but
-    // long enough that it gets maximally close to it. Matching 25 times takes roughly 3 seconds and with 100
-    // filters is enough that the watchdog is hit.
-    while (query.size() < 750)
+    if (res.rc != 0)
     {
-        query += "x";
+        test.tprintf("Call to maxscale/debug/hang failed, skipping test as this "
+                     "is most likely a release build: %s", res.output.c_str());
+        return;
     }
 
-    query += "'";
-
-    // Make one thread in maxscale hang
-    test.log_printf("Starting query");
-    auto start = mxb::Clock::now();
-    mysql_query(test.maxscale->conn_rwsplit, query.c_str());
-    auto end = mxb::Clock::now();
-    test.log_printf("Query complete in %.02f seconds", mxb::to_secs(end - start));
-
-    // maxscale should get killed by systemd in less than duration(interval - epsilon).
-    bool maxscale_alive = staying_alive(test, mxb::from_secs(1.2 * mxb::to_secs(watchdog_interval)));
+    test.log_printf("MaxScale should get killed by systemd in less than duration(interval - epsilon).");
+    bool maxscale_alive = staying_alive(test, mxb::from_secs(2 * mxb::to_secs(watchdog_interval)));
 
     if (maxscale_alive)
     {
