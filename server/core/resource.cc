@@ -1090,6 +1090,17 @@ HttpResponse cb_debug_server_diagnostics(const HttpRequest& request)
     });
 }
 
+#ifdef SS_DEBUG
+HttpResponse cb_debug_hang(const HttpRequest& request)
+{
+    mxs::RoutingWorker::get(0)->execute([](){
+        sleep(86400);
+    }, mxb::Worker::EXECUTE_AUTO);
+
+    return HttpResponse(MHD_HTTP_OK);
+}
+#endif
+
 HttpResponse cb_create_user(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -1503,6 +1514,13 @@ public:
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
         m_get.emplace_back(cb_debug_server_diagnostics, "maxscale", "debug", "server_diagnostics");
+
+        // This debug endpoint exists solely for the mxs2057_systemd_watchdog test
+        // and is only available in debug builds. This is to prevent it from being
+        // accidentally called in the released binaries.
+#ifdef SS_DEBUG
+        m_get.emplace_back(cb_debug_hang, "maxscale", "debug", "hang");
+#endif
 
         /** Create new resources */
         m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_server, "servers");
