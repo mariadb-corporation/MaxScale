@@ -91,8 +91,9 @@ std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
     return ret;
 }
 
-maxsql::GtidList get_gtid_list(const std::string& file_name,
-                               const Config& cnf)
+std::vector<GtidPosition> search_file(const std::string& file_name,
+                                      const std::vector<maxsql::Gtid>& gtids,
+                                      const Config& cnf)
 {
     auto sBinlog = cnf.shared_binlog_file().binlog_file(file_name);
     IFStreamReader file(sBinlog->make_ifstream());
@@ -137,16 +138,7 @@ maxsql::GtidList get_gtid_list(const std::string& file_name,
         }
     }
 
-    return gtid_list;
-}
-
-std::vector<GtidPosition> search_file(const std::string& file_name,
-                                      const std::vector<maxsql::Gtid>& gtids,
-                                      const Config& cnf)
-{
     std::vector<GtidPosition> ret;
-
-    auto gtid_list = get_gtid_list(file_name, cnf);
 
     for (const auto& list_gtid : gtid_list.gtids())
     {
