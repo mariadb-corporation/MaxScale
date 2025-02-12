@@ -2049,7 +2049,7 @@ bool RebuildServer::start_replication()
     string gtid;
     // The gtid of the rebuilt server may not be correct, read it from xtrabackup_binlog_info.
     string binlog_info = "xtrabackup_binlog_info";
-    string test_file_exists = mxb::string_printf("sudo test -f %s/mariadb_backup_binlog_info",
+    string test_file_exists = mxb::string_printf("test -f %s/mariadb_backup_binlog_info",
                                                  rebuild_datadir.c_str());
     auto test_res = ssh_util::run_cmd(*m_target_ses, test_file_exists, m_ssh_timeout);
 
