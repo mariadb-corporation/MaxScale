@@ -48,7 +48,7 @@ inline bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
 }
 
 std::vector<GtidPosition> search_file(const std::string& file_name,
-                                      const std::vector<maxsql::Gtid>& gtids,
+                                      std::vector<maxsql::Gtid> gtids,
                                       const Config& cnf);
 
 
@@ -93,8 +93,11 @@ std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
     return ret;
 }
 
+// TODO don't hog the CPU, and add an absolut time limit
+// TODO in file_reader, handle missing gtid: it can be in the future
+//      (files deleted from the tail) or deleted (files deleted from the head)
 std::vector<GtidPosition> search_file(const std::string& file_name,
-                                      const std::vector<maxsql::Gtid>& gtids,
+                                      std::vector<maxsql::Gtid> gtids,
                                       const Config& cnf)
 {
     auto sBinlog = cnf.shared_binlog_file().binlog_file(file_name);
@@ -105,52 +108,72 @@ std::vector<GtidPosition> search_file(const std::string& file_name,
         MXB_THROW(GtidSearchTimeout, "Timeout reading " << file_name);
     }
 
+    std::vector<GtidPosition> ret;
     maxsql::GtidList gtid_list;
     std::unique_ptr<mxq::EncryptCtx> encrypt;
 
-    while (maxsql::RplEvent rpl = mxq::RplEvent::read_event(file, encrypt))
+    for (bool done = false; !done;)
     {
-        if (rpl.event_type() == START_ENCRYPTION_EVENT)
+        // If the file is being decompressed it can lag behind reading. This is
+        // the only case where events need to be seen without interruption until
+        // gtids are found or the file actually ends (STOP or ROTATE)
+        auto read_pos = file.bytes_read();
+        auto is_decompressing = sBinlog->check_compression_status();
+        maxsql::RplEvent rpl = mxq::RplEvent::read_event(file, encrypt);
+
+        if (!rpl)
         {
+            done = !is_decompressing;
+            continue;
+        }
+
+        switch (rpl.event_type())
+        {
+        case START_ENCRYPTION_EVENT:
             encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(), file_name, rpl);
-        }
-        else if (rpl.event_type() == GTID_LIST_EVENT)
-        {
-            maxsql::GtidListEvent event = rpl.gtid_list();
-            gtid_list = event.gtid_list;
+            break;
 
-            // There is only one gtid list in a file. If the list was empty, this
-            // is the very first binlog file, continue looping and reading GTIDS
-            // to build an artificial gtid list.
-            if (!event.gtid_list.gtids().empty())
+        case GTID_LIST_EVENT:
             {
-                break;
-            }
-        }
-        else if (rpl.event_type() == GTID_EVENT)
-        {
-            maxsql::GtidEvent event = rpl.gtid_event();
-            if (!gtid_list.has_domain(event.gtid.domain_id()))
-            {
-                maxsql::Gtid gtid2{event.gtid.domain_id(),
-                                   event.gtid.server_id(),
-                                   event.gtid.sequence_nr() - 1};
-                gtid_list.replace(gtid2);
-            }
-        }
-    }
+                gtid_list = rpl.gtid_list().gtid_list;
+                // If a gtid being searched is in the domain of one of the gtids in the list, and
+                // the one in the list is later than the gtid being searched, it is in a prior file.
+                auto itr = std::find_if(gtids.begin(), gtids.end(), [&gtid_list](const auto& s) {
+                    auto dg = gtid_list.domain_gtid(s.domain_id());
+                    return dg.is_valid() && dg.sequence_nr() > s.sequence_nr();
+                });
 
-    std::vector<GtidPosition> ret;
-
-    for (const auto& list_gtid : gtid_list.gtids())
-    {
-        for (const auto& search_gtid : gtids)
-        {
-            if (list_gtid.domain_id() == search_gtid.domain_id()
-                && list_gtid.sequence_nr() <= search_gtid.sequence_nr())
-            {
-                ret.emplace_back(search_gtid, file_name, MAGIC_SIZE);
+                if (itr != gtids.end())
+                {
+                    gtids.erase(itr);   // The gtid is in a prior file and will be searched for.
+                }
             }
+            break;
+
+        case GTID_EVENT:
+            {
+                auto gtid = rpl.gtid_event().gtid;
+                if (auto itr = std::find(gtids.begin(), gtids.end(), gtid); itr != gtids.end())
+                {   // exact match. The replica already has this gtid so it will not actually be sent.
+                    ret.emplace_back(*itr, file_name, read_pos);
+                    gtids.erase(itr);
+                }
+            }
+            break;
+
+        case STOP_EVENT:
+        case ROTATE_EVENT:
+            done = true;
+            break;
+
+        default:
+            // ignore
+            break;
+        }
+
+        if (gtids.empty())
+        {
+            break;
         }
     }
 
