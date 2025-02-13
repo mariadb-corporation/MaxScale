@@ -17,7 +17,7 @@
                         </p>
                         <a
                             target="_blank"
-                            href="https://mariadb.com/kb/en/mariadb-maxscale-2302-sql-resource/#prepare-etl-operation"
+                            :href="`${docURL}-sql-resource/#prepare-etl-operation`"
                             rel="noopener noreferrer"
                             class="rsrc-link"
                         >
@@ -25,7 +25,9 @@
                         </a>
                         <a
                             target="_blank"
-                            href="https://mariadb.com/kb/en/mariadb-maxscale-2302-limitations-and-known-issues-within-mariadb-maxscale/#etl-limitations"
+                            :href="
+                                `${docURL}-limitations-and-known-issues-within-mariadb-maxscale/#etl-limitations`
+                            "
                             rel="noopener noreferrer"
                             class="d-block rsrc-link"
                         >
@@ -66,6 +68,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapGetters } from 'vuex'
 import EtlTask from '@wsModels/EtlTask'
 import { ETL_STATUS } from '@wsSrc/constants'
 
@@ -76,6 +79,7 @@ export default {
         hasConns: { type: Boolean, required: true },
     },
     computed: {
+        ...mapGetters({ docURL: 'maxscale/docURL' }),
         disabled() {
             const { RUNNING, COMPLETE } = ETL_STATUS
             const { status } = this.task

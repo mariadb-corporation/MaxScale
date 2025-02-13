@@ -11,7 +11,7 @@
                 </div>
                 <a
                     target="_blank"
-                    href="https://mariadb.com/kb/en/mariadb-maxscale-2402-mariadb-maxscale-configuration-guide/"
+                    :href="`${docURL}-mariadb-maxscale-configuration-guide`"
                     rel="noopener noreferrer"
                     class="rsrc-link"
                 >
@@ -48,10 +48,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapGetters } from 'vuex'
 
 export default {
     name: 'overview-stage',
     computed: {
+        ...mapGetters({ docURL: 'maxscale/docURL' }),
         introductions() {
             return [
                 this.$mxs_t('configWizardOverview.description'),

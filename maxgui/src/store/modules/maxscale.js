@@ -16,6 +16,9 @@ import { TIME_REF_POINTS } from '@src/constants'
 import { t } from 'typy'
 import { parseDateStr, genSetMutations } from '@share/utils/helpers'
 
+//TODO: Change link to gitbook
+const DOC_BASE_URL = 'https://mariadb.com/kb/en'
+
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
 const OPTIONAL_FILTER_NAMES = [
     'logPriorityFilter',
@@ -221,6 +224,12 @@ export default {
         },
     },
     getters: {
+        verData: state => {
+            const [major, minor, patch] = state.maxscale_version.split('.')
+            return { major, minor, patch }
+        },
+        ver: (state, getters) => `maxscale-${getters.verData.major}${getters.verData.minor}`,
+        docURL: (state, getters) => `${DOC_BASE_URL}/mariadb-${getters.ver}-${getters.ver}`,
         getMxsObjModules: state => objType => {
             const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
             switch (objType) {
