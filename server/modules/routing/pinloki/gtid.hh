@@ -132,6 +132,9 @@ public:
      */
     bool has_domain(uint32_t domain_id) const;
 
+    /** Returns valid Gtid if the domain is included */
+    Gtid domain_gtid(uint32_t domain_id) const;
+
 private:
     void sort();
 

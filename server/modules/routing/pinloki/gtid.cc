@@ -163,6 +163,15 @@ bool GtidList::has_domain(uint32_t domain_id) const
     });
 }
 
+Gtid GtidList::domain_gtid(uint32_t domain_id) const
+{
+    auto itr = std::find_if(begin(m_gtids), end(m_gtids), [domain_id](const auto& gtid){
+        return gtid.domain_id() == domain_id;
+    });
+
+    return itr != end(m_gtids) ? *itr : Gtid {};
+}
+
 std::ostream& operator<<(std::ostream& os, const GtidList& lst)
 {
     os << lst.to_string();
