@@ -145,10 +145,10 @@ void FileReader::fd_notify(uint32_t events)
     }
 }
 
-void FileReader::check_status()
+void FileReader::check_compression_status()
 {
     // Throws if there is a compression error
-    m_read_pos.sBinlog->check_status();
+    m_read_pos.sBinlog->check_compression_status();
 }
 
 maxsql::RplEvent FileReader::fetch_event(const maxbase::Timer& timer)

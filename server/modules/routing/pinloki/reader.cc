@@ -225,7 +225,7 @@ bool Reader::generate_heartbeats()
 {
     try
     {
-        m_sFile_reader->check_status();
+        m_sFile_reader->check_compression_status();
 
         auto now = maxbase::Clock::now();
 

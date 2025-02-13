@@ -104,7 +104,7 @@ BinlogFile::OpenRes BinlogFile::open_file(std::string_view file_name_)
     }
 }
 
-bool BinlogFile::check_status()
+bool BinlogFile::check_compression_status()
 {
     if (m_local_stat == DECOMPRESSING && m_future.wait_for(0s) == std::future_status::ready)
     {

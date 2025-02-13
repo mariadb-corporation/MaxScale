@@ -62,7 +62,7 @@ public:
     void fd_notify(uint32_t events);
 
     /* Called from generate_heartbeats, to generate possible decompression error */
-    void check_status();
+    void check_compression_status();
 private:
     struct ReadPosition
     {

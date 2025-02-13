@@ -44,10 +44,9 @@ public:
     BinlogFile(BinlogFile&&) = delete;
 
     // Throws BinlogReadError.
-    // As long as check_status returns true, continue to call in a
-    // polling manner as decompression is ongoing and an error
-    // can happen while files are being read/written.
-    bool check_status();
+    // As long as check_compression_status() returns true, decompression
+    // is going on. Continue to call in a polling manner where applicable.
+    bool check_compression_status();
 
     // Throws BinlogReadError.
     // Create an ifstream to read from.
@@ -90,7 +89,7 @@ inline const std::string& BinlogFile::file_name() const
 
 inline std::ifstream BinlogFile::make_ifstream()
 {
-    check_status();
+    check_compression_status();
     return std::ifstream{m_output_file};
 }
 }
