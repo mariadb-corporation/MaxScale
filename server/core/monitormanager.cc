@@ -283,9 +283,14 @@ void MonitorManager::start_all_monitors()
         return true;
     });
 
+    auto timeout = 3s;
+
     // Wait for monitors to complete first tick. Only wait a short while as MaxScale start should not be
     // delayed. Monitor tick can be slow if a server is not responding.
-    wait_until_ticks(std::move(monitors), 1, 3s);
+    if (!wait_until_ticks(std::move(monitors), 1, timeout))
+    {
+        MXB_WARNING("Startup of all monitors took longer than %s.", mxb::to_string(timeout).c_str());
+    }
 }
 
 void MonitorManager::stop_monitor(Monitor* monitor)

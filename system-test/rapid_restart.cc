@@ -70,6 +70,7 @@ void test_main(TestConnections& test)
     commands.flush();
     test.maxscale->copy_to_node("./commands.txt", "/tmp/commands.txt");
     test.check_maxctrl(" < /tmp/commands.txt");
+    test.maxscale->wait_for_monitor();
 
     test.tprintf("Restarting MaxScale %d times", RESTARTS);
 
