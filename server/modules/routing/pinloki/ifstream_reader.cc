@@ -96,7 +96,7 @@ ssize_t IFStreamReader::advance_for(ssize_t nbytes, mxb::Duration timeout)
     while (bytes_advanced < nbytes && sw.split() < timeout)
     {
         update_in_avail(nbytes - bytes_advanced);
-        auto skip = std::min(m_ifs.rdbuf()->in_avail(), nbytes - bytes_advanced);
+        auto skip = std::min(m_in_avail, nbytes - bytes_advanced);
         m_ifs.ignore(skip);
         CHECK_IFS();
         bytes_advanced += skip;
