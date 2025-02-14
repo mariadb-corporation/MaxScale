@@ -726,6 +726,13 @@ modifications done by the client itself.
   addition to this, the `session_track_system_variables` parameter must include
   `last_gtid` in its list of tracked system variables.
 
+**Note:** This feature also enables multi-statement execution of SQL in the
+  protocol. This is equivalent to using `allowMultiQueries=true` in
+  [Connector/J](https://mariadb.com/kb/en/about-mariadb-connector-j/#allowmultiqueries)
+  or using `CLIENT_MULTI_STATEMENTS` and `CLIENT_MULTI_RESULTS` in the
+  Connector/C. The *Implementation of causal_reads* section explains why this is
+  necessary.
+
 The possible values for this parameter are:
 
 * `none` (default)
@@ -822,18 +829,20 @@ statements.
 
 ```sql
 INSERT INTO test.t1 (id) VALUES (1);
+
+-- These are executed as one multi-query
 SET @maxscale_secret_variable=(
     SELECT CASE
            WHEN MASTER_GTID_WAIT('0-3000-8', 10) = 0 THEN 1
            ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES)
-    END);
-SELECT * FROM test.t1 WHERE id = 1;
+    END); SELECT * FROM test.t1 WHERE id = 1;
 ```
 
-The `SET` command will synchronize the slave to a certain logical point in
-the replication stream (see
-[MASTER_GTID_WAIT](https://mariadb.com/kb/en/library/master_gtid_wait/)
-for more details).
+The `SET` command will synchronize the slave to a certain logical point in the
+replication stream (see
+[MASTER_GTID_WAIT](https://mariadb.com/kb/en/library/master_gtid_wait/) for more
+details). If the synchronization fails, the query will not run and it will be
+retried on the server where the transaction was originally done.
 
 ##### Prepared Statements
 
