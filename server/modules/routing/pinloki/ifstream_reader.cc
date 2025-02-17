@@ -81,6 +81,14 @@ ssize_t IFStreamReader::advance(ssize_t nbytes)
     m_bytes_read += bytes_advanced;
     m_in_avail -= bytes_advanced;
 
+    if (m_ifs.eof())
+    {
+        m_ifs.clear();
+        m_ifs.seekg(m_bytes_read, std::ios_base::beg);
+    }
+
+    check_ifs();
+
     return bytes_advanced;
 }
 
