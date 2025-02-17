@@ -402,9 +402,8 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
     auto cluster = s_cluster.get(params);
     auto filters = s_filters.get(params);
 
-    // The call to set_filters also calculates the capabilities and the set of
-    // supported protocols for this service.
-    if (!service->set_filters(filters))
+    // The call to assign_filters also calculates the set of supported protocols for this service.
+    if (!service->assign_filters(filters))
     {
         service->state = State::FAILED;
         return nullptr;
@@ -476,6 +475,9 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
         service->state = State::FAILED;
         return nullptr;
     }
+
+    // Compute the capabilities again now that the router has been configured.
+    service->compute_capabilities();
 
     auto service_ptr = service.release();
     LockGuard guard(this_unit.lock);
@@ -857,18 +859,30 @@ bool Service::can_be_destroyed() const
     return names.empty();
 }
 
-bool Service::set_filters(const std::vector<std::string>& filters)
+void Service::compute_capabilities()
+{
+    uint64_t capabilities = get_module(router_name(), mxs::ModuleType::ROUTER)->module_capabilities;
+    capabilities |= m_router->getCapabilities();
+
+    if (config()->connection_keepalive.count())
+    {
+        capabilities |= RCAP_TYPE_REQUEST_TRACKING;
+    }
+
+    for (const auto& f : m_data->filters)
+    {
+        capabilities |= get_module(f->module(), mxs::ModuleType::FILTER)->module_capabilities;
+        capabilities |= f->capabilities();
+    }
+
+    m_capabilities = capabilities;
+}
+
+bool Service::assign_filters(const std::vector<std::string>& filters)
 {
     bool rval = true;
     std::vector<SFilterDef> flist;
     auto protocols = m_router->protocols();
-    uint64_t my_capabilities = get_module(router_name(), mxs::ModuleType::ROUTER)->module_capabilities;
-    my_capabilities |= m_router->getCapabilities();
-
-    if (config()->connection_keepalive.count())
-    {
-        my_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
-    }
 
     for (auto f : filters)
     {
@@ -878,7 +892,6 @@ bool Service::set_filters(const std::vector<std::string>& filters)
         {
             protocols = merge_protocols(protocols, def->instance()->protocols());
             flist.push_back(def);
-            my_capabilities |= def->capabilities();
         }
         else
         {
@@ -899,11 +912,22 @@ bool Service::set_filters(const std::vector<std::string>& filters)
         auto data = *m_data;
         data.filters = flist;
         m_data.assign(data);
-        m_capabilities = my_capabilities;
         m_protocols = std::move(protocols);
     }
 
     return rval;
+}
+
+bool Service::set_filters(const std::vector<std::string>& filters)
+{
+    bool ok = assign_filters(filters);
+
+    if (ok)
+    {
+        compute_capabilities();
+    }
+
+    return ok;
 }
 
 const Service::FilterList& Service::get_filters() const
@@ -1482,11 +1506,20 @@ bool Service::configure(json_t* params)
         }
     }
 
-    return ok
-           && m_config.specification().validate(params, &unknown)
-           && router_cnf.specification().validate(params)
-           && m_config.configure(params, &unknown)
-           && router_cnf.configure(params);
+    if (ok)
+    {
+        ok = m_config.specification().validate(params, &unknown)
+            && router_cnf.specification().validate(params)
+            && m_config.configure(params, &unknown)
+            && router_cnf.configure(params);
+
+        if (ok)
+        {
+            compute_capabilities();
+        }
+    }
+
+    return ok;
 }
 
 uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
