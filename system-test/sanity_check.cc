@@ -533,6 +533,33 @@ void test_mxs5480(TestConnections& test)
     test.check_maxctrl("alter service RW-Split-Router disable_sescmd_history=false");
 }
 
+void test_mxs5507(TestConnections& test)
+{
+    MYSQL* c = mysql_init(nullptr);
+    const char* ip = test.maxscale->ip();
+    const char* user = test.maxscale->user_name().c_str();
+    const char* pw = test.maxscale->password().c_str();
+    int port = test.maxscale->rwsplit_port;
+
+    test.expect(mysql_real_connect(c, ip, user, pw, nullptr, port, nullptr, 0),
+                "Failed to connect: %s", mysql_error(c));
+    test.expect(mysql_query(c, "SELECT 1; SELECT 2;") != 0,
+                "Multi-statement should fail with causal_reads=none");
+    mysql_close(c);
+
+    test.check_maxctrl("alter service RW-Split-Router causal_reads=local");
+
+    c = mysql_init(nullptr);
+    test.expect(mysql_real_connect(c, ip, user, pw, nullptr, port, nullptr, 0),
+                "Failed to connect: %s", mysql_error(c));
+    test.expect(mysql_query(c, "SELECT 1; SELECT 2;") == 0,
+                "Multi-statement should work with causal_reads=local: %s",
+                mysql_error(c));
+    mysql_close(c);
+
+    test.check_maxctrl("alter service RW-Split-Router causal_reads=none");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -584,6 +611,9 @@ int main(int argc, char** argv)
 
     // MXS-5480: disable_sescmd_history is broken
     test_mxs5480(test);
+
+    // MXS-5507: Multi-statements are enabled even without causal_reads
+    test_mxs5507(test);
 
     return test.global_result;
 }
