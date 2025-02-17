@@ -410,7 +410,7 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
 
     if (!filters.empty())
     {
-        MXB_AT_DEBUG(bool ok = ) service->set_filters(filters);
+        MXB_AT_DEBUG(bool ok = ) service->assign_filters(filters);
         mxb_assert(ok);
     }
 
@@ -424,7 +424,8 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
         return nullptr;
     }
 
-    service->m_capabilities |= service->m_router->getCapabilities();
+    // Compute the capabilities again now that the router has been configured.
+    service->compute_capabilities();
 
     auto service_ptr = service.release();
     LockGuard guard(this_unit.lock);
@@ -813,11 +814,29 @@ bool Service::can_be_destroyed() const
     return names.empty();
 }
 
-bool Service::set_filters(const std::vector<std::string>& filters)
+void Service::compute_capabilities()
+{
+    uint64_t capabilities = get_module(router_name(), mxs::ModuleType::ROUTER)->module_capabilities;
+    capabilities |= m_router->getCapabilities();
+
+    if (config()->connection_keepalive.count())
+    {
+        capabilities |= RCAP_TYPE_REQUEST_TRACKING;
+    }
+
+    for (const auto& f : m_data->filters)
+    {
+        capabilities |= get_module(f->module(), mxs::ModuleType::FILTER)->module_capabilities;
+        capabilities |= f->capabilities();
+    }
+
+    m_capabilities = capabilities;
+}
+
+bool Service::assign_filters(const std::vector<std::string>& filters)
 {
     bool rval = true;
     std::vector<SFilterDef> flist;
-    uint64_t my_capabilities = 0;
 
     for (auto f : filters)
     {
@@ -826,7 +845,6 @@ bool Service::set_filters(const std::vector<std::string>& filters)
         if (auto def = filter_find(f.c_str()))
         {
             flist.push_back(def);
-            my_capabilities |= def->capabilities();
         }
         else
         {
@@ -839,10 +857,21 @@ bool Service::set_filters(const std::vector<std::string>& filters)
     {
         m_data->filters = flist;
         m_data.assign(*m_data);
-        m_capabilities |= my_capabilities;
     }
 
     return rval;
+}
+
+bool Service::set_filters(const std::vector<std::string>& filters)
+{
+    bool ok = assign_filters(filters);
+
+    if (ok)
+    {
+        compute_capabilities();
+    }
+
+    return ok;
 }
 
 const Service::FilterList& Service::get_filters() const
@@ -1430,11 +1459,20 @@ bool Service::configure(json_t* params)
         }
     }
 
-    return ok
-           && m_config.specification().validate(params, &unknown)
-           && router_cnf.specification().validate(params)
-           && m_config.configure(params, &unknown)
-           && router_cnf.configure(params);
+    if (ok)
+    {
+        ok = m_config.specification().validate(params, &unknown)
+            && router_cnf.specification().validate(params)
+            && m_config.configure(params, &unknown)
+            && router_cnf.configure(params);
+
+        if (ok)
+        {
+            compute_capabilities();
+        }
+    }
+
+    return ok;
 }
 
 uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)

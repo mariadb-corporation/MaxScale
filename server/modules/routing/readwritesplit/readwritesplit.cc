@@ -415,11 +415,18 @@ json_t* RWSplit::diagnostics() const
 
 constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING | RCAP_TYPE_TRANSACTION_TRACKING
     | RCAP_TYPE_SESSION_STATE_TRACKING | RCAP_TYPE_RUNTIME_CONFIG | RCAP_TYPE_QUERY_CLASSIFICATION
-    | RCAP_TYPE_SESCMD_HISTORY | RCAP_TYPE_MULTI_STMT_SQL;
+    | RCAP_TYPE_SESCMD_HISTORY;
 
 uint64_t RWSplit::getCapabilities() const
 {
-    return CAPABILITIES;
+    uint64_t caps = CAPABILITIES;
+
+    if (config().causal_reads != CausalReads::NONE)
+    {
+        caps |= RCAP_TYPE_MULTI_STMT_SQL;
+    }
+
+    return caps;
 }
 
 void RWSplit::update_max_sescmd_sz(uint64_t maybe_max)
