@@ -349,6 +349,9 @@ private:
 
     bool post_configure() override;
 
+    bool assign_filters(const std::vector<std::string>& filters);
+    void compute_capabilities();
+
     mxs::WorkerGlobal<Data> m_data;
     Config                  m_config;
     std::atomic<int64_t>    m_refcount {1};
