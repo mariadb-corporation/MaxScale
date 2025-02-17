@@ -93,19 +93,14 @@ ssize_t IFStreamReader::advance_for(ssize_t nbytes, mxb::Duration timeout)
 
     while (bytes_advanced < nbytes && sw.split() < timeout)
     {
-        update_in_avail(nbytes - bytes_advanced);
-        auto skip = std::min(m_in_avail, nbytes - bytes_advanced);
-        m_ifs.ignore(skip);
-        check_ifs();
-        bytes_advanced += skip;
-        m_in_avail -= skip;
+        bytes_advanced += advance(nbytes - bytes_advanced);
+
         if (bytes_advanced < nbytes)
         {
             std::this_thread::sleep_for(SLEEP_DURATION);
         }
     }
 
-    m_bytes_read += bytes_advanced;
 
     return bytes_advanced;
 }
@@ -153,12 +148,11 @@ bool IFStreamReader::read_n_for(char* pData, ssize_t nbytes, mxb::Duration timeo
     }
 
     update_in_avail(nbytes);
-    while (m_in_avail < nbytes
-           && sw.split() < timeout)
+    while (m_in_avail < nbytes && sw.split() < timeout)
     {
-        check_ifs();
         std::this_thread::sleep_for(SLEEP_DURATION);
         update_in_avail(nbytes);
+        check_ifs();
     }
 
     return read_n(pData, nbytes);
