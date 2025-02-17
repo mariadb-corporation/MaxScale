@@ -117,6 +117,7 @@ public:
 private:
     // How many bytes are available to be read.
     void update_in_avail(ssize_t requested);
+    void check_ifs();
 
     std::ifstream     m_ifs;
     ssize_t           m_in_avail = 0;

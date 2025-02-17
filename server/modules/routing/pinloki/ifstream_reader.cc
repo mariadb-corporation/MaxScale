@@ -26,16 +26,14 @@ namespace
 {
 
 const mxb::Duration SLEEP_DURATION = 250us;
+}
 
-#define CHECK_IFS() \
-    do \
-    { \
-        if (m_ifs.fail()) \
-        { \
-            MXB_THROW(BinlogReadError, \
-                      "IFStreamReader error: " << errno << ", " << mxb_strerror(errno)); \
-        } \
-    } while (false)
+void IFStreamReader::check_ifs()
+{
+    if (m_ifs.fail())
+    {
+        MXB_THROW(BinlogReadError, "IFStreamReader error: " << errno << ", " << mxb_strerror(errno));
+    }
 }
 
 IFStreamReader::IFStreamReader(const std::string& file_name)
@@ -77,7 +75,7 @@ ssize_t IFStreamReader::advance(ssize_t nbytes)
     mxb_assert(m_putback_buffer.empty());
 
     m_ifs.ignore(nbytes);
-    CHECK_IFS();
+    check_ifs();
 
     auto bytes_advanced = m_ifs.gcount();
     m_bytes_read += bytes_advanced;
@@ -98,7 +96,7 @@ ssize_t IFStreamReader::advance_for(ssize_t nbytes, mxb::Duration timeout)
         update_in_avail(nbytes - bytes_advanced);
         auto skip = std::min(m_in_avail, nbytes - bytes_advanced);
         m_ifs.ignore(skip);
-        CHECK_IFS();
+        check_ifs();
         bytes_advanced += skip;
         m_in_avail -= skip;
         if (bytes_advanced < nbytes)
@@ -130,7 +128,7 @@ bool IFStreamReader::read_n(char* pData, ssize_t nbytes)
     if (m_in_avail >= nbytes)
     {
         m_ifs.read(pData, nbytes);
-        CHECK_IFS();
+        check_ifs();
         mxb_assert(nbytes == m_ifs.gcount());
         m_bytes_read += nbytes;
         m_in_avail -= nbytes;
@@ -158,7 +156,7 @@ bool IFStreamReader::read_n_for(char* pData, ssize_t nbytes, mxb::Duration timeo
     while (m_in_avail < nbytes
            && sw.split() < timeout)
     {
-        CHECK_IFS();
+        check_ifs();
         std::this_thread::sleep_for(SLEEP_DURATION);
         update_in_avail(nbytes);
     }
