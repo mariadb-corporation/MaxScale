@@ -4,10 +4,9 @@ node_modules
 /gui
 
 report.*
-# dev env files
-.env.development
-.env.*.development
-.env.local
+# local env files
+.env.*
+
 # Log files
 npm-debug.log*
 yarn-debug.log*

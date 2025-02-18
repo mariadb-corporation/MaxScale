@@ -38,6 +38,9 @@ export default {
         allServers: { type: Array, required: true },
         defaultItems: { type: Array, default: () => [] },
     },
+    data: () => ({
+        defServers: [],
+    }),
     computed: {
         // get only server that are not monitored
         serversList() {
@@ -47,13 +50,19 @@ export default {
             })
             return serverItems
         },
-        defServers() {
-            return this.serversList.filter(item =>
-                this.defaultItems.some(defItem => defItem.id === item.id)
-            )
+    },
+    watch: {
+        serversList: {
+            deep: true,
+            immediate: true,
+            handler(v, oV) {
+                if (!this.$helpers.lodash.isEqual(v, oV))
+                    this.defServers = v.filter(item =>
+                        this.defaultItems.some(defItem => defItem.id === item.id)
+                    )
+            },
         },
     },
-
     methods: {
         getValues() {
             const { moduleInputs, serversRelationship } = this.$refs
