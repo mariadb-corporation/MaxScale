@@ -36,13 +36,15 @@ inline bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
         return false;
     }
 
-    auto lhs_pos = lhs.file_name.find_last_of(".");
-    auto rhs_pos = rhs.file_name.find_last_of(".");
+    auto lhs_stripped = strip_extension(std::string_view {lhs.file_name}, COMPRESSION_EXTENSION);
+    auto lhs_pos = lhs_stripped.find_last_of(".");
+    auto lhs_seqnr = std::atoi(&lhs.file_name[lhs_pos + 1]);
 
-    auto lhs_num = std::atoi(&lhs.file_name[lhs_pos + 1]);
-    auto rhs_num = std::atoi(&rhs.file_name[rhs_pos + 1]);
+    auto rhs_stripped = strip_extension(std::string_view {rhs.file_name}, COMPRESSION_EXTENSION);
+    auto rhs_pos = rhs_stripped.find_last_of(".");
+    auto rhs_seqnr = std::atoi(&rhs.file_name[rhs_pos + 1]);
 
-    return lhs_num < rhs_num || (lhs_num == rhs_num && lhs.file_pos < rhs.file_pos);
+    return lhs_seqnr < rhs_seqnr || (lhs_seqnr == rhs_seqnr && lhs.file_pos < rhs.file_pos);
 }
 
 std::vector<GtidPosition> search_file(const std::string& file_name,
