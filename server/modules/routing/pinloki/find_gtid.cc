@@ -169,11 +169,10 @@ maxsql::GtidList find_last_gtid_list(const Config& cnf)
     {   // Decompress in place. This allows a user to take maxscale down
         // and delete tail binlogs. A drastic mesure when something goes
         // wrong with binlogs.
-        auto decompressed_name = file_name;
-        strip_extension(decompressed_name, COMPRESSION_EXTENSION);
+        auto decompressed_name = strip_extension(file_name, COMPRESSION_EXTENSION);
 
         auto in_file = std::ifstream(file_name);
-        auto out_file = std::ofstream(decompressed_name);
+        auto out_file = std::ofstream(std::string {decompressed_name});
 
         maxbase::Decompressor decomp;
         auto stat = decomp.decompress(in_file, out_file);
@@ -185,7 +184,7 @@ maxsql::GtidList find_last_gtid_list(const Config& cnf)
         }
         else
         {
-            ::remove(decompressed_name.c_str());
+            ::remove(std::string {decompressed_name}.c_str());
             MXB_THROW(BinlogReadError, "Failed to decompress '"
                       << file_name << "' :" << errno << ", " << mxb_strerror(errno));
         }

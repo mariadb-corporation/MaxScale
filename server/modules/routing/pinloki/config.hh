@@ -34,8 +34,8 @@
 namespace pinloki
 {
 
-bool has_extension(const std::string& file_name, const std::string& ext);
-void strip_extension(std::string& file_name, const std::string& ext);
+bool                           has_extension(std::string_view file_name, std::string_view ext);
+[[nodiscard]] std::string_view strip_extension(std::string_view file_name, std::string_view ext);
 
 std::string gen_uuid();
 

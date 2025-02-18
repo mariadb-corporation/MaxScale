@@ -83,8 +83,8 @@ BinlogFile::~BinlogFile()
 
 BinlogFile::OpenRes BinlogFile::open_file(std::string_view file_name_)
 {
-    auto file_name = std::string(file_name_);
-    strip_extension(file_name, COMPRESSION_EXTENSION);
+    std::string file_name;
+    file_name = strip_extension(file_name_, COMPRESSION_EXTENSION);
     std::ifstream file(file_name);
     if (file.good())
     {

@@ -108,7 +108,7 @@ cfg::ParamBool s_rpl_semi_sync_slave_enabled(
 namespace pinloki
 {
 
-bool has_extension(const std::string& file_name, const std::string& ext)
+bool has_extension(std::string_view file_name, std::string_view ext)
 {
     if (auto pos = file_name.find_last_of(".");
         pos != std::string::npos
@@ -122,12 +122,15 @@ bool has_extension(const std::string& file_name, const std::string& ext)
     }
 }
 
-void strip_extension(std::string& file_name, const std::string& ext)
+
+std::string_view strip_extension(std::string_view file_name, std::string_view ext)
 {
     if (has_extension(file_name, ext))
     {
-        file_name.resize(file_name.size() - ext.size() - 1);
+        file_name.remove_suffix(ext.size() + 1);
     }
+
+    return file_name;
 }
 
 // static

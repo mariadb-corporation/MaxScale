@@ -74,8 +74,7 @@ FileReader::FileReader(const std::vector<GtidPosition>& catch_up, const Inventor
 
         // Generate initial rotate and read format description, gtid list and any
         // binlog checkpoints from the file before jumping to the gtid.
-        m_generate_rotate_to = start_position.file_name;
-        strip_extension(m_generate_rotate_to, COMPRESSION_EXTENSION);
+        m_generate_rotate_to = strip_extension(start_position.file_name, COMPRESSION_EXTENSION);
         m_read_pos.next_pos = PINLOKI_MAGIC.size();
 
         // Once the preamble is done, jump to this file position. If the position is
@@ -87,9 +86,11 @@ FileReader::FileReader(const std::vector<GtidPosition>& catch_up, const Inventor
     }
     else
     {
-        auto first = first_string(m_inventory.config().binlog_file_names());
-        strip_extension(first, COMPRESSION_EXTENSION);
-        open(first);
+
+        std::string first;
+        first = strip_extension(first_string(m_inventory.config().binlog_file_names()),
+                                COMPRESSION_EXTENSION);
+        open(std::string {first});
         // Preamble just means send the initial rotate and then the whole file
         m_generate_rotate_to = first;
         m_read_pos.next_pos = PINLOKI_MAGIC.size();
@@ -294,8 +295,9 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     }
     else if (rpl.event_type() == STOP_EVENT)
     {
-        m_generate_rotate_to = next_string(m_inventory.config().binlog_file_names(), m_read_pos.rotate_name);
-        strip_extension(m_generate_rotate_to, COMPRESSION_EXTENSION);
+        m_generate_rotate_to = strip_extension(next_string(m_inventory.config().binlog_file_names(),
+                                                           m_read_pos.rotate_name),
+                                               COMPRESSION_EXTENSION);
         if (!m_generate_rotate_to.empty())
         {
             MXB_SINFO("STOP_EVENT in file " << m_read_pos.rotate_name
