@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 
     char filename[1024] = "/tmp/mxs3218.XXXXXX";
     int fd = mkstemp(filename);
-    write(fd, data, sizeof(data) - 1);
+    std::ignore = write(fd, data, sizeof(data) - 1);
 
     auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connect failed: %s", conn.error());

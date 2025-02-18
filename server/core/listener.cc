@@ -1457,7 +1457,7 @@ void Listener::reject_connection(int fd, const char* host)
 
     if (GWBUF buf = sdata->m_proto_module->make_error(errnum, "HY000", message); !buf.empty())
     {
-        write(fd, buf.data(), buf.length());
+        std::ignore = write(fd, buf.data(), buf.length());
     }
 
     close(fd);

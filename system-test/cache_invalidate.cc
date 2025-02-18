@@ -151,7 +151,7 @@ void install_and_start_redis(mxt::MaxScale& maxscales)
     string path(mxt::SOURCE_DIR);
     path += "/cache_install_and_start_storages.sh";
 
-    system(path.c_str());
+    std::ignore = system(path.c_str());
 }
 
 int main(int argc, char* argv[])

@@ -247,7 +247,7 @@ string generate_2fa_token(TestConnections& test, const string& secret)
         int n = 100;
         char buf[n];
         memset(buf, 0, n);
-        fgets(buf, n - 1, process);
+        std::ignore = fgets(buf, n - 1, process);
         int rc = pclose(process);
         test.expect(rc == 0, "Command '%s' returned %i", cmd.c_str(), rc);
         // 2FA tokens are six numbers long.

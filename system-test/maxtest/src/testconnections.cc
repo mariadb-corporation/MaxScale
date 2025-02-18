@@ -2150,7 +2150,7 @@ int TestConnections::count_tcp_time_wait() const
 {
     FILE* f = popen("netstat -an -A inet|grep -c TIME_WAIT", "r");
     char buf[256] = "";
-    fgets(buf, sizeof(buf), f);
+    std::ignore = fgets(buf, sizeof(buf), f);
     pclose(f);
 
     // If netstat wasn't installed or failed for some reason, this returns 0.

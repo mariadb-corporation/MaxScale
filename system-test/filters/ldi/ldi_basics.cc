@@ -50,7 +50,7 @@ void normal_ldli(TestConnections& test, mxt::MariaDBServer* backend)
 
     for (size_t i = 0; i < TARGET_ROWS; i++)
     {
-        write(fd, "hello\n", 6);
+        std::ignore = write(fd, "hello\n", 6);
     }
 
     close(fd);

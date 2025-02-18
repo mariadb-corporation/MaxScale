@@ -714,7 +714,7 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
         m_shared.run_shell_cmdf("cp %s %s/", mxs_cnf_file, dest);
         // Ignore errors of next command, as core-files may not exist.
         string core_copy = mxb::string_printf("cp /tmp/core* %s/ 2>/dev/null", dest);
-        system(core_copy.c_str());
+        std::ignore = system(core_copy.c_str());
     }
 }
 

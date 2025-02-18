@@ -48,7 +48,7 @@ public:
     void ship(json_t* obj) override final
     {
         auto str = mxb::json_dump(obj, JSON_COMPACT) + '\n';
-        write(m_fd, str.c_str(), str.length());
+        std::ignore = write(m_fd, str.c_str(), str.length());
     }
 
 private:

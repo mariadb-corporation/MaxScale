@@ -31,8 +31,8 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 10000; i++)
     {
-        write(fd, data.data(), data.size());
-        write(fd, "\n", 1);
+        std::ignore = write(fd, data.data(), data.size());
+        std::ignore = write(fd, "\n", 1);
     }
 
     auto conn = test.maxscale->rwsplit();

@@ -95,7 +95,7 @@ WebSocket::~WebSocket()
 
     // Send the Close command. If it fails then it fails but at least we tried.
     uint8_t buf[2] = {0x88};
-    write(m_fd, buf, sizeof(buf));
+    std::ignore = write(m_fd, buf, sizeof(buf));
 
     MHD_upgrade_action(m_urh, MHD_UPGRADE_ACTION_CLOSE);
 }

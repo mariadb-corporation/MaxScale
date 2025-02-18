@@ -275,7 +275,7 @@ void dump_gdb_stacktrace(void (* handler)(const char*))
             getpid(), path);
 
     prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
-    system(cmd);
+    std::ignore = system(cmd);
     prctl(PR_SET_PTRACER, 0);
 
     int rc;

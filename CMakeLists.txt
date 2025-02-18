@@ -153,7 +153,7 @@ endif()
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 
-add_compile_options(-fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Wno-unused-but-set-variable -Werror=format-security -Werror -fPIC)
+add_compile_options(-fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable -Werror=format-security -Werror -fPIC)
 
 # clang complains if a compile flag is not used
 add_link_options(-rdynamic)

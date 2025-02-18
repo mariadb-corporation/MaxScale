@@ -359,8 +359,8 @@ LoadAttempt load_module_file(const string& filepath, ModuleType type, const stri
                 // stable.
                 char file_path[PATH_MAX] = "";
                 char symbol_path[PATH_MAX] = "";
-                realpath(filepath.c_str(), file_path);
-                realpath(info.dli_fname, symbol_path);
+                std::ignore = realpath(filepath.c_str(), file_path);
+                std::ignore = realpath(info.dli_fname, symbol_path);
 
                 if (strcmp(file_path, symbol_path) != 0)
                 {
