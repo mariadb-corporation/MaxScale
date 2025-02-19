@@ -1082,8 +1082,8 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                             }
                         }
                     }
+                [[fallthrough]];
 
-                /* FALLTHROUGH */
                 case StatementType::UNKNOWN:
                     // A bit broad, as e.g. SHOW will cause the read only state to be turned
                     // off. However, during normal use this will always be an UPDATE, INSERT
