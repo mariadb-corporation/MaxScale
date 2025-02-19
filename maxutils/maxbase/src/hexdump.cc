@@ -27,6 +27,8 @@ std::ostream& hexdump(std::ostream& out, const void* pBytes, int len)
     bool already_said_same = false;
     const uint8_t* pPrev;
     const uint8_t* pCurr;
+    std::ostringstream oss;
+
     for (pPrev = pCurr = pBegin; pCurr < pEnd; pPrev = pCurr, pCurr += BYTES_PER_ROW)
     {
         // Print a single '*' for repeating, identical rows including the last row even if it is shorter
@@ -41,7 +43,7 @@ std::ostream& hexdump(std::ostream& out, const void* pBytes, int len)
         }
         already_said_same = false;
 
-        std::ostringstream oss;
+        size_t from_pos = oss.tellp();
 
         // the address
         auto addr = pCurr - pBegin;
@@ -58,9 +60,10 @@ std::ostream& hexdump(std::ostream& out, const void* pBytes, int len)
         }
 
         // padd up to the first pipe
-        if (oss.str().size() < NUMERIC_CHAR_WIDTH)
+        size_t advanced = size_t(oss.tellp()) - from_pos;
+        if (advanced < NUMERIC_CHAR_WIDTH)
         {
-            oss << std::string(NUMERIC_CHAR_WIDTH - oss.str().size(), ' ');
+            oss << std::string(NUMERIC_CHAR_WIDTH - advanced, ' ');
         }
 
         // the chars inside pipes
@@ -70,15 +73,12 @@ std::ostream& hexdump(std::ostream& out, const void* pBytes, int len)
             auto ch = *ptr;
             oss << char(std::isprint(ch) ? ch : '.');
         }
-        oss << '|';
-
-        oss << '\n';
-
-        out << oss.str();
+        oss << "|\n";
     }
 
     // The end address on its own line
-    out << setw(8) << setfill('0') << right << hex << len << '\n';
+    oss << setw(8) << setfill('0') << right << hex << len << '\n';
+    out  << oss.str();
 
     return out;
 }
