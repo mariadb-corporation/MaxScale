@@ -36,7 +36,7 @@ std::ostream& hexdump(std::ostream& out, const void* pBytes, int len)
         {
             if (!already_said_same)
             {
-                out << "*\n";
+                oss << "*\n";
                 already_said_same = true;
             }
             continue;
