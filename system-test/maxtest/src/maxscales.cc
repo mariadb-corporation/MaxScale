@@ -97,9 +97,8 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
         ports[2] = readconn_slave_port;
 
         // TODO: think of a proper reset command if ever needed.
-        m_vmnode->set_start_stop_reset_cmds("systemctl restart maxscale",
-                                            "systemctl stop maxscale",
-                                            "");
+        m_vmnode->set_commands("systemctl start maxscale", "systemctl stop maxscale",
+                               "systemctl restart maxscale", "");
         rval = true;
     }
     return rval;
@@ -238,10 +237,11 @@ int MaxScale::restart_maxscale()
     int res;
     if (m_vmnode->is_remote())
     {
-        res = m_vmnode->start_process("") ? 0 : 1;
+        res = m_vmnode->restart_process() ? 0 : 1;
     }
     else
     {
+        m_vmnode->stop_process();
         res = start_local_maxscale();
     }
     return res;
@@ -263,8 +263,6 @@ int MaxScale::start_maxscale()
 
 int MaxScale::start_local_maxscale()
 {
-    // MaxScale running locally, first stop it. In remote mode, systemctl handles this.
-    m_vmnode->stop_process();
     string params = mxb::string_printf("--config=%s", m_cnf_path.c_str());
     return m_vmnode->start_process(params) ? 0 : 1;
 }

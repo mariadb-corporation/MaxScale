@@ -143,7 +143,7 @@ public:
      */
     void write_node_env_vars();
 
-    void set_start_stop_reset_cmds(std::string&& start, std::string&& stop, std::string&& reset);
+    void set_commands(std::string start, std::string stop, std::string restart, std::string reset);
 
     const std::string m_name;   /**< E.g. "node_001" */
 
@@ -153,6 +153,7 @@ public:
 
     virtual bool start_process(std::string_view params) = 0;
     virtual bool stop_process() = 0;
+    virtual bool restart_process() = 0;
     virtual bool reset_process_datafiles() = 0;
 
 protected:
@@ -171,6 +172,7 @@ protected:
     std::string m_sshkey;   /**< Path to ssh key */
 
     std::string m_start_proc_cmd;       /**< Command to start MariaDB Server/MaxScale */
+    std::string m_restart_proc_cmd;     /**< Command to restart MariaDB Server/MaxScale */
     std::string m_stop_proc_cmd;        /**< Command to stop MariaDB Server/MaxScale */
     std::string m_reset_data_cmd;       /**< Command to remove MariaDB Server/MaxScale data files */
 
@@ -201,6 +203,7 @@ public:
 
     bool start_process(std::string_view params) override;
     bool stop_process() override;
+    bool restart_process() override;
     bool reset_process_datafiles() override;
 
 private:
@@ -228,6 +231,7 @@ public:
 
     bool start_process(std::string_view params) override;
     bool stop_process() override;
+    bool restart_process() override;
     bool reset_process_datafiles() override;
 };
 
@@ -253,6 +257,7 @@ public:
 
     bool start_process(std::string_view params) override;
     bool stop_process() override;
+    bool restart_process() override;
     bool reset_process_datafiles() override;
     bool is_new() const;
 
