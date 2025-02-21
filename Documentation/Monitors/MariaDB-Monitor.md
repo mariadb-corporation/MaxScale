@@ -452,7 +452,7 @@ modification. The operations implemented are:
 - [failover](#failover), which replaces a failed primary with a replica
 - [switchover](#switchover), which swaps a running primary with a replica
 - [switchover-force](#switchover-force), which swaps a running primary with a replica, ignoring
-  most errors
+  most errors. Can break replication.
 - [async-switchover](#queued-switchover), which schedules a switchover and returns
 - [rejoin](#rejoin), which directs servers to replicate from the primary
 - [reset-replication](#reset-replication) (added in MaxScale 2.3.0), which deletes binary logs and
@@ -587,7 +587,8 @@ call command mariadbmon switchover-force MONITOR [NEW_PRIMARY] [OLD_PRIMARY]
 any errors on the old primary. Switchover-force also does not expect the new
 primary to reach the gtid-position of the old, as the old primary
 could be receiving more events constantly. Thus, switchover-force may lose
-events.
+events and replication can break on multiple (or even all) replicas. This is
+an unsafe command and should only be used as a last resort.
 
 #### Rejoin
 
