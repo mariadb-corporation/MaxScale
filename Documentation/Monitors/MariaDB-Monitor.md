@@ -450,15 +450,15 @@ for more details on how this feature works and which value to use.
 
 Allowed values:
 1. `none` Default value, no locking.
-2. `majority_of_all` Primary monitor requires majority of locks, even counting
+2. `majority_of_all` Primary monitor requires a majority of locks, even counting
 servers which are [Down].
-3. `majority_of_running` Primary monitor requires majority of locks over
+3. `majority_of_running` Primary monitor requires a majority of locks over
 [Running] servers.
 
 This setting is separate from the global MaxScale setting *passive*. If
-*passive* is set, cluster operations are disabled even if monitor has
+*passive* is set to `true`, cluster operations are disabled even if monitor has
 acquired the locks. Generally, it's best not to mix cooperative monitoring with
-the *passive*-setting.
+*passive*. Either set `passive=false` or do not set it at all.
 
 ### `script_max_replication_lag`
 
