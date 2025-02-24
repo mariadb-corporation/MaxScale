@@ -54,6 +54,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/http.hh>
+#include <maxscale/secrets.hh>
 
 #include "internal/config.hh"
 #include "internal/config_runtime.hh"
@@ -1943,7 +1944,7 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     mxb_assert(!m_usermanager);
 
     const auto& config = *m_config.values();
-    user_manager->set_credentials(config.user, config.password);
+    user_manager->set_credentials(config.user, mxs::decrypt_password(config.password));
     user_manager->set_backends(m_data->servers);
     user_manager->set_union_over_backends(config.users_from_all);
     user_manager->set_strip_db_esc(config.strip_db_esc);
@@ -2295,7 +2296,7 @@ bool Service::post_configure()
     // If the parameter affects the user account manager, update its settings.
     if (m_usermanager)
     {
-        m_usermanager->set_credentials(config.user, config.password);
+        m_usermanager->set_credentials(config.user, mxs::decrypt_password(config.password));
         m_usermanager->set_union_over_backends(config.users_from_all);
         m_usermanager->set_strip_db_esc(config.strip_db_esc);
     }

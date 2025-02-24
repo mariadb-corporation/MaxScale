@@ -2409,21 +2409,8 @@ std::string ParamPassword::to_string(value_type value) const
         return "*****";
     }
 
-    return ParamString::to_string(mxs::encrypt_password(value));
+    return ParamString::to_string(value);
 }
-
-bool ParamPassword::from_string(const std::string& value, value_type* pValue, std::string* pMessage) const
-{
-    bool ok = ParamString::from_string(value, pValue, pMessage);
-
-    if (ok)
-    {
-        *pValue = mxs::decrypt_password(*pValue);
-    }
-
-    return ok;
-}
-
 
 json_t* ParamPassword::to_json(value_type value) const
 {
@@ -2436,19 +2423,7 @@ json_t* ParamPassword::to_json(value_type value) const
         return json_string("*****");
     }
 
-    return ParamString::to_json(mxs::encrypt_password(value));
-}
-
-bool ParamPassword::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
-{
-    bool ok = ParamString::from_json(pJson, pValue, pMessage);
-
-    if (ok)
-    {
-        *pValue = mxs::decrypt_password(*pValue);
-    }
-
-    return ok;
+    return ParamString::to_json(value);
 }
 }
 }

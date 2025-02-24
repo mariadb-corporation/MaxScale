@@ -789,7 +789,7 @@ void UserManager::create_initial_user(const SERVER* pMaster)
     }
 
     if (mysql_real_connect(pMysql, pMaster->address(),
-                           m_config.user.c_str(), m_config.password.c_str(),
+                           m_config.user.c_str(), mxs::decrypt_password(m_config.password).c_str(),
                            nullptr, pMaster->port(), nullptr, 0))
     {
         bool grants_obtained = true;
@@ -894,7 +894,7 @@ void UserManager::create_initial_user(const vector<string>& grants)
         string user = (i != string::npos ? m_config.user.substr(i + 1) : m_config.user);
 
         vector<scram::Mechanism> mechanisms = { scram::Mechanism::SHA_256 };
-        if (add_user(db, user, m_config.password, m_config.host, "", mechanisms, roles))
+        if (add_user(db, user, mxs::decrypt_password(m_config.password), m_config.host, "", mechanisms, roles))
         {
             MXB_NOTICE("Created initial NoSQL user '%s.%s'.", db.c_str(), user.c_str());
         }
@@ -1532,7 +1532,7 @@ UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService, const Con
     auto& settings = m_db.connection_settings();
 
     settings.user = m_config.authentication_user;
-    settings.password = m_config.authentication_password;
+    settings.password = mxs::decrypt_password(m_config.authentication_password);
 }
 
 //static
