@@ -124,11 +124,42 @@ void encrypted_password_in_maxctrl(TestConnections& test)
     test.maxscale->ssh_node_f(true, "rm /tmp/maxctrl-plaintext.cnf /tmp/maxctrl-encrypted.cnf");
 }
 
+void mxs5520_no_password_reencryption(TestConnections& test)
+{
+    test.tprintf("MXS-5520: Passwords end up being re-encrypted when persisted");
+
+    std::string config_path = "/var/lib/maxscale/maxscale.cnf.d/maxscale.cnf";
+    auto res = test.maxscale->ssh_output("maxpasswd /var/lib/maxscale/ skysql");
+    std::string original_pw = res.output;
+    test.maxscale->stop();
+    test.maxscale->ssh_output("sed -i \"/maxscale/ a config_sync_password=%s\" /etc/maxscale.cnf",
+                              res.output.c_str());
+    // test.check_maxctrl("alter maxscale config_sync_password=" + res.output);
+    test.maxscale->start();
+
+    for (int i = 0; i < 5; i++)
+    {
+        // Do a config change and restart MaxScale. This would trigger the re-encryption of
+        // an already encrypted password.
+        test.maxscale->restart();
+        test.check_maxctrl("alter maxscale passive=true");
+        test.check_maxctrl("alter maxscale passive=false");
+
+        res = test.maxscale->ssh_output("grep config_sync_password " + config_path
+                                        + " |cut -f2 -d=");
+
+        test.expect(original_pw == res.output,
+                    "Iteration %d: Password in persisted config file is different: %s",
+                    i, res.output.c_str());
+    }
+}
+
 void test_main(TestConnections& test)
 {
     create_key(test);
     hash_password(test);
     encrypted_password_in_maxctrl(test);
+    mxs5520_no_password_reencryption(test);
 }
 
 int main(int argc, char* argv[])
