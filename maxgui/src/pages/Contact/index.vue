@@ -15,7 +15,7 @@
                         <a
                             target="_blank"
                             rel="noopener noreferrer"
-                            href="https://mariadb.service-now.com/csm"
+                            href="https://mariadb.zendesk.com/"
                             class="rsrc-link"
                         >
                             {{ $mxs_t('supportPortal') }}
@@ -58,7 +58,6 @@ export default {
                     email: 'sales-EMEA@mariadb.com',
                     contacts: [
                         { title: 'Denmark', phone: '+45 69 918 495' },
-                        { title: 'Finland', phone: '+358 94 2597815' },
                         { title: 'France & Benelux', phone: '+33 1 82 88 37 38' },
                         { title: 'Italy', phone: '+39 02 40042055' },
                         { title: 'Sweden', phone: '+46 840 838 825' },
@@ -68,7 +67,8 @@ export default {
 
                 {
                     name: 'Americas',
-                    address: '699 Veterans Blvd, Redwood City, CA 94063, United States',
+                    address:
+                        '1900 McCarthy Blvd. Suite 301, Milpitas California, 95035 United States',
                     email: 'sales-nam@mariadb.com',
                     contacts: [{ title: 'Phone', phone: '+1 (855) 562-7423' }],
                 },

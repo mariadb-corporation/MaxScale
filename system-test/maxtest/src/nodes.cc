@@ -165,6 +165,11 @@ bool LocalNode::reset_process_datafiles()
     return system(m_reset_data_cmd.c_str()) == 0;
 }
 
+bool LocalNode::restart_process()
+{
+    return system(m_restart_proc_cmd.c_str()) == 0;
+}
+
 bool VMNode::init_connection()
 {
     close_ssh_master();
@@ -550,6 +555,13 @@ bool DockerNode::stop_process()
     return rval;
 }
 
+bool DockerNode::restart_process()
+{
+    auto rval = exec_cmd(m_restart_proc_cmd);
+    sleep(1);
+    return rval;
+}
+
 bool DockerNode::reset_process_datafiles()
 {
     return exec_cmd(m_reset_data_cmd);
@@ -746,6 +758,11 @@ bool VMNode::start_process(std::string_view params)
 bool VMNode::stop_process()
 {
     return run_cmd_sudo(m_stop_proc_cmd) == 0;
+}
+
+bool VMNode::restart_process()
+{
+    return run_cmd_sudo(m_restart_proc_cmd) == 0;
 }
 
 bool VMNode::reset_process_datafiles()
@@ -951,6 +968,7 @@ bool Node::base_configure(const mxb::ini::map_result::ConfigSection& cnf)
     auto& s = m_shared;
     if (s.read_str(cnf, "ip4", m_ip4) && s.read_str(cnf, "hostname", m_hostname)
         && s.read_str(cnf, "start_cmd", m_start_proc_cmd)
+        && s.read_str(cnf, "restart_cmd", m_restart_proc_cmd)
         && s.read_str(cnf, "stop_cmd", m_stop_proc_cmd)
         && s.read_str(cnf, "reset_cmd", m_reset_data_cmd)
         && s.read_str(cnf, "homedir", m_homedir))
@@ -963,10 +981,11 @@ bool Node::base_configure(const mxb::ini::map_result::ConfigSection& cnf)
     return rval;
 }
 
-void Node::set_start_stop_reset_cmds(string&& start, string&& stop, string&& reset)
+void Node::set_commands(string start, string stop, string restart, string reset)
 {
     m_start_proc_cmd = std::move(start);
     m_stop_proc_cmd = std::move(stop);
+    m_restart_proc_cmd = std::move(restart);
     m_reset_data_cmd = std::move(reset);
 }
 

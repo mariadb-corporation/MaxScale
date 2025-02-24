@@ -172,6 +172,7 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     const string space = " ";
     const char start_db_def[] = "systemctl start mariadb";
     const char stop_db_def[] = "systemctl stop mariadb";
+    const char restart_db_def[] = "systemctl restart mariadb";
     const char clean_db_def[] = "rm -rf /var/lib/mysql/*; killall -9 mysqld";
 
     clear_vms();
@@ -204,11 +205,14 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
             string key_stop_db_cmd = node_name + "_stop_db_command";
             string stop_db_cmd = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
 
+            string key_restart_db_cmd = node_name + "_restart_db_command";
+            string restart_db_cmd = envvar_get_set(key_restart_db_cmd.c_str(), restart_db_def);
+
             string key_clear_db_cmd = node_name + "_cleanup_db_command";
             string cleanup_db_cmd = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
 
-            latest_node->set_start_stop_reset_cmds(std::move(start_db_cmd), std::move(stop_db_cmd),
-                                                   std::move(cleanup_db_cmd));
+            latest_node->set_commands(std::move(start_db_cmd), std::move(stop_db_cmd),
+                                      std::move(restart_db_cmd), std::move(cleanup_db_cmd));
 
             srv->set_port(port_res);
 
