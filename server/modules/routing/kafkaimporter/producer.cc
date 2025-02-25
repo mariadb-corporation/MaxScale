@@ -17,6 +17,7 @@
 #include <maxbase/assert.hh>
 #include <maxscale/service.hh>
 #include <maxscale/mainworker.hh>
+#include <maxscale/secrets.hh>
 #include <maxsql/mariadb.hh>
 
 namespace kafkaimporter
@@ -74,7 +75,7 @@ Producer::ConnectionInfo Producer::find_master() const
         [this, &rval]() {
         SERVER* best = nullptr;
         rval.user = m_service->config()->user;
-        rval.password = m_service->config()->password;
+        rval.password = mxs::decrypt_password(m_service->config()->password);
 
         for (SERVER* s : m_service->reachable_servers())
         {
