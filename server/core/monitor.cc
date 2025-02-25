@@ -796,12 +796,12 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
             else
             {
                 string user = conn_settings().username;
-                string password = conn_settings().password;
+                string password = mxs::decrypt_password(conn_settings().password);
                 string server_specific_monuser = server->monitor_user();
                 if (!server_specific_monuser.empty())
                 {
                     user = server_specific_monuser;
-                    password = server->monitor_password();
+                    password = mxs::decrypt_password(server->monitor_password());
                 }
 
                 rval += separator + mxb::string_printf("%s:%s@[%s]:%d", user.c_str(), password.c_str(),

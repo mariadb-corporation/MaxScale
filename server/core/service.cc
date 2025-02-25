@@ -49,6 +49,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/session.hh>
+#include <maxscale/secrets.hh>
 #include <maxscale/users.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
@@ -2050,7 +2051,7 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
 
     const auto& config = *m_config.values();
     bool auth_all_user = (capabilities() & RCAP_TYPE_AUTH_ALL_SERVERS) || config.users_from_all;
-    user_manager->set_credentials(config.user, config.password);
+    user_manager->set_credentials(config.user, mxs::decrypt_password(config.password));
     user_manager->set_backends(m_data->servers);
     user_manager->set_union_over_backends(auth_all_user);
     user_manager->set_strip_db_esc(config.strip_db_esc);
@@ -2423,7 +2424,7 @@ bool Service::post_configure()
     // If the parameter affects the user account manager, update its settings.
     if (m_usermanager)
     {
-        m_usermanager->set_credentials(config.user, config.password);
+        m_usermanager->set_credentials(config.user, mxs::decrypt_password(config.password));
         m_usermanager->set_union_over_backends(config.users_from_all);
         m_usermanager->set_strip_db_esc(config.strip_db_esc);
     }

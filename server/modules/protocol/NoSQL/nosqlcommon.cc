@@ -505,7 +505,7 @@ string default_field_and_value_to_comparison(const Path::Incarnation& p,
 
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
-         [[fallthrough]];
+        [[fallthrough]];
     default:
         path = p.path();
     }
