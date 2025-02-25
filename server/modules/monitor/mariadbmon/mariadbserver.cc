@@ -22,6 +22,7 @@
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/mysql_utils.hh>
+#include <maxscale/secrets.hh>
 
 #define SLAVE_OF_EXT "Slave of External Server"
 
@@ -2319,7 +2320,7 @@ MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_sett
     const char user_pw[] = "MASTER_USER = '%s', MASTER_PASSWORD = '%s';";
     string cleartext_cmd = cmd_begin;
     cleartext_cmd += mxb::string_printf(user_pw, m_settings.replication_user.c_str(),
-                                        m_settings.replication_password.c_str());
+                                        mxs::decrypt_password(m_settings.replication_password).c_str());
     const char mask[] = "******";
     string masked_cmd = move(cmd_begin);
     masked_cmd += mxb::string_printf(user_pw, mask, mask);

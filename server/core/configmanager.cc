@@ -1095,6 +1095,16 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
     case Type::LISTENERS:
         if (auto listener = Listener::find(name))
         {
+            // Ignore changes to port, address and socket for listeners. This prevents
+            // configurations on the same machine from conflicting with each other and
+            // it also allows different MaxScales to listen on different ports.
+            if (json_t* new_params = mxb::json_ptr(js, MXS_JSON_PTR_PARAMETERS))
+            {
+                json_object_del(new_params, CN_PORT);
+                json_object_del(new_params, CN_ADDRESS);
+                json_object_del(new_params, CN_SOCKET);
+            }
+
             if (!runtime_alter_listener_from_json(listener, js))
             {
                 throw error("Failed to update listener '", name, "'");

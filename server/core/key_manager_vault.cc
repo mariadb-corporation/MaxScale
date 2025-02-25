@@ -14,6 +14,7 @@
 
 #include "internal/key_manager_vault.hh"
 #include <maxbase/json.hh>
+#include <maxscale/secrets.hh>
 
 #include <libvault/VaultClient.h>
 
@@ -56,7 +57,8 @@ load_key(const VaultKey::Config& cnf, const std::string& id, int64_t version)
         err = true;
     };
 
-    Vault::TokenStrategy auth{Vault::Token{cnf.token}};
+    auto dpwd = mxs::decrypt_password(cnf.token);
+    Vault::TokenStrategy auth{Vault::Token{dpwd}};
 
     auto builder = Vault::ConfigBuilder()
         .withTlsEnabled(cnf.tls)
