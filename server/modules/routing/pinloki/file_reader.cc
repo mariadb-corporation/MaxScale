@@ -268,8 +268,10 @@ maxsql::RplEvent FileReader::fetch_event_internal()
             && rpl.event_type() != BINLOG_CHECKPOINT_EVENT)
         {
             m_generating_preamble = false;
-            if (m_initial_gtid_file_pos)
+            int64_t prev_pos = m_read_pos.next_pos - rpl.real_size();
+            if (m_initial_gtid_file_pos && m_initial_gtid_file_pos != prev_pos)
             {
+                mxb_assert(m_read_pos.next_pos < m_initial_gtid_file_pos);
                 m_read_pos.next_pos = m_initial_gtid_file_pos;
 
                 auto delta = m_read_pos.next_pos - m_read_pos.file.bytes_read();
