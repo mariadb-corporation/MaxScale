@@ -83,7 +83,7 @@ private:
     const InventoryReader& m_inventory;
     std::string            m_generate_rotate_to;
     bool                   m_generating_preamble = true;
-    int                    m_initial_gtid_file_pos = 0;
+    int64_t                m_initial_gtid_file_pos = 0;
 
     std::vector<GtidPosition> m_catchup;
     std::set<uint32_t>        m_active_domains;
