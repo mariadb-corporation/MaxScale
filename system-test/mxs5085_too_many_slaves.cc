@@ -44,6 +44,15 @@ void test_mxs5209(TestConnections& test)
                 "Query should not be routed to the same server after master changes: %s",
                 mxb::join(first_id).c_str());
 
+    test.check_maxctrl("clear server server2 master");
+    test.check_maxctrl("set server server2 slave");
+    test.check_maxctrl("clear server server1 slave");
+    test.check_maxctrl("set server server1 master");
+    std::cout << test.maxctrl("list servers").output << std::endl;
+
+    c.query("SET @a=1");
+    test.log_includes("Replacing old master 'server2' with new master 'server1'");
+
     test.check_maxctrl("start monitor MariaDB-Monitor");
 }
 
