@@ -96,7 +96,7 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
 {
     if (m_config.causal_reads != CausalReads::NONE)
     {
-        if (reply.is_ok() && backend == m_current_master)
+        if (backend == m_current_master)
         {
             auto gtid = reply.get_variable(MXS_LAST_GTID);
 

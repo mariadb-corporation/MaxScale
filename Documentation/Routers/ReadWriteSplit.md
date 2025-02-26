@@ -911,6 +911,20 @@ server which would cause the connection to be closed and a warning to be logged.
   added to it by readwritesplit exceed the maximum packet size (16777213 bytes),
   the causal read will not be attempted and a non-causal read is done instead.
 
+- SQL like `INSERT ... RETURNING` that commits a transaction and returns a
+  resultset will only work with causal reads if the connector supports the
+  DEPRECATE_EOF protocol feature. The following table contains a list of MariaDB
+  connectors and whether they support the protocol feature.
+
+| Connector         | Supported | Version |
+|-------------------|-----------|---------|
+| Connector/J       | Yes       | 3.5.2   |
+| Connector/Node.js | Yes       | 3.4.0   |
+| Connector/R2DBC   | Yes       | 1.3.0   |
+| Connector/C       | No        | 3.4.4   |
+| Connector/C++     | No        | 1.1.5   |
+| Connector/ODBC    | No        | 3.2.5   |
+
 ### `causal_reads_timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
