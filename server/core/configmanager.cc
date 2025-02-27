@@ -495,8 +495,13 @@ std::string ConfigManager::checksum() const
 
     if (m_current_config)
     {
-        auto cnf = m_current_config.get_object(CN_CONFIG).to_string(mxb::Json::Format::COMPACT);
-        rval = mxs::checksum<mxs::SHA1Checksum>(cnf);
+        // Use the sorted and compacted JSON as the checksum. This way the same state will result
+        // in the same checksum and differing MaxScale instances will thus result in a different
+        // checksum. One example where the checksum is expected to differ is when the local network
+        // address or port that is used in a listener is different in each MaxScale instance.
+        auto cnf = m_current_config.get_object(CN_CONFIG);
+        auto json_str = mxb::json_dump(cnf.get_json(), JSON_COMPACT | JSON_SORT_KEYS);
+        rval = mxs::checksum<mxs::SHA1Checksum>(json_str);
     }
 
     return rval;
@@ -1098,14 +1103,25 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
             // Ignore changes to port, address and socket for listeners. This prevents
             // configurations on the same machine from conflicting with each other and
             // it also allows different MaxScales to listen on different ports.
-            if (json_t* new_params = mxb::json_ptr(js, MXS_JSON_PTR_PARAMETERS))
+            auto attr = m_tmp.at("data/attributes");
+            mxb::Json old_params;
+
+            if (auto params = attr.at(CN_PARAMETERS))
             {
-                json_object_del(new_params, CN_PORT);
-                json_object_del(new_params, CN_ADDRESS);
-                json_object_del(new_params, CN_SOCKET);
+                old_params = params.deep_copy();
+                params.erase(CN_PORT);
+                params.erase(CN_ADDRESS);
+                params.erase(CN_SOCKET);
             }
 
-            if (!runtime_alter_listener_from_json(listener, js))
+            bool ok = runtime_alter_listener_from_json(listener, js);
+
+            if (old_params)
+            {
+                attr.set_object(CN_PARAMETERS, old_params);
+            }
+
+            if (!ok)
             {
                 throw error("Failed to update listener '", name, "'");
             }
