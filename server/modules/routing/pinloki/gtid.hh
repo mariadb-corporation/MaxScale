@@ -29,6 +29,8 @@ namespace maxsql
 struct Gtid
 {
     Gtid() = default;
+    Gtid(const Gtid&) = default;
+    Gtid& operator=(const Gtid&) = default;
     Gtid(MARIADB_GTID* mgtid);
     Gtid(uint32_t domain, uint32_t server_id, uint64_t sequence)
         : m_domain_id(domain)
@@ -61,6 +63,9 @@ struct Gtid
     {
         return m_is_valid;
     }
+
+    uint64_t inc_seq(uint64_t amount = 1);
+    uint64_t dec_seq(uint64_t amount = 1);
 
 private:
     uint32_t m_domain_id = -1;

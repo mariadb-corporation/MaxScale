@@ -70,6 +70,16 @@ Gtid Gtid::from_string(const std::string& gtid_str)
     }
 }
 
+uint64_t Gtid::inc_seq(uint64_t amount)
+{
+    return ++m_sequence_nr;
+}
+
+uint64_t Gtid::dec_seq(uint64_t amount)
+{
+    return --m_sequence_nr;
+}
+
 std::ostream& operator<<(std::ostream& os, const Gtid& gtid)
 {
     os << gtid.to_string();
@@ -157,8 +167,7 @@ bool GtidList::is_included(const GtidList& other) const
 bool GtidList::has_domain(uint32_t domain_id) const
 {
     return std::any_of(begin(m_gtids), end(m_gtids), [domain_id]
-                       (const auto& gtid)
-                       {
+                       (const auto& gtid){
         return gtid.domain_id() == domain_id;
     });
 }
