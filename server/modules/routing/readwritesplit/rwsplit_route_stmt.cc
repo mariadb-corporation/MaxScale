@@ -333,8 +333,7 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
  */
 bool RWSplitSession::route_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
 {
-    const RouteInfo& info = route_info();
-    route_target_t route_target = info.target();
+    route_target_t route_target = res.route_target;
     mxb_assert_message(m_state != OTRX_ROLLBACK, "OTRX_ROLLBACK should never happen when routing queries");
 
     if (m_config.reuse_ps && reuse_prepared_stmt(buffer))
@@ -464,7 +463,7 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const mxs::Buffer& buf
     RoutingPlan rval;
     rval.route_target = info.target();
 
-    if (m_config.max_slave_connections == 0 && rval.route_target == TARGET_SLAVE)
+    if (m_config.max_slave_connections == 0)
     {
         // With max_slave_connections=0, all reads can be treated as writes. This will correctly trigger a
         // master migration if the current one no longer qualifies for it and a replacement is available.
