@@ -50,6 +50,7 @@ add_subdirectory(filters)
 add_subdirectory(rworker)
 add_subdirectory(connectors)
 add_subdirectory(sql_api)
+add_subdirectory(nodejs)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
