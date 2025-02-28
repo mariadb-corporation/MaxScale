@@ -132,9 +132,9 @@ void mxs5520_no_password_reencryption(TestConnections& test)
     auto res = test.maxscale->ssh_output("maxpasswd /var/lib/maxscale/ skysql");
     std::string original_pw = res.output;
     test.maxscale->stop();
-    test.maxscale->ssh_output("sed -i \"/maxscale/ a config_sync_password=%s\" /etc/maxscale.cnf",
+    test.maxscale->ssh_node_f(true, "sed -i \"/maxscale/ a config_sync_password=%s\" /etc/maxscale.cnf",
                               res.output.c_str());
-    // test.check_maxctrl("alter maxscale config_sync_password=" + res.output);
+
     test.maxscale->start();
 
     for (int i = 0; i < 5; i++)

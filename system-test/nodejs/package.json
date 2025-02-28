@@ -1,0 +1,14 @@
+{
+  "name": "test-mariadb-connector-nodejs",
+  "version": "1.0.0",
+  "description": "MaxScale tests that use the MariaDB Node.js connector",
+  "main": "main.js",
+  "scripts": {
+    "test": "node mxs5527.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mariadb": "^3.4.0"
+  }
+}
