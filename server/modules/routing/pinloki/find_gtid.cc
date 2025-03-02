@@ -52,9 +52,17 @@ std::vector<GtidPosition> search_file(const std::string& file_name,
                                       const Config& cnf);
 
 
-std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
+std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids_,
                                              const Config& cnf)
 {
+    // The gtids from the replica are the ones it already has,
+    // search for the next ones in sequence.
+    auto gtids{gtids_};
+    for (auto& gtid : gtids)
+    {
+        gtid.inc_seq();
+    }
+
     std::vector<GtidPosition> ret;
     // Simple linear search. If there can be a lot of files, make this a binary search, or
     // if it really becomes slow, create an index
@@ -89,6 +97,15 @@ std::vector<GtidPosition> find_gtid_position(std::vector<maxsql::Gtid> gtids,
     }
 
     sort(begin(ret), end(ret));
+
+    // Adjust the gtids to what is expected elsewhere,
+    // which is that the gtids are the ones the replica already has.
+    // If would be clearer if the method everywhere was that the
+    // gtids are the next ones to fetch, but that change is for later.
+    for (auto& gpos : ret)
+    {
+        gpos.gtid.dec_seq();
+    }
 
     return ret;
 }
@@ -174,6 +191,16 @@ std::vector<GtidPosition> search_file(const std::string& file_name,
         if (gtids.empty())
         {
             break;
+        }
+    }
+
+    // If a gtid with its domain in the gtid_list was not found
+    // it is a future gtid.
+    for (const auto& gtid : gtids)
+    {
+        if (gtid_list.has_domain(gtid.domain_id()))
+        {
+            ret.emplace_back(gtid, file_name, file.bytes_read());
         }
     }
 
