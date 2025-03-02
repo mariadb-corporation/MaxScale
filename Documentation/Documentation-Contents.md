@@ -114,5 +114,7 @@ A short description of the authentication module type can be found in the
 [Authentication Modules](Authenticators/Authentication-Modules.md)
 document.
 
- - [MySQL Authenticator](Authenticators/MySQL-Authenticator.md)
+ - [MariaDB/MySQL Authenticator](Authenticators/MySQL-Authenticator.md)
  - [GSSAPI Authenticator](Authenticators/GSSAPI-Authenticator.md)
+ - [PAM Authenticator](Authenticators/PAM-Authenticator.md)
+ - [Ed25519 Authenticator](Authenticators/Ed25519-Authenticator.md)
