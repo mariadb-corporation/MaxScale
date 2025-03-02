@@ -51,7 +51,7 @@ void test_mxs5209(TestConnections& test)
     test.check_maxctrl("set server server1 master");
 
     c.query("SET @a=1");
-    test.log_includes("Replacing old master 'server2' with new master 'server1'");
+    test.log_includes("Replacing old primary 'server2' with new primary 'server1'");
 
     test.check_maxctrl("start monitor MariaDB-Monitor");
 }
