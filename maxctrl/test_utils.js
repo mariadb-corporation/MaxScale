@@ -122,10 +122,6 @@ module.exports = function () {
     });
   };
 
-  this.isConnectionOk = function () {
-    return connectionError;
-  };
-
   this.connectionId = function () {
     return connectionId;
   };
@@ -144,6 +140,10 @@ module.exports = function () {
       .catch((err) => {
         connectionError = true;
       });
+  };
+
+  this.connectionQuery = function (sql) {
+    return conn.query(sql);
   };
 
   this.closeConnection = function () {
