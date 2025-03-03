@@ -157,7 +157,7 @@ cfg::ParamCount s_max_connections(
 
 cfg::ParamSeconds s_wait_timeout(
     &s_spec, "wait_timeout", "Connection idle timeout",
-    std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
+    std::chrono::seconds(28800), cfg::Param::AT_RUNTIME);
 
 // Alias connection_timeout -> wait_timeout
 cfg::ParamDeprecated<cfg::ParamAlias> s_connection_timeout(

@@ -2450,18 +2450,20 @@ release build does nothing.
 - **Type**: [duration](#durations)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: `0s`
+- **Default**: `28800s` (>= MaxScale 24.02.5, 25.01.2), `0s` (<= MaxScale 24.02.4, 25.01.1)
 - **Auto tune**: [Yes](#auto_tune)
 
-The wait_timeout parameter is used to disconnect sessions to MariaDB
-MaxScale that have been idle for too long. The session timeouts are disabled by
-default. To enable them, define the timeout in seconds in the service's
-configuration section. A value of zero is interpreted as no timeout, the same
-as if the parameter is not defined.
+The wait_timeout parameter is used to disconnect sessions to MariaDB MaxScale
+that have been idle for too long. The session timeout is set to 28800 seconds by
+default. A value of zero is interpreted as no timeout.
 
 This parameter used to be called `connection_timeout` and this name is still
 accepted as an alias for `wait_timeout`. The old name has been deprecated in
 MaxScale 23.08.
+
+The default value of `wait_timeout` changed from `0s` to `28800s` in MaxScale
+versions 24.02.5 and 25.01.2 to match the default value of MariaDB
+([MXS-5530](https://jira.mariadb.org/browse/MXS-5530)).
 
 Note that since the granularity of the timeout is seconds, a timeout specified
 in milliseconds will be rejected, even if the duration is longer than a second.
