@@ -142,8 +142,7 @@ void mxs5520_no_password_reencryption(TestConnections& test)
         // Do a config change and restart MaxScale. This would trigger the re-encryption of
         // an already encrypted password.
         test.maxscale->restart();
-        test.check_maxctrl("alter maxscale passive=true");
-        test.check_maxctrl("alter maxscale passive=false");
+        test.check_maxctrl("alter maxscale session_trace=" + std::to_string(i + 1));
 
         res = test.maxscale->ssh_output("grep config_sync_password " + config_path
                                         + " |cut -f2 -d=");
@@ -152,6 +151,8 @@ void mxs5520_no_password_reencryption(TestConnections& test)
                     "Iteration %d: Password in persisted config file is different: %s",
                     i, res.output.c_str());
     }
+
+    test.check_maxctrl("alter maxscale session_trace=0");
 }
 
 void test_main(TestConnections& test)
