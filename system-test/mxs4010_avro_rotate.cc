@@ -40,8 +40,8 @@ void check_file_count(TestConnections& test, std::string count)
 
 int main(int argc, char* argv[])
 {
-    TestConnections test(argc, argv);
     TestConnections::skip_maxscale_start(true);
+    TestConnections test(argc, argv);
     test.maxscale->ssh_node("rm -f /tmp/test.t1.*.av* /tmp/current_gtid.txt", true);
 
     auto c = test.repl->get_connection(0);
