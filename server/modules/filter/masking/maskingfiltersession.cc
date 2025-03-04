@@ -613,8 +613,32 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
 {
     bool is_used = false;
 
-    auto pred1 = [this, zUser, zHost](const QC_FIELD_INFO& field_info) {
-            const MaskingRules::Rule* pRule = m_config.sRules->get_rule_for(field_info, zUser, zHost);
+    const std::vector<string>& tables = qc_get_table_names(pPacket, false);
+    const char* zTable = (tables.size() == 1 ? tables.front().c_str() : nullptr);
+
+    auto pred1 = [this, zTable, zUser, zHost](const QC_FIELD_INFO& field_info) {
+            const MaskingRules::Rule* pRule;
+
+            if (field_info.table || !zTable)
+            {
+                // The field info contains table information or we do not know
+                // the potential table => go ahead.
+                pRule = m_config.sRules->get_rule_for(field_info, zUser, zHost);
+            }
+            else
+            {
+                // The field did not specify a table but the whole statement
+                // contained just one table - e.g. SELECT * FROM t1 WHERE f = 1 -
+                // so we can add the table and essentially pretend the statement
+                // was SELECT * FROM t1 WHERE t1.f = 1. This will reduce the number
+                // of false positives, as a masking rule for "t2.f" will be a match
+                // for just "f" since, if the table is not known, it has to be assumed
+                // that it might be "t2".
+                QC_FIELD_INFO field_info_copy { field_info };
+                field_info_copy.table = const_cast<char*>(zTable);
+
+                pRule = m_config.sRules->get_rule_for(field_info_copy, zUser, zHost);
+            }
 
             return pRule ? true : false;
         };
