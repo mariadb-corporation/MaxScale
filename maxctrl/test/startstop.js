@@ -1,5 +1,6 @@
 const {
   doCommand,
+  doQuery,
   verifyCommand,
   createConnection,
   closeConnection,
@@ -28,7 +29,7 @@ describe("Start/Stop Commands", function () {
     var res = await verifyCommand("stop service RW-Split-Router --force", "services/RW-Split-Router");
     res.data.attributes.state.should.equal("Stopped");
 
-    isConnectionOk().should.equal(true);
+    doQuery("SELECT 1").should.be.rejected;
     closeConnection();
 
     await doCommand("start service RW-Split-Router");
@@ -70,7 +71,7 @@ describe("Start/Stop Commands", function () {
       i.attributes.state.should.equal("Stopped");
     }
 
-    isConnectionOk().should.equal(true);
+    doQuery("SELECT 1").should.be.rejected;
     closeConnection();
 
     await doCommand("start maxscale");
@@ -91,7 +92,7 @@ describe("Start/Stop Commands", function () {
     var res = await verifyCommand("stop listener RW-Split-Listener --force", "listeners/RW-Split-Listener");
     res.data.attributes.state.should.equal("Stopped");
 
-    isConnectionOk().should.equal(true);
+    doQuery("SELECT 1").should.be.rejected;
     closeConnection();
 
     doCommand("start listener RW-Split-Listener");
