@@ -239,6 +239,7 @@ identical. 21.06 denotes the year and month when the first 6 release was made.
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 21.06.19 Release Notes](Release-Notes/MaxScale-21.06.19-Release-Notes.md)
 * [MariaDB MaxScale 21.06.18 Release Notes](Release-Notes/MaxScale-21.06.18-Release-Notes.md)
 * [MariaDB MaxScale 21.06.17 Release Notes](Release-Notes/MaxScale-21.06.17-Release-Notes.md)
 * [MariaDB MaxScale 21.06.16 Release Notes](Release-Notes/MaxScale-21.06.16-Release-Notes.md)
