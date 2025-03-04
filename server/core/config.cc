@@ -2854,6 +2854,7 @@ static bool process_config_context(ConfigSectionMap& context)
      */
     for (ConfigSection* obj : objects)
     {
+        mxb::LogScope scope(obj->name());
         std::string type = obj->m_parameters.get_string(CN_TYPE);
         mxb_assert(!type.empty());
 
