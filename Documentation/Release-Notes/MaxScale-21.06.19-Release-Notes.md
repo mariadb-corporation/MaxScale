@@ -18,6 +18,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-5536](https://jira.mariadb.org/browse/MXS-5536) Early mismatched responses to session commands do not close connections
 * [MXS-5529](https://jira.mariadb.org/browse/MXS-5529) Session commands with max_slave_connections=0 after switchover do not discard stale connections
 * [MXS-5527](https://jira.mariadb.org/browse/MXS-5527) The "INSERT INTO...RETURNING" syntax breaks causal_reads
 * [MXS-5519](https://jira.mariadb.org/browse/MXS-5519) Documentation regarding mixing of cooperative_monitoring_locks and passive is unclear
