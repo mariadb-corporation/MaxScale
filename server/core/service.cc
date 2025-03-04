@@ -198,7 +198,7 @@ cfg::ParamInteger s_retain_last_statements(
     &s_spec, "retain_last_statements", "Number of statements kept in memory",
     -1, cfg::Param::AT_RUNTIME);
 
-cfg::ParamBool s_session_trace(
+cfg::ParamDeprecated<cfg::ParamBool> s_session_trace(
     &s_spec, "session_trace", "Enable session tracing for this service",
     false, cfg::Param::AT_RUNTIME);
 
