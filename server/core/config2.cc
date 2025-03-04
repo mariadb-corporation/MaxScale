@@ -721,6 +721,22 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
                     MXB_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
                     configured = false;
                 }
+                else if (pValue->parameter().is_deprecated())
+                {
+                    MXB_WARNING("Parameter '%s' is deprecated.", pValue->parameter().name().c_str());
+                }
+                else
+                {
+                    const Param* pParam = m_pSpecification->find_param(name);
+                    const Param* pFinalParam = m_pSpecification->find_param(pParam->final_name());
+                    mxb_assert(pParam && pFinalParam);
+
+                    if (pParam != pFinalParam && pParam->is_deprecated() && !pFinalParam->is_deprecated())
+                    {
+                        MXB_WARNING("Parameter '%s' is a deprecated alias of '%s'.",
+                                    pParam->name().c_str(), pFinalParam->name().c_str());
+                    }
+                }
             }
             else if (!is_core_param(m_pSpecification->kind(), name))
             {

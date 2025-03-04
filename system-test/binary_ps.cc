@@ -60,6 +60,40 @@ void mxs4922_change_user_history_responses(TestConnections& test)
     check_stored_responses(test, c.thread_id());
 }
 
+void mxs5536_early_response(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+
+    // Create a table that gets replicated to all servers
+    c.query("CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.repl->sync_slaves();
+
+    // Then modify it but don't replicate the modification
+    c.query("SET SQL_LOG_BIN=0");
+    c.query("CREATE OR REPLACE TABLE test.t1(id INT, a INT)");
+    c.query("SET SQL_LOG_BIN=1");
+
+    test.repl->suspend_node(0);
+
+    std::thread thr([&](){
+        std::this_thread::sleep_for(1s);
+        test.repl->unsuspend_node(0);
+    });
+
+    // The prepare should fail on the replicas but succeed on the primary
+    std::string sql = "SELECT id, a FROM test.t1";
+    MYSQL_STMT* stmt = c.stmt();
+    test.expect(mysql_stmt_prepare(stmt, sql.c_str(), sql.size()) == 0,
+                "Failed to prepare: %s", mysql_stmt_error(stmt));
+    test.expect(mysql_stmt_execute(stmt) == 0,
+                "Failed to execute: %s", mysql_stmt_error(stmt));
+
+    thr.join();
+
+    test.repl->execute_query_all_nodes("DROP TABLE IF EXISTS test.t1");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -142,6 +176,7 @@ int main(int argc, char** argv)
 
     mxs4921_ps_history_responses(test);
     mxs4922_change_user_history_responses(test);
+    mxs5536_early_response(test);
 
     return test.global_result;
 }
