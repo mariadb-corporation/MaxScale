@@ -25,6 +25,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <poll.h>
+#include <utime.h>
 
 namespace fs = std::filesystem;
 
@@ -49,6 +50,29 @@ wall_time::TimePoint file_mod_time(const std::string& file_name)
     }
 
     return ret;
+}
+
+// Leaves errno set on error
+bool copy_file_mod_time(const std::string& from, const std::string& to)
+{
+    errno = 0;
+    struct stat from_stat;
+
+    if (::stat(from.c_str(), &from_stat) != 0)
+    {
+        return false;
+    }
+
+    struct utimbuf to_time;
+    to_time.actime = time(NULL);    // leave unchanged
+    to_time.modtime = from_stat.st_mtime;
+
+    if (::utime(to.c_str(), &to_time) != 0)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 /** Returns -1 on error and errno is set.
@@ -536,38 +560,46 @@ void FileTransformer::update_compression()
     }
 }
 
-maxbase::CompressionStatus FileTransformer::compress_file(const std::string& file_path)
+maxbase::CompressionStatus FileTransformer::compress_file(const std::string& uncompressed_name)
 {
-    std::ifstream in(file_path);
-    std::string temp_compress_name = make_temp_compression_name(file_path);
-    std::string compressed_name = file_path + '.' + COMPRESSION_EXTENSION;
+    std::ifstream in(uncompressed_name);
+    std::string temp_compress_name = make_temp_compression_name(uncompressed_name);
+    std::string compressed_name = uncompressed_name + '.' + COMPRESSION_EXTENSION;
     std::ofstream out(temp_compress_name);
-    maxbase::Compressor compressor(3);      // TODO, add level to config, maybe.
+    maxbase::Compressor compressor(3);
 
     if (compressor.status() == maxbase::CompressionStatus::OK)
     {
         compressor.compress(in, out);
+
         if (compressor.status() != maxbase::CompressionStatus::OK)
         {
-            MXB_SWARNING(compr_err_str(file_path, compressor));
+            MXB_SWARNING(compr_err_str(uncompressed_name, compressor));
+            remove(temp_compress_name.c_str());
+        }
+        else if (!copy_file_mod_time(uncompressed_name, temp_compress_name))
+        {
+            MXB_SWARNING("Failed to copy modification time from " << uncompressed_name <<
+                         " to " << temp_compress_name << " : " << mxb_strerror(errno));
             remove(temp_compress_name.c_str());
         }
         else if (rename(temp_compress_name.c_str(), compressed_name.c_str()) != 0)
         {
             MXB_SWARNING("Failed to move " << temp_compress_name <<
                          " to " << compressed_name << " : " << mxb_strerror(errno));
+
             remove(temp_compress_name.c_str());
         }
-        else if (remove(file_path.c_str()))
+        else if (remove(uncompressed_name.c_str()) != 0)
         {
-            MXB_SWARNING("Failed to delete " << file_path <<
-                         " that has been compressed to " << compressed_name);
+            MXB_SWARNING("Failed to delete " << uncompressed_name <<
+                         " which has been compressed to " << compressed_name);
         }
     }
     else
     {
         remove(temp_compress_name.c_str());
-        MXB_SERROR(compr_err_str(file_path, compressor));
+        MXB_SERROR(compr_err_str(uncompressed_name, compressor));
     }
 
     return compressor.status();
