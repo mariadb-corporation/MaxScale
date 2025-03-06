@@ -15,7 +15,6 @@ if (BUILD_KAFKAIMPORTER)
   add_subdirectory(kafkaimporter)
 endif()
 
-add_subdirectory(cat)
 add_subdirectory(readconnroute)
 add_subdirectory(readwritesplit)
 add_subdirectory(schemarouter)
