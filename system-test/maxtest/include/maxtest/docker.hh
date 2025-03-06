@@ -104,6 +104,18 @@ public:
         }
     }
 
+    /**
+     * Executes a command inside the container
+     *
+     * @param cmd Command to execute
+     *
+     * @return The exit code of the command
+     */
+    int execute(std::string_view cmd)
+    {
+        return m_test.maxscale->ssh_node(mxb::cat("docker exec -u root ", m_name, " ", cmd), true);
+    }
+
     ~Docker()
     {
         m_test.expect(cleanup(), "Failed to stop container");
