@@ -1877,9 +1877,13 @@ static HttpResponse handle_request(const HttpRequest& request)
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
 
-        remove_unwanted_rows(request, rval);
-        paginate_result(request, rval);
-        remove_unwanted_fields(request, rval);
+        // Only filter successful results
+        if (rval.get_code() < MHD_HTTP_BAD_REQUEST)
+        {
+            remove_unwanted_rows(request, rval);
+            paginate_result(request, rval);
+            remove_unwanted_fields(request, rval);
+        }
     }
 
     return rval;
