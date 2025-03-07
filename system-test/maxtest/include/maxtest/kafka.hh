@@ -14,6 +14,7 @@
 
 #include <librdkafka/rdkafkacpp.h>
 #include <maxtest/testconnections.hh>
+#include <maxtest/docker.hh>
 
 class Kafka
 {
@@ -22,17 +23,9 @@ public:
 
     void create_topic(const std::string& topic);
 
-    ~Kafka()
-    {
-        stop_kafka();
-    }
-
 private:
-    bool start_kafka();
-    void stop_kafka();
-    bool install_kafka();
-
     TestConnections& m_test;
+    mxt::Docker      m_docker;
 };
 
 class Logger : public RdKafka::EventCb
