@@ -158,6 +158,7 @@ public:
         {
             std::string err;
             cnf->set("group.id", "maxscale-kafkacdc", err);
+            cnf->set("enable.auto.commit", "false", err);
 
             if (auto consumer = RdKafka::KafkaConsumer::create(cnf.get(), err))
             {
