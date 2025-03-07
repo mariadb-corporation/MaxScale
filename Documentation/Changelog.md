@@ -82,6 +82,7 @@
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 23.08.9 Release Notes](Release-Notes/MaxScale-23.08.9-Release-Notes.md)
 * [MariaDB MaxScale 23.08.8 Release Notes](Release-Notes/MaxScale-23.08.8-Release-Notes.md)
 * [MariaDB MaxScale 23.08.7 Release Notes](Release-Notes/MaxScale-23.08.7-Release-Notes.md)
 * [MariaDB MaxScale 23.08.6 Release Notes](Release-Notes/MaxScale-23.08.6-Release-Notes.md)
