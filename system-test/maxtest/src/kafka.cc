@@ -14,140 +14,39 @@
 #include <maxtest/kafka.hh>
 #include <iostream>
 #include <maxbase/format.hh>
-
 Kafka::Kafka(TestConnections& test)
     : m_test(test)
+    , m_docker(
+        test,
+        "apache/kafka",
+        "kafka",
+        {4008},
 {
-    if (m_test.maxscale->ssh_node_f(false, "test -d kafka") != 0)
-    {
-        test.tprintf("Installing Kafka...");
-        if (!install_kafka())
-        {
-            m_test.add_failure("Failed to install Kafka");
-        }
-        else
-        {
-            test.tprintf("Installed Kafka");
-        }
-    }
-
-    test.tprintf("Starting Kafka...");
-    if (!start_kafka())
-    {
-        m_test.add_failure("Failed to start Kafka");
-    }
-    else
-    {
-        test.tprintf("Started Kafka");
-    }
+    "KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:4008,CONTROLLER://0.0.0.0:9093",
+    "KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://"s + test.maxscale->ip4() + ":4008,CONTROLLER://" + test.maxscale->ip4() + ":9093",
+    "KAFKA_NODE_ID=1",
+    "KAFKA_PROCESS_ROLES=broker,controller",
+    "KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER",
+    "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
+    "KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093",
+    "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1",
+    "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1",
+    "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1",
+    "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0",
+    "KAFKA_NUM_PARTITIONS=1"
+},
+        "/opt/kafka/bin/kafka-topics.sh --bootstrap-server 127.0.0.1:4008 --list"
+        )
+{
 }
 
 void Kafka::create_topic(const std::string& topic)
 {
-    std::string cmd = "kafka/bin/kafka-topics.sh --create --topic " + topic
+    std::string cmd = "/opt/kafka/bin/kafka-topics.sh --create --topic " + topic
         + " --bootstrap-server 127.0.0.1:4008";
 
-    m_test.expect(m_test.maxscale->ssh_node_f(false, "%s", cmd.c_str()) == 0,
+    m_test.expect(m_docker.execute(cmd) == 0,
                   "Failed to create topic '%s'", topic.c_str());
-}
-
-bool Kafka::start_kafka()
-{
-    bool ok = false;
-    // Stop any running instances of Kafka and clean out their data directories.
-    stop_kafka();
-
-    std::string zookeeper = "kafka/bin/zookeeper-server-start.sh "
-                            "-daemon kafka/config/zookeeper.properties;";
-    std::string kafka = mxb::string_printf(
-        "kafka/bin/kafka-server-start.sh"
-        " -daemon kafka/config/server.properties"
-        " --override listeners=PLAINTEXT://0.0.0.0:4008"
-        " --override advertised.listeners=PLAINTEXT://%s:4008;",
-        m_test.maxscale->ip4());
-
-    std::string check =
-        "kafka/bin/zookeeper-shell.sh localhost:2181"
-        " ls -R /brokers/ids|grep /brokers/ids/0";
-
-    if (m_test.maxscale->ssh_node_f(false, "%s", (zookeeper + kafka).c_str()) == 0)
-    {
-        for (int i = 0; i < 10; i++)
-        {
-            if (m_test.maxscale->ssh_node_f(false, "%s", check.c_str()) == 0)
-            {
-                ok = true;
-                break;
-            }
-            else
-            {
-                sleep(1);
-            }
-        }
-    }
-
-    return ok;
-}
-
-void Kafka::stop_kafka()
-{
-    m_test.maxscale->ssh_node_f(
-        false,
-        "kafka/bin/kafka-server-stop.sh;"
-        "kafka/bin/zookeeper-server-stop.sh;"
-        "pkill -9 java;"
-        "rm -rf /tmp/zookeeper /tmp/kafka-logs;");
-}
-
-bool Kafka::install_kafka()
-{
-    // Download the package locally, wget isn't always installed on the MaxScale VM.
-    std::string download =
-        R"EOF(
-wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-2.7.0.tgz&action=download" -O kafka_2.13-2.7.0.tgz;
-)EOF";
-
-    m_test.tprintf("Downloading Kafka...");
-
-    if (system(download.c_str()) != 0)
-    {
-        m_test.add_failure("Failed to wget kafka sources.");
-        return false;
-    }
-
-    m_test.tprintf("Copying Kafka to MaxScale...");
-
-    m_test.reset_timeout();
-    std::string file = m_test.maxscale->access_homedir();
-    file += "/kafka_2.13-2.7.0.tgz";
-
-    if (!m_test.maxscale->copy_to_node("./kafka_2.13-2.7.0.tgz", file.c_str()))
-    {
-        m_test.add_failure("Failed to copy kafka sources to node.");
-        return false;
-    }
-
-    m_test.reset_timeout();
-
-    // The link can be updated by getting the closest mirror link from the Kafka download page and
-    // changing `file` to `filename` and adding `action=download` (these are options to closer.cgi).
-    std::string command =
-        R"EOF(
-tar -axf kafka_2.13-2.7.0.tgz;
-rm kafka_2.13-2.7.0.tgz;
-mv kafka_2.13-2.7.0 kafka;
-        )EOF";
-
-    m_test.tprintf("Unpacking Kafka...");
-
-    if (m_test.maxscale->ssh_node_f(false, "%s", command.c_str()) != 0)
-    {
-        m_test.add_failure("Failed to untar and rename kafka directory.");
-        return false;
-    }
-
-    m_test.reset_timeout();
-    return true;
 }
 
 Logger::Logger(TestConnections& test)
