@@ -1699,7 +1699,7 @@ documentation](../REST-API/API.md).
 If a symmetric algorithm is used (i.e. `HS256`, `HS384` or `HS512`), MaxScale
 will generate a random encryption key on startup and use that to sign the
 messages. The symmetric key can also be retrieved from an [Encryption Key
-Manager]() if the `admin_jwt_key` parameter is defined.
+Manager](#encryption-key-managers) if the `admin_jwt_key` parameter is defined.
 
 If an asymmetric algorithm (i.e. public key authentication) is used, both the
 `admin_ssl_cert` and `admin_ssl_key` parameters must be defined and they must
