@@ -616,9 +616,16 @@ bool HttpResponse::remove_rows_json_path(const std::string& json_path, const std
     bool ok = false;
     json_error_t err;
     json_t* data = json_object_get(m_body, CN_DATA);
+
+    if (!json_is_array(data))
+    {
+        MXB_ERROR("The 'data' field is not an array");
+        return false;
+    }
+
     auto matcher = MatcherParser(value).parse();
 
-    if (matcher && json_is_array(data))
+    if (matcher)
     {
         ok = true;
         json_t* val;

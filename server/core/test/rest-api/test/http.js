@@ -363,6 +363,21 @@ describe("HTTP", function () {
       return request.get(base_url + `/servers?filter=id=magic`).should.be.rejected;
     });
 
+    it("Does not filter errors", async function () {
+      try {
+        await request.put(base_url + `/servers/server2/set?filter[id]=eq("server1")`);
+        return Promise.reject("Request should fail");
+      } catch (e) {
+        e.response.data.should.deep.equal({
+          errors: [
+            {
+              detail: "Invalid or missing value for the `state` parameter",
+            },
+          ],
+        });
+      }
+    });
+
     const path_filter_test_cases = [
       [`filter[id]=eq("server1")`, ["server1"]],
       [`filter[attributes.parameters.port]=eq(3001)`, ["server2"]],
