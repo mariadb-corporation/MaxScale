@@ -35,6 +35,7 @@ Kafka::Kafka(TestConnections& test)
     "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0",
     "KAFKA_NUM_PARTITIONS=1"
 },
+        "",
         "/opt/kafka/bin/kafka-topics.sh --bootstrap-server 127.0.0.1:4008 --list"
         )
 {
