@@ -2178,13 +2178,17 @@ static HttpResponse handle_request(const HttpRequest& request)
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
 
-        if (!remove_unwanted_rows(request, rval))
+        // Only filter successful results
+        if (rval.get_code() < MHD_HTTP_BAD_REQUEST)
         {
-            return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
-        }
+            if (!remove_unwanted_rows(request, rval))
+            {
+                return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+            }
 
-        paginate_result(request, rval);
-        remove_unwanted_fields(request, rval);
+            paginate_result(request, rval);
+            remove_unwanted_fields(request, rval);
+        }
     }
 
     return rval;
