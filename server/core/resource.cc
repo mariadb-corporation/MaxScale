@@ -2192,6 +2192,7 @@ static HttpResponse handle_request(const HttpRequest& request)
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
 
+        // Only filter successful results
         if (rval.get_code() < MHD_HTTP_BAD_REQUEST)
         {
             if (!remove_unwanted_rows(request, rval))
