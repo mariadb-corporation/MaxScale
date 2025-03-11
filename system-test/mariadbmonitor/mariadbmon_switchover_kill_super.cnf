@@ -18,6 +18,7 @@ router= readwritesplit
 servers=###server_line###
 user=maxservice
 password=maxservice
+master_failure_mode=fail_on_write
 
 [RW-Split-Listener]
 type=listener
