@@ -33,6 +33,7 @@ void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type
 
         if (backend->in_use())
         {
+            MXB_INFO("Routing trailing part of large packet to '%s'", backend->name());
             backend->write(gwbuf_clone(querybuf), mxs::Backend::NO_RESPONSE);
         }
     }
