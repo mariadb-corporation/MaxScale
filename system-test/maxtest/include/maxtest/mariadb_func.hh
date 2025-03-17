@@ -457,6 +457,11 @@ public:
         return mysql_thread_id(m_conn);
     }
 
+    uint64_t last_insert_id() const
+    {
+        return mysql_insert_id(m_conn);
+    }
+
     std::string host() const
     {
         return m_host;
