@@ -27,22 +27,32 @@ using namespace std;
 
 atomic<bool> running {true};
 
-void client_thr(TestConnections* test, int id)
+void client_thr(TestConnections& test, int id)
 {
-    MYSQL* conn = test->maxscale->open_rwsplit_connection();
+    std::string str_id = std::to_string(id);
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
 
-    while (running && test->global_result == 0)
+    while (running && test.ok())
     {
-        test->try_query(conn, "START TRANSACTION");
-        test->try_query(conn, "INSERT INTO test.t1 (a) VALUES (%d)", id);
-        int last_id = mysql_insert_id(conn);
-        test->try_query(conn, "UPDATE test.t1 SET a = -1 WHERE id = %d", last_id);
-        test->try_query(conn, "COMMIT");
-        test->try_query(conn, "DELETE FROM test.t1 WHERE id = %d", last_id);
+        test.expect(c.query("START TRANSACTION"),
+                    "START TRANSACTION failed: %s", c.error());
+        test.expect(c.query("INSERT INTO test.t1 (a) VALUES (" + str_id + ")"),
+                    "INSERT failed: %s", c.error());
+        auto last_id = std::to_string(c.last_insert_id());
+        test.expect(c.query("UPDATE test.t1 SET a = -1 WHERE id = " + last_id),
+                    "UPDATE failed: %s", c.error());
+        test.expect(c.query("COMMIT"),
+                    "COMMIT failed: %s", c.error());
+
+        // The delete might fail as autocommit writes are not retried.
+        // If it happens, just reconnect.
+        if (!c.query("DELETE FROM test.t1 WHERE id = " + last_id))
+        {
+            test.expect(c.connect(), "Failed to reconnect: %s", c.error());
+        }
         sleep(1);
     }
-
-    mysql_close(conn);
 }
 
 int main(int argc, char** argv)
@@ -66,7 +76,7 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < N_THREADS; i++)
     {
-        threads.emplace_back(client_thr, &test, i);
+        threads.emplace_back(client_thr, std::ref(test), i);
     }
 
     for (int i = 0; i < 5; i++)
