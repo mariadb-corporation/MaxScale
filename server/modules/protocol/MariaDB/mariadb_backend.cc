@@ -2674,7 +2674,7 @@ bool MariaDBBackendConnection::send_delayed_packets()
             rval = false;
             break;
         }
-        else if (m_state != State::ROUTING)
+        else if (m_state != State::ROUTING && !m_large_query)
         {
             // One of the packets caused the state to change. Put the rest of the packets back into the
             // delayed packet queue.

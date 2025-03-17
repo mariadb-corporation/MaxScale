@@ -462,7 +462,7 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const GWBUF& buffer, c
     {
         /** We're processing a large query that's split across multiple packets.
          * Route it to the same backend where we routed the previous packet. */
-        rval.route_target = TARGET_LAST_USED;
+        rval.route_target = m_prev_plan.route_target == TARGET_ALL ? TARGET_ALL : TARGET_LAST_USED;
     }
     else if (trx_is_starting() && !trx_is_read_only() && should_try_trx_on_slave(rval.route_target))
     {
