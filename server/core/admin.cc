@@ -327,6 +327,13 @@ void admin_log_error(void* arg, const char* fmt, va_list ap)
         char buf[1024];
         vsnprintf(buf, sizeof(buf), fmt, ap);
         MXS_ERROR("REST API HTTP daemon error: %s\n", mxb::trimmed_copy(buf).c_str());
+
+        if (strstr(buf, "ASN1 parser: Error in DER parsing")
+            && this_unit.ssl_key.find("BEGIN RSA PRIVATE KEY") != std::string::npos)
+        {
+            MXS_ERROR("This error may be caused by a PKCS#1 formatted PEM private key. "
+                      "Convert the key to PKCS#8 and try again.");
+        }
     }
 }
 
