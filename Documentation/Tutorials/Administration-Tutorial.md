@@ -162,21 +162,22 @@ compliant with logrotate.
 ### Putting Servers into Maintenance
 
 MariaDB MaxScale supports the concept of maintenance mode for servers within a
-cluster, this allows for planned, temporary removal of a database from the
-cluster within the need to change the MariaDB MaxScale configuration.
+cluster. This allows for planned, temporary removal of a database from the
+cluster without the need to change the MariaDB MaxScale configuration.
 
 ```
 maxctrl set server db-server-3 maintenance
 ```
 
-To achieve the removal of a database server you can use the `set server` command
-in maxctrl to set the maintenance mode flag for the server. This
-may be done interactively within maxctrl or by passing the command on the
-command line.
+To achieve this, you can use the `set server` command in maxctrl to set the
+maintenance mode flag for the server. This may be done interactively within
+maxctrl or by passing the command on the command line.
 
 This will cause MariaDB MaxScale to stop routing any new requests to the server,
 however if there are currently requests executing on the server these will not
-be interrupted.
+be interrupted. Connections to servers in maintenance mode are closed as soon as
+the next request arrives. To close them immediately, use the `--force` option
+for `maxctrl set server`.
 
 ```
 maxctrl clear server db-server-3 maintenance
@@ -288,9 +289,10 @@ maxctrl set server db-server-1 drain
 ```
 
 When a server is set into the `drain` state, no new connections to it are
-created. Unlike to the `maintenance` state which immediately closes all
-connections, the `drain` state allows existing connections to be gracefully
-closed.
+created. Unlike to the `maintenance` state which immediately stops all new
+requests and closes all connections if used with the `--force` option, the
+`drain` state allows existing connections to continue routing requests to them
+in order to be gracefully closed once the client disconnects.
 
 To remove the `drain` state, use `clear server` command:
 

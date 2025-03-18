@@ -438,15 +438,15 @@ for more details on how this feature works and which value to use.
 
 Allowed values:
 1. `none` Default value, no locking.
-2. `majority_of_all` Primary monitor requires majority of locks, even counting
+2. `majority_of_all` Primary monitor requires a majority of locks, even counting
 servers which are [Down].
-3. `majority_of_running` Primary monitor requires majority of locks over
+3. `majority_of_running` Primary monitor requires a majority of locks over
 [Running] servers.
 
 This setting is separate from the global MaxScale setting *passive*. If
-*passive* is set, cluster operations are disabled even if monitor has
+*passive* is set to `true`, cluster operations are disabled even if monitor has
 acquired the locks. Generally, it's best not to mix cooperative monitoring with
-the *passive*-setting.
+*passive*. Either set `passive=false` or do not set it at all.
 
 ### `script_max_replication_lag`
 
@@ -474,7 +474,7 @@ topology. The supported operations are:
   only if no data is clearly lost
 - [switchover](#switchover), which swaps a running primary with a replica
 - [switchover-force](#switchover-force), which swaps a running primary with a replica, ignoring
-  most errors
+  most errors. Can break replication.
 - [async-switchover](#queued-switchover), which schedules a switchover and returns
 - [rejoin](#rejoin), which directs servers to replicate from the primary
 - [reset-replication](#reset-replication) (added in MaxScale 2.3.0), which deletes binary logs and
@@ -624,7 +624,8 @@ call command mariadbmon switchover-force MONITOR [NEW_PRIMARY] [OLD_PRIMARY]
 any errors on the old primary. Switchover-force also does not expect the new
 primary to reach the gtid-position of the old, as the old primary
 could be receiving more events constantly. Thus, switchover-force may lose
-events.
+events and replication can break on multiple (or even all) replicas. This is
+an unsafe command and should only be used as a last resort.
 
 #### Rejoin
 

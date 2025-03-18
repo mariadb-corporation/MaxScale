@@ -20,6 +20,7 @@
 
 ## Reference
 
+ - [Hardening](Reference/Hardening.md)
  - [MaxCtrl - Command Line Admin Interface](Reference/MaxCtrl.md)
  - [MaxScale REST API](REST-API/API.md)
  - [Module Commands](Reference/Module-Commands.md)
@@ -126,5 +127,7 @@ A short description of the authentication module type can be found in the
 [Authentication Modules](Authenticators/Authentication-Modules.md)
 document.
 
- - [MySQL Authenticator](Authenticators/MySQL-Authenticator.md)
+ - [MariaDB/MySQL Authenticator](Authenticators/MySQL-Authenticator.md)
  - [GSSAPI Authenticator](Authenticators/GSSAPI-Authenticator.md)
+ - [PAM Authenticator](Authenticators/PAM-Authenticator.md)
+ - [Ed25519 Authenticator](Authenticators/Ed25519-Authenticator.md)

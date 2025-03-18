@@ -1,8 +1,7 @@
 # Avrorouter
 
-The Avrorouter was deprecated in MaxScale 24.08 and will be removed
+The Avrorouter was deprecated in MaxScale 25.01 and will be removed
 in the next major release. [KafkaCDC](../Routers/KafkaCDC.md) can be used instead.
-
 
 The avrorouter is a MariaDB 10.0 binary log to Avro file converter. It consumes
 binary logs from a local directory and transforms them into a set of Avro files.
@@ -66,7 +65,7 @@ port=4001
 ```
 
 In direct replication mode, the avrorouter stores the latest replicated GTID in
-the `last_gtid.txt` file located in the `avrodir` (defaults to
+the `current_gtid.txt` file located in the `avrodir` (defaults to
 `/var/lib/maxscale`). To reset the replication process, stop MaxScale and remove
 the file.
 
@@ -96,6 +95,20 @@ the server and the last is the GTID sequence number.
 This parameter has no effect in the traditional mode. If this parameter is
 defined, the replication will start from the implicit GTID that the primary first
 serves.
+
+Starting in MaxScale 24.02, the special values `newest` and `oldest` can be
+used:
+
+- `newest` uses the current value of `@@gtid_binlog_pos` as the GTID where the
+  replication is started from.
+
+- `oldest` uses the oldest binlog that's available in `SHOW BINARY LOGS` and
+  then extracting the oldest GTID from it with `SHOW BINLOG EVENTS`.
+
+Once the replication has started and a GTID position has been recorded, this
+parameter will be ignored. To reset the recorded GTID position, delete the
+`current_gtid.txt` file located in `/var/lib/maxscale/<SERVICE>/` where
+`<SERVICE>` is the name of the Avrorouter service.
 
 ### `server_id`
 

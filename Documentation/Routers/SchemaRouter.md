@@ -22,7 +22,7 @@ The exception to this rule are the system tables `mysql`, `information_schema`,
 If duplicate tables are expected, use the
 [`ignore_tables_regex`](#ignore_tables_regex) parameter to control which
 duplicate tables are allowed. To disable the duplicate database detection, use
-`ignore_tables_regex=.*`. Starting with MaxScale 24.08, the detection of
+`ignore_tables_regex=.*`. Starting with MaxScale 25.01, the detection of
 duplicate tables can be turned off with `allow_duplicates=true`.
 
 Schemarouter compares table and database names case-insensitively. This means
@@ -187,7 +187,7 @@ MaxScale's hostname.
 
 If enabled, the detection of duplicated tables on shards is not done.
 
-This parameter was added in MaxScale 24.08 and it is a more convenient and
+This parameter was added in MaxScale 25.01 and it is a more convenient and
 efficient way to disable the duplicate table detection that previously was only
 possible with `ignore_tables_regex=.*`.
 

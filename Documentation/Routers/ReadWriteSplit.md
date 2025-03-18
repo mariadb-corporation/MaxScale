@@ -165,7 +165,7 @@ when the server has caught up enough to be a valid routing target, another warni
 is logged. These messages are only logged when a query is being routed and the
 replication state changes.
 
-Starting with MaxScale versions 23.08.7, 24.02.3 and 24.08.1, readwritesplit
+Starting with MaxScale versions 23.08.7, 24.02.3 and 25.01.1, readwritesplit
 will discard connections to any servers that have excessive replication lag. The
 connection will be discarded if a server is lagging behind by more than twice
 the amount of `max_replication_lag` and the server is behind by more than 300
@@ -489,7 +489,7 @@ outside of transactions can be hidden from the client connection. This allows a
 primary to be replaced while writes are being sent.
 
 Starting with MaxScale 21.06.18, 22.08.15, 23.02.12, 23.08.8, 24.02.4 and
-24.08.1, `delayed_retry` will no longer attempt to retry a query if it was
+25.01.1, `delayed_retry` will no longer attempt to retry a query if it was
 already sent to the database. If a query is received while a valid target server
 is not available, the execution of the query is delayed until a valid target is
 found or the delayed retry timeout is hit. If a query was already sent, it will
@@ -652,12 +652,12 @@ This parameter was added in MaxScale 23.08.0 and is enabled by default. The
 older version of MaxScale always attempted to replay the transaction even if
 there was a risk of duplicating the transaction.
 
-In MaxScale 24.08.0, this parameter also disabled the replaying of individual
+In MaxScale 25.01.0, this parameter also disabled the replaying of individual
 DML statements that `delayed_retry` enabled. The result of this was that only
 statements done inside of an explicit transactions or with autocommit disabled
 were replayed and writes done with autocommit enabled were never replayed.
 
-In MaxScale 24.08.1 and newer versions, where `delayed_retry no longer attempts
+In MaxScale 25.01.1 and newer versions, where `delayed_retry no longer attempts
 to retry a query if it was already sent to the database, write queries outside
 of transactions are delayed if no valid target is found but they are never
 retried. Thus `transaction_replay_safe_commit` again only affects how the
@@ -729,7 +729,7 @@ Possible values are:
 ### `optimistic_trx`
 
 This feature has been moved into the
-[OptimisticTrx](../Filters/OptimisticTrx.md) filter in MaxScale 24.08 and the
+[OptimisticTrx](../Filters/OptimisticTrx.md) filter in MaxScale 25.01 and the
 parameter has been removed from readwritesplit.
 
 ### `causal_reads`
@@ -765,6 +765,13 @@ low latency is more important than proper distribution of reads. These modes
 should only be used when the workload is mostly read-only with only occasional
 writes. If used with a mixed or a write-heavy workload, the traffic will end up
 being routed almost exclusively to the primary server.
+
+**Note:** This feature also enables multi-statement execution of SQL in the
+  protocol. This is equivalent to using `allowMultiQueries=true` in
+  [Connector/J](https://mariadb.com/kb/en/about-mariadb-connector-j/#allowmultiqueries)
+  or using `CLIENT_MULTI_STATEMENTS` and `CLIENT_MULTI_RESULTS` in the
+  Connector/C. The *Implementation of causal_reads* section explains why this is
+  necessary.
 
 The possible values for this parameter are:
 
@@ -905,18 +912,20 @@ statements.
 
 ```sql
 INSERT INTO test.t1 (id) VALUES (1);
+
+-- These are executed as one multi-query
 SET @maxscale_secret_variable=(
     SELECT CASE
            WHEN MASTER_GTID_WAIT('0-3000-8', 10) = 0 THEN 1
            ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES)
-    END);
-SELECT * FROM test.t1 WHERE id = 1;
+    END); SELECT * FROM test.t1 WHERE id = 1;
 ```
 
-The `SET` command will synchronize the replica to a certain logical point in
-the replication stream (see
-[MASTER_GTID_WAIT](https://mariadb.com/kb/en/library/master_gtid_wait/)
-for more details).
+The `SET` command will synchronize the replica to a certain logical point in the
+replication stream (see
+[MASTER_GTID_WAIT](https://mariadb.com/kb/en/library/master_gtid_wait/) for more
+details). If the synchronization fails, the query will not run and it will be
+retried on the server where the transaction was originally done.
 
 ##### Prepared Statements
 
@@ -985,6 +994,20 @@ server which would cause the connection to be closed and a warning to be logged.
   This applies only to text protocol queries as the binary protocol queries use
   a different synchronization mechanism.
 
+- SQL like `INSERT ... RETURNING` that commits a transaction and returns a
+  resultset will only work with causal reads if the connector supports the
+  DEPRECATE_EOF protocol feature. The following table contains a list of MariaDB
+  connectors and whether they support the protocol feature.
+
+| Connector         | Supported | Version |
+|-------------------|-----------|---------|
+| Connector/J       | Yes       | 3.5.2   |
+| Connector/Node.js | Yes       | 3.4.0   |
+| Connector/R2DBC   | Yes       | 1.3.0   |
+| Connector/C       | No        | 3.4.4   |
+| Connector/C++     | No        | 1.1.5   |
+| Connector/ODBC    | No        | 3.2.5   |
+
 ### `causal_reads_timeout`
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
@@ -1032,7 +1055,7 @@ primary node if one was available.
 ### `reuse_prepared_statements`
 
 This feature has been moved into the [PsReuse](../Filters/PsReuse.md) filter in
-MaxScale 24.08 and the parameter has been removed from readwritesplit.
+MaxScale 25.01 and the parameter has been removed from readwritesplit.
 
 ## Router Diagnostics
 

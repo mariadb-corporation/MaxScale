@@ -537,6 +537,11 @@ and store all the data.
 
 ### Before you start
 
+ * Binlogrouter uses [inotify](https://man7.org/linux/man-pages/man7/inotify.7.html) which has three kernel limits.
+   While Binlogrouter uses a modest number of inotify instances, the limit `max_user_instances` applies to the total
+   number of instances for the user and has a low default value on many systems. A double or triple of the
+   default value should suffice. The other two limits, `max_queued_events` and `max_user_watches` are usually high
+   enough, but it is sensible to double (triple) them if `max_user_instances` was doubled (tripled).
  * Note that binlogrouter only supports GTID based replication.
  * Make sure that the configured data directory for the new binlogrouter
    is different from the old one, or move old data away.

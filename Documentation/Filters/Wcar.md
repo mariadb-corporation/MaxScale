@@ -135,7 +135,7 @@ in the examples).
 Each capture will generate a number of files named `NAME_YYYY-MM-DD_HHMMSS.SUFFIX`
 where `NAME` is the capture name (defaults to `capture`), `YYYY-MM-DD` is the
 date and `HHMMSS` is the time and the `SUFFIX` is one of `.cx`, `.ex` or
-`.gx`. For example, a capture started on the 18th of April 2024 at 10:26:11
+`.tx`. For example, a capture started on the 18th of April 2024 at 10:26:11
 would generate a file named `capture_2024-04-18_102611.cx`.
 
 ### Stopping the Capture
@@ -338,6 +338,7 @@ Start capture when maxscale starts.
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Default**: 0s
+- **Maximum**: Unlimited in MaxScale Enterprise, 5min in MaxScale Lite.
 - **Mandatory**: No
 - **Dynamic**: No
 
@@ -347,6 +348,7 @@ Limit capture to this duration. If set to zero there is no limit.
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
 - **Default**: 0
+- **Maximum**: Unlimited in MaxScale Enterprise, 10MB in MaxScale Lite.
 - **Mandatory**: No
 - **Dynamic**: No
 

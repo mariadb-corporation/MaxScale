@@ -73,6 +73,10 @@ Examples of filters `cache` that provides query caching according to rules,
 Filters have sections of their own in the MaxScale configuration file that are
 referred to from _services_.
 
+Limitations:
+- MaxScale Enterprise: No limitations.
+- MaxScale Lite: At most 2 filters can be created.
+
 ### Router
 
 A router module is capable of routing requests to backend servers according to
@@ -95,6 +99,10 @@ way. If the service uses filters, then all requests will be pre-processed in
 some way before they reach the router.
 
 Services have sections of their own in the MaxScale configuration file.
+
+Limitations:
+- MaxScale Enterprise: No limitations.
+- MaxScale Lite: At most 1 service can be created.
 
 ### Listener
 
@@ -1830,7 +1838,7 @@ documentation](../REST-API/API.md).
 If a symmetric algorithm is used (i.e. `HS256`, `HS384` or `HS512`), MaxScale
 will generate a random encryption key on startup and use that to sign the
 messages. The symmetric key can also be retrieved from an [Encryption Key
-Manager]() if the `admin_jwt_key` parameter is defined.
+Manager](#encryption-key-managers) if the `admin_jwt_key` parameter is defined.
 
 If an asymmetric algorithm (i.e. public key authentication) is used, both the
 `admin_ssl_cert` and `admin_ssl_key` parameters must be defined and they must
@@ -2545,18 +2553,20 @@ release build does nothing.
 - **Type**: [duration](#durations)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: `0s`
+- **Default**: `28800s` (>= MaxScale 24.02.5, 25.01.2), `0s` (<= MaxScale 24.02.4, 25.01.1)
 - **Auto tune**: [Yes](#auto_tune)
 
-The wait_timeout parameter is used to disconnect sessions to MariaDB
-MaxScale that have been idle for too long. The session timeouts are disabled by
-default. To enable them, define the timeout in seconds in the service's
-configuration section. A value of zero is interpreted as no timeout, the same
-as if the parameter is not defined.
+The wait_timeout parameter is used to disconnect sessions to MariaDB MaxScale
+that have been idle for too long. The session timeout is set to 28800 seconds by
+default. A value of zero is interpreted as no timeout.
 
 This parameter used to be called `connection_timeout` and this name is still
 accepted as an alias for `wait_timeout`. The old name has been deprecated in
 MaxScale 23.08.
+
+The default value of `wait_timeout` changed from `0s` to `28800s` in MaxScale
+versions 24.02.5 and 25.01.2 to match the default value of MariaDB
+([MXS-5530](https://jira.mariadb.org/browse/MXS-5530)).
 
 Note that since the granularity of the timeout is seconds, a timeout specified
 in milliseconds will be rejected, even if the duration is longer than a second.
@@ -2590,12 +2600,17 @@ wait_timeout=300s
 - **Type**: number
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: `0`
+- **Default**: 0 in MaxScale Enterprise, 15 in MaxScale Lite.
+- **Minimum**: 0 in MaxScale Enterprise, 1 in MaxScale Lite.
+- **Maximum**: Unlimited in MaxScale Enterprise, 15 in MaxScale Lite.
 
 The maximum number of simultaneous connections MaxScale should permit to this
-service. If the parameter is zero or is omitted, there is no limit. Any attempt
-to make more connections after the limit is reached will result in a "Too many
-connections" error being returned.
+service. Any attempt to make more connections after the limit is reached will
+result in a "Too many connections" error being returned.
+
+A value of 0 means no limit which is the default for the enterprise edition of
+MaxScale. The lite edition is limited to a maximum of 15 connections per
+service.
 
 **Warning**: In MaxScale 2.5, it is possible that the number of concurrent
   connections temporarily exceeds the value of `max_connections`. This has been
@@ -3193,6 +3208,10 @@ address=127.0.0.1
 port=3000
 ```
 
+Limitations:
+- MaxScale Enterprise: No limitations.
+- MaxScale Lite: At most 3 servers can be created.
+
 ### `address`
 
 - **Type**: string
@@ -3340,11 +3359,15 @@ the DCB will be discarded and the connection closed.
 - **Type**: number
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: `0`
+- **Default**: 0 in MaxScale Enterprise, 15 in MaxScale Lite.
+- **Minimum**: 0 in MaxScale Enterprise, 1 in MaxScale Lite.
+- **Maximum**: Unlimited in MaxScale Enterprise, 15 in MaxScale Lite.
 
 Maximum number of routing connections to this server. Connections held in a pool
 also count towards this maximum. Does not limit monitor connections or user
-account fetching. A value of 0 (default) means no limit.
+account fetching. A value of 0 means no limit which is the default for the
+enterprise edition of MaxScale. The lite edition is limited to a maximum of 15
+connections per server.
 
 Since every client session can generate a connection to a server, the server may
 run out of memory when the number of clients is high enough. This setting limits

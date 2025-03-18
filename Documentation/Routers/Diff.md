@@ -131,6 +131,15 @@ port=3306
 protocol=mariadbbackend
 ```
 
+Note that this server must **not** be added to the service that
+uses the original server. That is, in this example, `MariaDB_112`
+must not be added to the service `MyService`.
+
+The new server can be added to the monitor used for monitoring
+the servers of the service, but that is not necessary. However,
+unless it is added, `maxctrl list servers` will show the server
+as being down.
+
 With these steps Diff is ready to be used.
 
 ### Running Diff
@@ -629,10 +638,15 @@ define the edges and number of bins of the histograms.
 
 ## Limitations
 
-Diff is currently not capable of adapting to any changes made in
+Diff is not capable of adapting to any changes made in
 the cluster configuration. For instance, if Diff starts up in
 read-only mode and _main_ is subsequently made _primary_, Diff
 will not sever the replication from _main_ to _other_. The result
 will be that _other_ receives the same writes twice; once via the
 replication from the server it is replicating from and once when
 Diff executes the same writes.
+
+Diff is not compatible with
+[configuration synchronization](../Getting-Started/Configuration-Guide.md#configuration-synchronization).
+If _configuration synchronization_ is enabled, an attempt to create a
+Diff router will fail.
