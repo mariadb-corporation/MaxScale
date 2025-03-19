@@ -1580,6 +1580,10 @@ The path to the TLS private key in PEM format for the admin interface.
 If the `admin_ssl_key` and `admin_ssl_cert` options are all defined, the admin
 interface will use encrypted HTTPS instead of plain HTTP.
 
+The REST-API only supports PKCS#8 PEM private keys and using a PKCS#1 PEM
+private key will result in an error. If your private key is in PKCS#1 PEM
+format, convert it to PKCS#8 PEM format first before starting up MaxScale.
+
 ### `admin_ssl_cert`
 
 - **Type**: path
