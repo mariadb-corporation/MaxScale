@@ -18,7 +18,7 @@ Kafka::Kafka(TestConnections& test)
     : m_test(test)
     , m_docker(
         test,
-        "apache/kafka",
+        "apache/kafka:3.9.0",
         "kafka",
         {4008},
 {
