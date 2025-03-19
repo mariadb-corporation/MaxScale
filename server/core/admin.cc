@@ -329,7 +329,18 @@ std::unique_ptr<Creds> Creds::create(const std::string& cert_file, const std::st
         }
         else
         {
-            MXB_ERROR("Failed to load REST API TLS private key: %s", gnutls_strerror(rc));
+            const char* errmsg = gnutls_strerror(rc);
+            MXB_ERROR("Failed to load REST API TLS private key: %s", errmsg);
+
+            const char NEEDLE[] = "BEGIN RSA PRIVATE KEY";
+
+            if (strstr(errmsg, "ASN1 parser: Error in DER parsing")
+                && memmem(key.data(), key.size(), NEEDLE, sizeof(NEEDLE) - 1))
+            {
+                MXB_ERROR("This error may be caused by a PKCS#1 formatted PEM private key. "
+                          "Convert the key to PKCS#8 and try again.");
+            }
+
             gnutls_privkey_deinit(pkey);
 
             for (auto& certificate : pcerts)
