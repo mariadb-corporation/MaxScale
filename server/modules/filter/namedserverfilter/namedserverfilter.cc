@@ -369,24 +369,12 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
             auto cmd = mariadb::get_command(buffer);
             switch (cmd)
             {
-            case MXS_COM_QUERY:
-                // A normal query. If a mapping was found, add hints to the buffer.
-                inc_diverted(reg_serv);
-
-                if (reg_serv)
-                {
-                    for (const auto& target : reg_serv->m_targets)
-                    {
-                        buffer.add_hint(reg_serv->m_htype, target);
-                    }
-                }
-
-                break;
-
             case MXS_COM_STMT_PREPARE:
                 {
-                    // Not adding any hints to the prepare command itself as it should be routed normally.
-                    // Instead, save the id and hints so that execution of the PS can be properly hinted.
+                    // Add hints to the prepare command itself as well. It should be routed normally by e.g.
+                    // readwritesplit but specialized routers like the schemarouter need to see the hint on
+                    // the COM_STMT_PREPARE as well. Save the id and hints so that execution of the PS can
+                    // also be properly hinted.
                     if (reg_serv)
                     {
                         // The PS ID is the id of the buffer. This is set by client protocol and should be
@@ -411,6 +399,19 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                         m_last_prepare_id = ps_id;
                     }
                 }
+                [[fallthrough]];
+
+            case MXS_COM_QUERY:
+                // A normal query. If a mapping was found, add hints to the buffer.
+                inc_diverted(reg_serv);
+
+                if (reg_serv)
+                {
+                    for (const auto& target : reg_serv->m_targets)
+                    {
+                        buffer.add_hint(reg_serv->m_htype, target);
+                    }
+                }
                 break;
 
             default:
@@ -426,6 +427,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
             case MXS_COM_STMT_EXECUTE:
             case MXS_COM_STMT_BULK_EXECUTE:
             case MXS_COM_STMT_SEND_LONG_DATA:
+            case MXS_COM_STMT_CLOSE:
                 {
                     uint32_t ps_id = mxs_mysql_extract_ps_id(buffer);
                     // -1 means use the last prepared stmt.
@@ -444,13 +446,11 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
                             buffer.add_hint(new_hint);
                         }
                     }
-                }
-                break;
 
-            case MXS_COM_STMT_CLOSE:
-                {
-                    uint32_t ps_id = mxs_mysql_extract_ps_id(buffer);
-                    m_ps_id_to_hints.erase(ps_id);
+                    if (cmd == MXS_COM_STMT_CLOSE)
+                    {
+                        m_ps_id_to_hints.erase(ps_id);
+                    }
                 }
                 break;
 

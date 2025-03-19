@@ -75,3 +75,8 @@ add_test_executable_ex(NAME mxs4471_bad_target SOURCE mxs4471_bad_target.cc
 # https://jira.mariadb.org/browse/MXS-4216
 add_test_executable_ex(NAME mxs4216_stale_cache SOURCE mxs4216_stale_cache.cc
         CONFIG mxs4216_stale_cache.cnf VMS repl_backend LABELS schemarouter)
+
+# MXS-5544: COM_STMT_PREPARE does not receive hints from namedserverfilter
+# https://jira.mariadb.org/browse/MXS-5544
+add_test_executable_ex(NAME mxs5544_ps_with_hints SOURCE mxs5544_ps_with_hints.cc
+        CONFIG mxs5544_ps_with_hints.cnf VMS repl_backend LABELS schemarouter)
