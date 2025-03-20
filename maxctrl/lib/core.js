@@ -18,8 +18,10 @@ var os = require("os");
 var yargs = require("yargs");
 
 // Note: The version.js file is generated at configuation time. If you are
-// building in-source, manually create the file
-const maxctrl_version = require("./version.js").version;
+// building in-source, it'll be created automatically. Make sure to remove
+// it if you want to refresh the contents of it.
+const constants = require("./version.js")
+const maxctrl_version = constants.version;
 
 // Global options given at startup
 var base_opts = {};
@@ -210,6 +212,7 @@ function program() {
     .option("k", {
       alias: "secretsdir",
       describe: "Directory where the .secrets file is stored for passwords encrypted with maxpasswd.",
+      default: constants.datadir,
       type: "string",
       requiresArg: true,
     })
@@ -277,10 +280,15 @@ function program() {
     .command(require("./classify.js"))
     .epilog(
       `
-MaxCtrl supports passwords encrypted with maxpasswd. In order to use them,
-the encryption key used by MaxScale must be copied to a directory where it
-can be access and the ownership of the file must be changed to the current
-user. The file must be readable by only the owner of the file.
+MaxCtrl supports passwords encrypted with maxpasswd. By default, maxctrl assumes
+that the encryption keys are located in '${constants.datadir}' and that the
+current user can read them. Usually this means that you need to run maxctrl as
+the root user or with sudo in order for the default path to work.
+
+To use encrypted passwords with a non-root user, the encryption key used by
+MaxScale must be copied to a directory where it can be access and the ownership
+of the file must be changed to the current user. The file must be readable by
+only the owner of the file.
 
 For example, to copy the encryption key from the default location to
 the current user's home directory, the following commands can be used:

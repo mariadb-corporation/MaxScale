@@ -12,4 +12,5 @@
  * Public License.
  */
 
-exports.version = "@MAXSCALE_VERSION@"
+exports.version = "@MAXSCALE_VERSION@";
+exports.datadir = "@DEFAULT_DATADIR@";
