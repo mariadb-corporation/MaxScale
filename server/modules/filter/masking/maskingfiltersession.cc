@@ -29,6 +29,7 @@ using maxscale::Buffer;
 using maxscale::Parser;
 using std::ostream;
 using std::string;
+using std::string_view;
 using std::stringstream;
 
 namespace
@@ -619,8 +620,36 @@ bool MaskingFilterSession::is_function_used(const GWBUF& packet, const char* zUs
 {
     bool is_used = false;
 
-    auto pred1 = [this, zUser, zHost](const Parser::FieldInfo& field_info) {
-        const MaskingRules::Rule* pRule = m_config.sRules->get_rule_for(field_info, zUser, zHost);
+    Parser::TableNames tables = parser().get_table_names(packet);
+    string_view table;
+    if (tables.size() == 1)
+    {
+        table = tables.front().table;
+    }
+
+    auto pred1 = [this, table, zUser, zHost](const Parser::FieldInfo& field_info) {
+        const MaskingRules::Rule* pRule;
+
+        if (!field_info.table.empty() || table.empty())
+        {
+            // The field info contains table information or we do not know
+            // the potential table => go ahead.
+            pRule = m_config.sRules->get_rule_for(field_info, zUser, zHost);
+        }
+        else
+        {
+            // The field did not specify a table but the whole statement
+            // contained just one table - e.g. SELECT * FROM t1 WHERE f = 1 -
+            // so we can add the table and essentially pretend the statement
+            // was SELECT * FROM t1 WHERE t1.f = 1. This will reduce the number
+            // of false positives, as a masking rule for "t2.f" will be a match
+            // for just "f" since, if the table is not known, it has to be assumed
+            // that it might be "t2".
+            Parser::FieldInfo field_info_copy { field_info };
+            field_info_copy.table = table;
+
+            pRule = m_config.sRules->get_rule_for(field_info_copy, zUser, zHost);
+        }
 
         return pRule ? true : false;
     };
