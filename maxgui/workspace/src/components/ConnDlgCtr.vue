@@ -179,10 +179,8 @@ export default {
         }),
         ...mapMutations({
             SET_PRE_SELECT_CONN_RSRC: 'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',
-            SET_DEF_CONN_OBJ_TYPE: 'prefAndStorage/SET_DEF_CONN_OBJ_TYPE',
         }),
         async onChangeResourceType(v) {
-            this.SET_DEF_CONN_OBJ_TYPE(v)
             await this.handleFetchResources(v)
             this.handleChooseDefResource(v)
         },
