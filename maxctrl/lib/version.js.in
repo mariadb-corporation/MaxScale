@@ -13,3 +13,4 @@
  */
 
 exports.version = "@MAXSCALE_VERSION@";
+exports.datadir = "@DEFAULT_DATADIR@";
