@@ -106,6 +106,7 @@ void encrypted_password_in_maxctrl(TestConnections& test)
 
     command_ok("maxctrl --user=foobar --password=foobar list sessions");
     command_ok("maxctrl -c /tmp/maxctrl-plaintext.cnf list sessions");
+    command_ok("sudo maxctrl --user=foobar --password=" + enc + " list sessions");
     command_ok("maxctrl --user=foobar --password=" + enc + " --secretsdir=" + secretsdir + " list sessions");
     command_ok(
         "echo " + enc + "|maxctrl --user=foobar --password='' --secretsdir=" + secretsdir + " list sessions");
@@ -115,6 +116,7 @@ void encrypted_password_in_maxctrl(TestConnections& test)
 
     command_ok("maxctrl --user=foobar --password=foobar list sessions");
     command_ok("maxctrl -c /tmp/maxctrl-plaintext.cnf list sessions");
+    command_ok("sudo maxctrl --user=foobar --password=" + enc + " list sessions");
     command_err("maxctrl --user=foobar --password=" + enc + " --secretsdir=" + secretsdir + " list sessions");
     command_err(
         "echo " + enc + "|maxctrl --user=foobar --password='' --secretsdir=" + secretsdir + " list sessions");
