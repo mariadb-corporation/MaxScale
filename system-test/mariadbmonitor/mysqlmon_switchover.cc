@@ -13,71 +13,35 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include <iostream>
-#include <sstream>
 #include <string>
 
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::flush;
 using std::string;
-using std::stringstream;
 
 namespace
 {
+const auto normal_status = mxt::ServersInfo::default_repl_states();
+auto master = mxt::ServerInfo::master_st;
+auto slave = mxt::ServerInfo::slave_st;
 
-void create_table(TestConnections& test)
-{
-    MYSQL* pConn = test.maxscale->conn_rwsplit;
+void test_missing_privs(TestConnections& test);
 
-    test.try_query(pConn, "DROP TABLE IF EXISTS test.t1");
-    test.try_query(pConn, "CREATE TABLE test.t1(id INT)");
-}
-
-int i_start = 0;
-int n_rows = 20;
-int i_end = 0;
-
-void insert_data(TestConnections& test)
-{
-    MYSQL* pConn = test.maxscale->conn_rwsplit;
-
-    test.try_query(pConn, "BEGIN");
-
-    i_end = i_start + n_rows;
-
-    for (int i = i_start; i < i_end; ++i)
-    {
-        stringstream ss;
-        ss << "INSERT INTO test.t1 VALUES (" << i << ")";
-        test.try_query(pConn, "%s", ss.str().c_str());
-    }
-
-    test.try_query(pConn, "COMMIT");
-
-    i_start = i_end;
-}
-
-void run(TestConnections& test)
+void test_main(TestConnections& test)
 {
     auto& mxs = *test.maxscale;
-    auto& repl = *test.repl;
 
     mxs.wait_for_monitor();
-
-    auto master = mxt::ServerInfo::master_st;
-    auto slave = mxt::ServerInfo::slave_st;
-    auto normal_status = mxt::ServersInfo::default_repl_states();
     mxs.check_servers_status(normal_status);
 
-    mxs.connect_maxscale();
+    test.tprintf("Create table and insert some data.");
+    auto conn = mxs.open_rwsplit_connection2("test");
+    conn->cmd("CREATE OR REPLACE TABLE test.t1(id INT)");
 
-    test.tprintf("Creating table.");
-    create_table(test);
-
-    test.tprintf("Inserting data.");
-    insert_data(test);
+    conn->cmd("BEGIN");
+    for (int i = 0; i < 10; ++i)
+    {
+        conn->cmd_f("INSERT INTO test.t1 VALUES (%i)", i);
+    }
+    conn->cmd("COMMIT");
 
     test.tprintf("Trying to do manual switchover to server2");
     test.maxctrl("call command mysqlmon switchover MySQL-Monitor server2 server1");
@@ -105,98 +69,106 @@ void run(TestConnections& test)
 
     if (test.ok())
     {
-        test.tprintf("MXS-4605: Monitor should reconnect if command fails due to missing privileges.");
-        mxs.stop();
-        auto* master_srv = repl.backend(0);
-        auto conn = master_srv->open_connection();
-        conn->cmd_f("grant slave monitor on *.* to mariadbmon;");
-        conn->cmd_f("revoke super, read_only admin on *.* from mariadbmon;");
-        repl.sync_slaves();
-        // Close connections so monitor does not attempt to kill them.
-        conn = nullptr;
-        repl.close_connections();
-        repl.close_admin_connections();
+        test_missing_privs(test);
+    }
+}
 
-        mxs.start();
+void test_missing_privs(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
 
-        mxs.check_servers_status(normal_status);
-        if (test.ok())
-        {
-            auto try_switchover = [&](const string& expected_errmsg,
-                                      mxt::ServerInfo::bitfield expected_server2_state) {
-                const string switch_cmd = "call command mysqlmon switchover MySQL-Monitor server2";
-                auto res = test.maxctrl(switch_cmd);
-                if (expected_errmsg.empty())
+    test.tprintf("MXS-4605: Monitor should reconnect if command fails due to missing privileges.");
+    mxs.stop();
+    auto* master_srv = repl.backend(0);
+    auto conn = master_srv->open_connection();
+    conn->cmd_f("grant slave monitor on *.* to mariadbmon;");
+    conn->cmd_f("revoke super, read_only admin on *.* from mariadbmon;");
+    repl.sync_slaves();
+    // Close connections so monitor does not attempt to kill them.
+    conn = nullptr;
+    repl.close_connections();
+    repl.close_admin_connections();
+
+    mxs.start();
+
+    mxs.check_servers_status(normal_status);
+    if (test.ok())
+    {
+        auto try_switchover = [&](const string& expected_errmsg,
+                                  mxt::ServerInfo::bitfield expected_server2_state) {
+            const string switch_cmd = "call command mysqlmon switchover MySQL-Monitor server2";
+            auto res = test.maxctrl(switch_cmd);
+            if (expected_errmsg.empty())
+            {
+                if (res.rc == 0)
                 {
-                    if (res.rc == 0)
-                    {
-                        test.tprintf("Switchover succeeded.");
-                    }
-                    else
-                    {
-                        test.add_failure("Switchover failed. Error: %s", res.output.c_str());
-                    }
+                    test.tprintf("Switchover succeeded.");
                 }
                 else
                 {
-                    if (res.rc == 0)
-                    {
-                        test.add_failure("Switchover succeeded when it should have failed.");
-                    }
-                    else
-                    {
-                        test.tprintf("Switchover failed as expected. Error: %s", res.output.c_str());
-                        test.expect(res.output.find(expected_errmsg) != string::npos,
-                                    "Did not find expected error message.");
-                        mxs.check_print_servers_status({master, expected_server2_state, slave, slave});
-                    }
+                    test.add_failure("Switchover failed. Error: %s", res.output.c_str());
                 }
-                mxs.wait_for_monitor();
-            };
-
-            test.tprintf("Trying switchover, it should fail due to missing privs.");
-            try_switchover("Failed to enable read_only on", slave);
-
-            if (test.ok())
-            {
-                conn = master_srv->open_connection();
-                conn->cmd_f("grant super, read_only admin on *.* to mariadbmon;");
-                conn = nullptr;
-
-                repl.sync_slaves();
-                repl.close_admin_connections();
-
-                test.tprintf("Privileges granted. Switchover should still fail, as monitor connections are "
-                             "using the grants of their creation time.");
-                // In 23.08 and later, the monitor makes a new connection to master when starting switchover.
-                // This connection will immediately have the updated grants. Disabling read-only fails
-                // on server2 instead.
-                try_switchover("Failed to disable read_only on", mxt::ServerInfo::RUNNING);
-
-                // server2 ends up with replication stopped, not an ideal situation. If auto-rejoin is on,
-                // this is not an issue.
-                test.tprintf("Rejoining server2");
-                mxs.maxctrl("call command mariadbmon rejoin MySQL-Monitor server2");
-                mxs.wait_for_monitor(1);
-                mxs.check_print_servers_status({master, slave, slave, slave});
-
-                test.tprintf("Switchover should now work.");
-                try_switchover("", 0);
-
-                mxs.check_print_servers_status({slave, master, slave, slave});
             }
-        }
+            else
+            {
+                if (res.rc == 0)
+                {
+                    test.add_failure("Switchover succeeded when it should have failed.");
+                }
+                else
+                {
+                    test.tprintf("Switchover failed as expected. Error: %s", res.output.c_str());
+                    test.expect(res.output.find(expected_errmsg) != string::npos,
+                                "Did not find expected error message.");
+                    mxs.check_print_servers_status({master, expected_server2_state, slave, slave});
+                }
+            }
+            mxs.wait_for_monitor();
+        };
 
-        if (!test.ok())
+        test.tprintf("Trying switchover, it should fail due to missing privs.");
+        try_switchover("Failed to enable read_only on", slave);
+
+        if (test.ok())
         {
             conn = master_srv->open_connection();
             conn->cmd_f("grant super, read_only admin on *.* to mariadbmon;");
+            conn = nullptr;
+
+            repl.sync_slaves();
+            repl.close_admin_connections();
+
+            test.tprintf("Privileges granted. Switchover should still fail, as monitor connections are "
+                         "using the grants of their creation time.");
+            // In 23.08 and later, the monitor makes a new connection to master when starting switchover.
+            // This connection will immediately have the updated grants. Disabling read-only fails
+            // on server2 instead.
+            try_switchover("Failed to disable read_only on", mxt::ServerInfo::RUNNING);
+
+            // server2 ends up with replication stopped, not an ideal situation. If auto-rejoin is on,
+            // this is not an issue.
+            test.tprintf("Rejoining server2");
+            mxs.maxctrl("call command mariadbmon rejoin MySQL-Monitor server2");
+            mxs.wait_for_monitor(1);
+            mxs.check_print_servers_status({master, slave, slave, slave});
+
+            test.tprintf("Switchover should now work.");
+            try_switchover("", 0);
+
+            mxs.check_print_servers_status({slave, master, slave, slave});
         }
+    }
+
+    if (!test.ok())
+    {
+        conn = master_srv->open_connection();
+        conn->cmd_f("grant super, read_only admin on *.* to mariadbmon;");
     }
 }
 }
 
 int main(int argc, char* argv[])
 {
-    return TestConnections().run_test(argc, argv, run);
+    return TestConnections().run_test(argc, argv, test_main);
 }

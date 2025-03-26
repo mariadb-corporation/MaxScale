@@ -36,7 +36,7 @@ add_test_executable_ex(NAME mysqlmon_failover_manual2_3 SOURCE mysqlmon_failover
 add_test_executable_ex(NAME mysqlmon_failover_manual2_2 SOURCE mysqlmon_failover_manual2.cc
         CONFIG mysqlmon_failover_manual2_2.cnf VMS repl_backend LABELS mysqlmon)
 
-# MySQL Monitor switchover
+# MariaDB Monitor switchover and related issues (MXS-4605).
 add_test_executable_ex(NAME mysqlmon_switchover SOURCE mysqlmon_switchover.cc CONFIG mysqlmon_switchover.cnf
         VMS repl_backend LABELS mysqlmon switchover)
 
