@@ -23,6 +23,7 @@ const auto normal_status = mxt::ServersInfo::default_repl_states();
 auto master = mxt::ServerInfo::master_st;
 auto slave = mxt::ServerInfo::slave_st;
 
+void test_connector_timeout(TestConnections& test);
 void test_missing_privs(TestConnections& test);
 
 void test_main(TestConnections& test)
@@ -69,8 +70,94 @@ void test_main(TestConnections& test)
 
     if (test.ok())
     {
+        test_connector_timeout(test);
+    }
+
+    if (test.ok())
+    {
         test_missing_privs(test);
     }
+}
+
+void test_connector_timeout(TestConnections& test)
+{
+    test.tprintf("Lock a table on master, and start switchover.");
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    const string lock_cmd = "lock table test.t1 write;";
+    const string unlock_cmd = "unlock tables;";
+    const string async_switchover = "call command mariadbmon async-switchover MySQL-Monitor";
+    const string fetch_results = "call command mariadbmon fetch-cmd-result MySQL-Monitor";
+    const char so_not_started[] = "Switchover did not start: %s";
+
+    mxs.delete_log();
+
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    auto master_conn = repl.backend(0)->open_connection();
+    master_conn->cmd(lock_cmd);
+    auto res = test.maxctrl(async_switchover);
+    test.expect(res.rc == 0, so_not_started, res.output.c_str());
+
+    if (test.ok())
+    {
+        auto so_running = [&mxs, &fetch_results](){
+            auto fetch_res = mxs.maxctrl(fetch_results);
+            return fetch_res.output.find("running") != string::npos;
+        };
+
+        const char should_be_running[] = "Switchover should still be running.";
+        const char log_pattern[] = "FOR SET GLOBAL read_only=1;. timed out on .* Retrying with";
+        const char unexpected_timeout_msg[] = "Log should not include timeout message.";
+
+        test.tprintf("Check that switchover is still running and that log has no timeout message.");
+
+        // The timings here are restrictive enough that any change to the related monitor code or monitor
+        // settings can cause a fail, but is required to get valid results.
+
+        // Timeout should not happen in at least 5 seconds.
+        test.tprintf("Sleep 4 seconds, then check log.");
+        sleep(4);
+        test.expect(so_running(), should_be_running);
+        test.expect(!mxs.log_matches(log_pattern), unexpected_timeout_msg);
+
+        test.tprintf("Sleep some more, connector should time out. Switchover itself should still be "
+                     "running.");
+        sleep(5);
+        test.expect(mxs.log_matches(log_pattern), "No expected timeout message.");
+        test.expect(so_running(), should_be_running);
+        test.tprintf("Sleep again, switchover should time out.");
+        sleep(7);
+        test.expect(!so_running(), "Switchover should have timed out.");
+
+        res = mxs.maxctrl(fetch_results);
+        test.expect(res.output.find("failed") != string::npos, "Switchover should have failed.");
+
+        if (test.ok())
+        {
+            test.tprintf("Table lock is still held. Start async switchover again. Check that it completes "
+                         "once lock is released.");
+            mxs.delete_log();
+            res = test.maxctrl(async_switchover);
+            test.expect(res.rc == 0, so_not_started, res.output.c_str());
+
+            test.tprintf("Sleep 4 seconds, then check log.");
+            sleep(4);
+            test.expect(so_running(), should_be_running);
+            test.expect(!mxs.log_matches(log_pattern), unexpected_timeout_msg);
+
+            test.tprintf("Release lock, wait for switchover to complete.");
+            master_conn->cmd(unlock_cmd);
+            sleep(2);
+            test.expect(!so_running(), "Switchover should no longer be running.");
+            res = mxs.maxctrl(fetch_results);
+            test.expect(res.output.find("successfully") != string::npos, "Switchover should have succeeded.");
+
+            res = mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor server1");
+            test.expect(res.rc == 0, "Switchover to standard config failed: %s", res.output.c_str());
+        }
+    }
+    master_conn->cmd(unlock_cmd);
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 }
 
 void test_missing_privs(TestConnections& test)
