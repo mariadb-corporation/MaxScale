@@ -37,8 +37,8 @@ add_test_executable_ex(NAME mysqlmon_failover_manual2_2 SOURCE mysqlmon_failover
         CONFIG mysqlmon_failover_manual2_2.cnf VMS repl_backend LABELS mysqlmon)
 
 # MariaDB Monitor switchover and related issues (MXS-4605).
-add_test_executable_ex(NAME mysqlmon_switchover SOURCE mysqlmon_switchover.cc CONFIG mysqlmon_switchover.cnf
-        VMS repl_backend LABELS mysqlmon switchover)
+add_test_executable_ex(NAME mdbmon_switchover SOURCE mdbmon_switchover.cc
+        CONFIG mdbmon_switchover.cnf VMS repl_backend LABELS mysqlmon switchover)
 
 # MXS-4743 switchover-force works even with high replication lag
 add_test_executable_ex(NAME mariadbmon_switchover_force SOURCE mariadbmon_switchover_force.cc
@@ -109,16 +109,16 @@ add_test_executable_ex(NAME mysqlmon_reset_replication SOURCE mysqlmon_reset_rep
 
 # MySQL Monitor low disk switchover
 # MXS-4917 disk_space_ok-option of master/slave_conditions
-add_test_executable_ex(NAME mysqlmon_switchover_auto SOURCE mysqlmon_switchover_auto.cc
-        CONFIG mysqlmon_switchover_auto.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_switchover_auto SOURCE mdbmon_switchover_auto.cc
+        CONFIG mdbmon_switchover_auto.cnf VMS repl_backend LABELS mysqlmon)
 
 # MySQL Monitor series of failovers and rejoins
 add_test_executable_ex(NAME mysqlmon_failover_readonly SOURCE mysqlmon_failover_readonly.cc
         CONFIG mysqlmon_failover_readonly.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MXS-1493: Use replication heartbeat in mysqlmon https://jira.mariadb.org/browse/MXS-1493
-add_test_executable_ex(NAME verify_master_failure SOURCE verify_master_failure.cc
-        CONFIG verify_master_failure.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_verify_master_failure SOURCE mdbmon_verify_master_failure.cc
+        CONFIG mdbmon_verify_master_failure.cnf VMS repl_backend LABELS mysqlmon)
 
 # MariaDB-Monitor enforce_simple_topology
 # Also MXS-3324 switchover when autocommit is off on backends.
@@ -134,8 +134,8 @@ add_test_executable_ex(NAME mysqlmon_fail_switch_multi SOURCE mysqlmon_fail_swit
 
 # MXS-3018 MariaDB-Monitor master_conditions and slave_conditions
 # MXS-5067 enforce_read_only_servers
-add_test_executable_ex(NAME mariadbmon_master_slave_conditions SOURCE master_slave_conditions.cc
-        CONFIG master_slave_conditions.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_master_slave_conditions SOURCE mdbmon_master_slave_conditions.cc
+        CONFIG mdbmon_master_slave_conditions.cnf VMS repl_backend LABELS mysqlmon)
 
 # MXS-5366 Rebuild with special chars in username/pw.
 add_test_executable_ex(NAME mariadbmon_rebuild_server SOURCE mariadbmon_rebuild_server.cc
@@ -157,11 +157,12 @@ add_test_executable_ex(NAME mariadbmon_broken_repl_master SOURCE mariadbmon_brok
 
 # Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
 # to move test exec to a separate MV. Also MXS-4902.
-add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
-        CONFIG cooperative_monitoring.cnf1 cooperative_monitoring.cnf2 VMS repl_backend second_maxscale
+add_test_executable_ex(NAME mdbmon_cooperative_monitoring SOURCE mdbmon_cooperative_monitoring.cc
+        CONFIG mdbmon_cooperative_monitoring.cnf1 mdbmon_cooperative_monitoring.cnf2
+        VMS repl_backend second_maxscale
         LABELS mysqlmon BREAKS_REPL LIBS mariadbmon_utils)
 
 # Two MaxScales with cooperative monitoring + two MariaDB Servers.
-add_test_executable_ex(NAME cooperative_monitoring_2srv SOURCE cooperative_monitoring_2srv.cc
-        CONFIG cooperative_monitoring_2srv.cnf VMS repl_backend second_maxscale
+add_test_executable_ex(NAME mdbmon_cooperative_monitoring_2srv SOURCE mdbmon_cooperative_monitoring_2srv.cc
+        CONFIG mdbmon_cooperative_monitoring_2srv.cnf VMS repl_backend second_maxscale
         LABELS mysqlmon BREAKS_REPL LIBS mariadbmon_utils)
