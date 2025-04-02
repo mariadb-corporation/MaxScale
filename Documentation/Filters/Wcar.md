@@ -338,7 +338,7 @@ Start capture when maxscale starts.
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Default**: 0s
-- **Maximum**: Unlimited in MaxScale Enterprise, 5min in MaxScale Lite.
+- **Maximum**: Unlimited in MaxScale, 5min in MaxScale Lite.
 - **Mandatory**: No
 - **Dynamic**: No
 
@@ -348,7 +348,7 @@ Limit capture to this duration. If set to zero there is no limit.
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
 - **Default**: 0
-- **Maximum**: Unlimited in MaxScale Enterprise, 10MB in MaxScale Lite.
+- **Maximum**: Unlimited in MaxScale, 10MB in MaxScale Lite.
 - **Mandatory**: No
 - **Dynamic**: No
 

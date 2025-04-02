@@ -74,7 +74,8 @@ Filters have sections of their own in the MaxScale configuration file that are
 referred to from _services_.
 
 Limitations:
-- MaxScale Enterprise: No limitations.
+
+- MaxScale: No limitations.
 - MaxScale Lite: At most 2 filters can be created.
 
 ### Router
@@ -101,7 +102,8 @@ some way before they reach the router.
 Services have sections of their own in the MaxScale configuration file.
 
 Limitations:
-- MaxScale Enterprise: No limitations.
+
+- MaxScale: No limitations.
 - MaxScale Lite: At most 1 service can be created.
 
 ### Listener
@@ -2600,17 +2602,16 @@ wait_timeout=300s
 - **Type**: number
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: 0 in MaxScale Enterprise, 15 in MaxScale Lite.
-- **Minimum**: 0 in MaxScale Enterprise, 1 in MaxScale Lite.
-- **Maximum**: Unlimited in MaxScale Enterprise, 15 in MaxScale Lite.
+- **Default**: 0 in MaxScale, 15 in MaxScale Lite.
+- **Minimum**: 0 in MaxScale, 1 in MaxScale Lite.
+- **Maximum**: Unlimited in MaxScale, 15 in MaxScale Lite.
 
 The maximum number of simultaneous connections MaxScale should permit to this
 service. Any attempt to make more connections after the limit is reached will
 result in a "Too many connections" error being returned.
 
-A value of 0 means no limit which is the default for the enterprise edition of
-MaxScale. The lite edition is limited to a maximum of 15 connections per
-service.
+A value of 0 means no limit, which is the default for MaxScale. MaxScale Lite
+is limited to a maximum of 15 connections per service.
 
 **Warning**: In MaxScale 2.5, it is possible that the number of concurrent
   connections temporarily exceeds the value of `max_connections`. This has been
@@ -3209,7 +3210,8 @@ port=3000
 ```
 
 Limitations:
-- MaxScale Enterprise: No limitations.
+
+- MaxScale: No limitations.
 - MaxScale Lite: At most 3 servers can be created.
 
 ### `address`
@@ -3359,15 +3361,14 @@ the DCB will be discarded and the connection closed.
 - **Type**: number
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: 0 in MaxScale Enterprise, 15 in MaxScale Lite.
-- **Minimum**: 0 in MaxScale Enterprise, 1 in MaxScale Lite.
-- **Maximum**: Unlimited in MaxScale Enterprise, 15 in MaxScale Lite.
+- **Default**: 0 in MaxScale, 15 in MaxScale Lite.
+- **Minimum**: 0 in MaxScale, 1 in MaxScale Lite.
+- **Maximum**: Unlimited in MaxScale, 15 in MaxScale Lite.
 
 Maximum number of routing connections to this server. Connections held in a pool
 also count towards this maximum. Does not limit monitor connections or user
-account fetching. A value of 0 means no limit which is the default for the
-enterprise edition of MaxScale. The lite edition is limited to a maximum of 15
-connections per server.
+account fetching. A value of 0 means no limit, which is the default for MaxScale.
+MaxScle Lite is limited to a maximum of 15 connections per server.
 
 Since every client session can generate a connection to a server, the server may
 run out of memory when the number of clients is high enough. This setting limits

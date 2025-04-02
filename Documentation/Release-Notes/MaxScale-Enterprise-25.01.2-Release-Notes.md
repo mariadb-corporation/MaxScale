@@ -1,4 +1,4 @@
-# MariaDB MaxScale Enterprise 25.01.2 Release Notes
+# MariaDB MaxScale 25.01.2 Release Notes
 
 Release 25.01.2 is a GA release.
 

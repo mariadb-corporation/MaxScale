@@ -69,8 +69,8 @@
 
 For more details, please refer to:
 
-* [MariaDB MaxScale Enterprise 25.01.2 Release Notes](Release-Notes/MaxScale-Enterprise-25.01.2-Release-Notes.md)
-* [MariaDB MaxScale Enterprise 25.01.1 Release Notes](Release-Notes/MaxScale-Enterprise-25.01.1-Release-Notes.md)
+* [MariaDB MaxScale 25.01.2 Release Notes](Release-Notes/MaxScale-Enterprise-25.01.2-Release-Notes.md)
+* [MariaDB MaxScale 25.01.1 Release Notes](Release-Notes/MaxScale-Enterprise-25.01.1-Release-Notes.md)
 
 ## MariaDB MaxScale 24.02
 
