@@ -174,7 +174,7 @@ void MariaDBBackendConnection::finish_connection()
         // COM_QUIT. If it's sent, the server might misinterpret it as a semi-sync acknowledgement packet.
     }
     else if (m_state != State::HANDSHAKING && m_state != State::AUTHENTICATING
-             && m_reply.command() != MXS_COM_QUIT)
+             && (m_reply.command() != MXS_COM_QUIT || m_state == State::POOLED))
     {
         // Send a COM_QUIT to the backend only if the connection has been successfully opened but no COM_QUIT
         // has been routed to this backend.
