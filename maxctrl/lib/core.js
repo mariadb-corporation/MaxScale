@@ -16,12 +16,12 @@ var fs = require("fs");
 var ini = require("ini");
 var os = require("os");
 var yargs = require("yargs");
-const { maxctrl, error } = require("./common.js");
+const { maxctrl, error, doRequest } = require("./common.js");
 
 // Note: The version.js file is generated at configuation time. If you are
 // building in-source, it'll be created automatically. Make sure to remove
 // it if you want to refresh the contents of it.
-const constants = require("./version.js")
+const constants = require("./version.js");
 const maxctrl_version = constants.version;
 
 // Global options given at startup
@@ -407,6 +407,13 @@ async function askQuestion(argv) {
 
   if (!process.stdin.isTTY) {
     return readCommands(argv, options);
+  } else {
+    // Ping the hosts to make sure the credentials are correct
+    argv.quiet = true;
+    await maxctrl(argv, function (host) {
+      return doRequest(host, "/");
+    });
+    argv.quiet = false;
   }
 
   const inquirer = require("inquirer");
