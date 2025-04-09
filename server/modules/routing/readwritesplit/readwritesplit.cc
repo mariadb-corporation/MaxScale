@@ -23,6 +23,7 @@
 #include <cmath>
 #include <new>
 #include <sstream>
+#include <charconv>
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
@@ -50,6 +51,12 @@ void warn_and_disable(const std::string& name, bool& val)
         val = false;
     }
 }
+
+constexpr auto GTID_DOMAIN_DIGITS = std::numeric_limits<uint32_t>::digits10 + 1;
+constexpr auto GTID_SERVER_ID_DIGITS = std::numeric_limits<uint32_t>::digits10 + 1;
+constexpr auto GTID_SEQUENCE_DIGITS = std::numeric_limits<uint64_t>::digits10 + 1;
+constexpr size_t GTID_MAX_LEN = GTID_DOMAIN_DIGITS + 1 + GTID_SERVER_ID_DIGITS + 1 + GTID_SEQUENCE_DIGITS;
+static_assert(GTID_MAX_LEN == std::string_view("4294967295-4294967295-18446744073709551615").size());
 }
 
 /**
@@ -229,22 +236,43 @@ RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
 
 void RWSplit::gtid::parse(std::string_view sv)
 {
-    std::string str(sv);
-    const char* ptr = str.c_str();
-    char* end;
-    domain = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '-');
-    ptr = end + 1;
-    server_id = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '-');
-    ptr = end + 1;
-    sequence = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '\0');
+    uint32_t dom;
+    uint32_t srv_id;
+    uint64_t seq;
+
+    auto res = std::from_chars(sv.begin(), sv.end(), dom);
+
+    if (res.ec == std::errc{} && res.ptr < sv.end() && *res.ptr == '-')
+    {
+        res = std::from_chars(res.ptr + 1, sv.end(), srv_id);
+
+        if (res.ec == std::errc{} && res.ptr < sv.end() && *res.ptr == '-')
+        {
+            res = std::from_chars(res.ptr + 1, sv.end(), seq);
+
+            if (res.ec == std::errc{})
+            {
+                this->domain = dom;
+                this->server_id = srv_id;
+                this->sequence = seq;
+            }
+        }
+    }
 }
 
 std::string RWSplit::gtid::to_string() const
 {
-    return std::to_string(domain) + '-' + std::to_string(server_id) + '-' + std::to_string(sequence);
+    char buf[GTID_MAX_LEN + 1];
+    char* end = buf + sizeof(buf);
+    auto res = std::to_chars(buf, end, this->domain);
+    mxb_assert(res.ec == std::errc {} && res.ptr < end);
+    *res.ptr++ = '-';
+    res = std::to_chars(res.ptr, end, this->server_id);
+    mxb_assert(res.ec == std::errc {} && res.ptr < end);
+    *res.ptr++ = '-';
+    res = std::to_chars(res.ptr, end, this->sequence);
+    mxb_assert(res.ec == std::errc {});
+    return std::string(buf, res.ptr);
 }
 
 bool RWSplit::gtid::empty() const
