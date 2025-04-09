@@ -39,7 +39,6 @@ bool json_ptr_matches(const std::string& json_ptr, json_t* obj, json_t* rhs)
 HttpResponse::HttpResponse(int code, json_t* response)
     : m_body(response)
     , m_code(code)
-    , m_headers{{HTTP_RESPONSE_HEADER_DATE, http_get_date()}}
 {
     if (m_body)
     {
