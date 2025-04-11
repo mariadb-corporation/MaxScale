@@ -19,6 +19,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 #include <maxsql/mariadb.hh>
 #include <mysqld_error.h>
 #include <errmsg.h>
@@ -26,6 +27,7 @@
 
 std::atomic<bool> running {true};
 std::atomic<int> id{1};
+std::string wait_prefix;
 
 void test_reads(TestConnections& test)
 {
@@ -48,14 +50,14 @@ void test_reads(TestConnections& test)
                     "[%u <-> %u] INSERT should work: %s", conn.thread_id(), id2, conn.error());
 
         // Existing connections should also see the inserted rows
-        auto count = atoi(secondary.field("SELECT COUNT(*) FROM " + table).c_str());
+        auto count = atoi(secondary.field(wait_prefix + "SELECT COUNT(*) FROM " + table).c_str());
         test.expect(count == i + 1, "[%u <-> %u] Missing %d rows from open connection.",
                     conn.thread_id(), id2, (i + 1) - count);
         conn.disconnect();
 
         // New connections should see the inserted rows
         conn.connect();
-        auto second_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
+        auto second_count = atoi(conn.field(wait_prefix + "SELECT COUNT(*) FROM " + table).c_str());
         test.expect(second_count == i + 1, "[%u <-> %u] Missing %d rows in second connection.",
                     conn.thread_id(), id2, (i + 1) - second_count);
         conn.disconnect();
@@ -65,7 +67,7 @@ void test_reads(TestConnections& test)
 void check_row(TestConnections& test, const char* func, Connection& conn,
                const std::string& table, const std::string& value)
 {
-    auto stored_value = conn.field("SELECT MAX(a) FROM " + table + " WHERE a = " + value);
+    auto stored_value = conn.field(wait_prefix + "SELECT MAX(a) FROM " + table + " WHERE a = " + value);
 
     std::string errmsg;
 
@@ -89,13 +91,13 @@ void check_row_new_conn(TestConnections& test, const char* func, uint32_t orig_i
 {
     auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Failed to connect when querying '%s': %s", table.c_str(), conn.error());
-    auto stored_value = conn.field("SELECT MAX(a) FROM " + table + " WHERE a = " + value);
+    auto stored_value = conn.field(wait_prefix + "SELECT MAX(a) FROM " + table + " WHERE a = " + value);
 
     for (int i = 0; i < 10 && conn.errnum() == CR_SERVER_LOST; i++)
     {
         std::this_thread::sleep_for(1s);
         conn.connect();
-        stored_value = conn.field("SELECT MAX(a) FROM " + table + " WHERE a = " + value);
+        stored_value = conn.field(wait_prefix + "SELECT MAX(a) FROM " + table + " WHERE a = " + value);
     }
 
     std::string errmsg;
@@ -272,11 +274,10 @@ void test_ro_trx_set_trx(TestConnections& test)
     });
 }
 
-int main(int argc, char** argv)
+template<class Backend>
+void run_test(TestConnections& test, Backend* backend)
 {
-    TestConnections::require_repl_version("10.3.8");
-    TestConnections test(argc, argv);
-    test.repl->set_replication_delay(1);
+    backend->set_replication_delay(1);
 
     test.log_printf("Cross-MaxScale causal reads with causal_reads=universal");
     test_reads(test);
@@ -301,10 +302,10 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 5; i++)
     {
-        test.repl->block_node(0);
+        backend->block_node(0);
         test.maxscale->wait_for_monitor();
         sleep(5);
-        test.repl->unblock_node(0);
+        backend->unblock_node(0);
         test.maxscale->wait_for_monitor();
         sleep(5);
     }
@@ -324,6 +325,26 @@ int main(int argc, char** argv)
         conn.query("DROP TABLE test.t" + std::to_string(i));
     }
 
-    test.repl->set_replication_delay(0);
+    backend->set_replication_delay(0);
+}
+
+int main(int argc, char** argv)
+{
+    TestConnections::require_repl_version("10.3.8");
+    TestConnections test(argc, argv);
+
+    if (test.repl)
+    {
+        run_test(test, test.repl);
+    }
+    else
+    {
+        // This is needed to handle the case where the Galera node where the writes are sent changes. Since
+        // Galera itself doesn't work that nicely with GTIDs and doesn't function with MASTER_GTID_WAIT(),
+        // this is the only thing we can do to make the reads consistent.
+        wait_prefix = "SET STATEMENT wsrep_sync_wait=1 FOR ";
+        run_test(test, test.galera);
+    }
+
     return test.global_result;
 }

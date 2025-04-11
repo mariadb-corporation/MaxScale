@@ -107,6 +107,7 @@ add_test_executable(mxs3663_universal_causal_reads.cc mxs3663_universal_causal_r
 
 # MXS-4123: Fast universal causal reads
 add_test_derived(mxs4123_fast_universal mxs3663_universal_causal_reads mxs4123_fast_universal LABELS readwritesplit REPL_BACKEND)
+add_test_derived(mxs5588_galera_fast_universal mxs3663_universal_causal_reads mxs5588_galera_fast_universal LABELS readwritesplit GALERA_BACKEND)
 
 # MXS-1961: Standalone master loses master status
 # https://jira.mariadb.org/browse/MXS-1961
