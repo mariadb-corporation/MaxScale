@@ -159,10 +159,7 @@ MHD_Result handle_client(void* cls,
 {
     if (*con_cls == NULL)
     {
-        if ((*con_cls = new(std::nothrow) Client(connection, url, method)) == NULL)
-        {
-            return MHD_NO;
-        }
+        *con_cls = new Client(connection, url, method);
     }
 
     Client* client = static_cast<Client*>(*con_cls);
@@ -957,68 +954,45 @@ MHD_Result Client::handle(const std::string& url, const std::string& method,
         send_shutting_down_error();
         return MHD_YES;
     }
-    else if (this_unit.cors && send_cors_preflight_request(method))
+    else if (is_auth_endpoint(m_request) && m_request.is_truthy_option("logout"))
     {
-        return MHD_YES;
-    }
-    else if (mxs::Config::get().gui && method == MHD_HTTP_METHOD_GET && serve_file(url))
-    {
-        return MHD_YES;
+        return queue_response(clear_auth_cookies());
     }
 
-    Client::state state = get_state();
     MHD_Result rval = MHD_NO;
 
-    if (state != Client::CLOSED)
+    switch (get_state())
     {
-        if (is_auth_endpoint(m_request) && m_request.is_truthy_option("logout"))
-        {
-            return queue_response(clear_auth_cookies());
-        }
+    case Client::INIT:
+        // The first time the callback is called is when the headers have been read. At this point,
+        // we can perform the authentication. If the authentication fails and a response is sent,
+        // the callback is not called and the library closes the connection with "Connection: close".
+        auth(m_connection, url.c_str(), method.c_str());
+        rval = MHD_YES;
+        break;
 
-        if (state == Client::INIT)
+    case Client::OK:
+        // Authentication was successful, start processing the request. The callback is called multiple
+        // times if data is being uploaded. This is handled inside the process() function.
+        if (this_unit.cors && send_cors_preflight_request(method))
         {
-            // First request, do authentication
-            if (!auth(m_connection, url.c_str(), method.c_str()))
-            {
-                rval = MHD_YES;
-            }
-        }
-
-        if (get_state() == Client::OK)
-        {
-            // Authentication was successful, start processing the request
-            if (state == Client::INIT && request_data_length())
-            {
-                // The first call doesn't have any data
-                rval = MHD_YES;
-            }
-            else
-            {
-                rval = process(url, method, upload_data, upload_data_size);
-            }
-        }
-        else if (get_state() == Client::FAILED)
-        {
-            // Authentication has failed, an error will be sent to the client
             rval = MHD_YES;
-
-            if (*upload_data_size != 0)
-            {
-                m_data = std::string(upload_data, *upload_data_size);
-            }
-
-            if (*upload_data_size || (state == Client::INIT && request_data_length()))
-            {
-                // The client is uploading data, discard it so we can send the error
-                *upload_data_size = 0;
-            }
-            else if (state != Client::INIT)
-            {
-                // No pending upload data, close the connection
-                close();
-            }
         }
+        else if (mxs::Config::get().gui && method == MHD_HTTP_METHOD_GET && serve_file(url))
+        {
+            rval = MHD_YES;
+        }
+        else
+        {
+            rval = process(url, method, upload_data, upload_data_size);
+        }
+        break;
+
+    default:
+        // Authentication has failed and an error was sent to the client. Somehow the callback
+        // was called again which should be an error.
+        mxb_assert_message(false, "This should be dead code");
+        break;
     }
 
     return rval;
