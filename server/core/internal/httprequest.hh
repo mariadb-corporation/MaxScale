@@ -353,6 +353,16 @@ public:
      */
     std::string to_string() const;
 
+    /**
+     * @brief Get the requested filename, if it exists
+     *
+     * @return The requested filename if this is a file request or an empty string if it's an API call.
+     */
+    const std::string& filename() const
+    {
+        return m_filename;
+    }
+
 private:
     void fix_api_version();
 
@@ -368,5 +378,6 @@ private:
     std::deque<std::string>            m_resource_parts;/**< @c m_resource split into parts */
     std::string                        m_verb;          /**< Request method */
     std::string                        m_hostname;      /**< The value of the Host header */
+    std::string                        m_filename;
     struct MHD_Connection*             m_connection;
 };
