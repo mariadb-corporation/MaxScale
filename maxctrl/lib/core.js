@@ -87,11 +87,13 @@ function configParser(filename) {
 
   // As the file may contain a password, we are picky about the bits.
   if ((stats.mode & 31) != 0) {
+    const mode = (stats.mode & 0o777).toString(8);
     throw Error(
       "Error: " +
         filename +
-        " exists, but can be accessed by group and world." +
-        " Remove all rights from everyone else but owner"
+        " exists, but can be accessed by group and world (mode 0" +
+        mode +
+        "). Only the owner and the group should have read access to it (mode 0640)."
     );
   }
 

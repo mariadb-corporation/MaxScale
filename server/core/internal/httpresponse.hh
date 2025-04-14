@@ -29,7 +29,6 @@
 /**
  * A list of default headers that are generated with each response
  */
-#define HTTP_RESPONSE_HEADER_DATE          "Date"
 #define HTTP_RESPONSE_HEADER_LAST_MODIFIED "Last-Modified"
 #define HTTP_RESPONSE_HEADER_ETAG          "ETag"
 #define HTTP_RESPONSE_HEADER_ACCEPT        "Accept"
