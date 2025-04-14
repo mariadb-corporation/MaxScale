@@ -36,6 +36,7 @@ int main(int argc, char* argv[])
     test.repl->execute_query_all_nodes("DROP DATABASE IF EXISTS duplicate;");
     test.repl->execute_query_all_nodes("CREATE DATABASE duplicate;");
     test.repl->execute_query_all_nodes("CREATE TABLE duplicate.duplicate (a int, b int);");
+    test.maxscale->wait_for_monitor();
 
     test.maxscale->connect_maxscale();
     test.add_result(execute_query(test.maxscale->conn_rwsplit, "SELECT 1") == 0,
