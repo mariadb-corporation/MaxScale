@@ -218,39 +218,6 @@ std::string get_file(const std::string& file)
     return rval;
 }
 
-std::string get_filename(const HttpRequest& request)
-{
-    std::string sharedir = mxs::sharedir();
-    sharedir += "/gui/";
-    std::string path = sharedir;
-
-    if (request.uri_part_count() == 0)
-    {
-        path += "index.html";
-    }
-    else
-    {
-        path += request.uri_segment(0, request.uri_part_count());
-    }
-
-    char pathbuf[PATH_MAX + 1] = "";
-    char sharebuf[PATH_MAX + 1] = "";
-
-    if (realpath(path.c_str(), pathbuf) && access(pathbuf, R_OK) == 0
-        && realpath(sharedir.c_str(), sharebuf)
-        && strncmp(pathbuf, sharebuf, strlen(sharebuf)) == 0)
-    {
-        // A valid file that's stored in the GUI directory
-        path.assign(pathbuf);
-    }
-    else
-    {
-        path.clear();
-    }
-
-    return path;
-}
-
 // Converts mxb::ssl_version::Version into the corresponding GNUTLS configuration string
 static std::string get_ssl_version(uint32_t ssl_version)
 {
@@ -567,10 +534,10 @@ bool Client::send_cors_preflight_request(const std::string& verb)
     return rval;
 }
 
-bool Client::serve_file(const std::string& url) const
+bool Client::serve_file() const
 {
     bool rval = false;
-    std::string path = get_filename(m_request);
+    const std::string& path = m_request.filename();
 
     if (!path.empty())
     {
@@ -660,7 +627,15 @@ MHD_Result Client::handle(const std::string& url, const std::string& method,
         // The first time the callback is called is when the headers have been read. At this point,
         // we can perform the authentication. If the authentication fails and a response is sent,
         // the callback is not called and the library closes the connection with "Connection: close".
-        auth(m_connection, url.c_str(), method.c_str());
+        // If the client is requesting for a GUI file, authentication is skipped.
+        if (mxs::Config::get().gui && method == MHD_HTTP_METHOD_GET && !m_request.filename().empty())
+        {
+            m_state = Client::OK;
+        }
+        else
+        {
+            auth(m_connection, url.c_str(), method.c_str());
+        }
         rval = MHD_YES;
         break;
 
@@ -671,7 +646,7 @@ MHD_Result Client::handle(const std::string& url, const std::string& method,
         {
             rval = MHD_YES;
         }
-        else if (mxs::Config::get().gui && method == MHD_HTTP_METHOD_GET && serve_file(url))
+        else if (mxs::Config::get().gui && method == MHD_HTTP_METHOD_GET && serve_file())
         {
             rval = MHD_YES;
         }

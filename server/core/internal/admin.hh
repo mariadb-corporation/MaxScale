@@ -100,11 +100,9 @@ private:
     /**
      * Serve a file that the client is requesting
      *
-     * @param url   The URL the client is requesting
-     *
      * @return True if a file was served and the processing should stop
      */
-    bool serve_file(const std::string& url) const;
+    bool serve_file() const;
 
     MHD_Connection* m_connection;   /**< Connection handle */
     std::string     m_data;         /**< Uploaded data */
