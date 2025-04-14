@@ -161,10 +161,7 @@ MHD_Result handle_client(void* cls,
 {
     if (*con_cls == NULL)
     {
-        if ((*con_cls = new(std::nothrow) Client(connection, url, method)) == NULL)
-        {
-            return MHD_NO;
-        }
+        *con_cls = new Client(connection, url, method);
     }
 
     Client* client = static_cast<Client*>(*con_cls);
@@ -959,54 +956,39 @@ MHD_Result Client::handle(const std::string& url, const std::string& method,
         send_shutting_down_error();
         return MHD_YES;
     }
-
-    auto host_allowed = HostMatchResult::NO;
-    sockaddr_storage client_addr {};
-
-    if (m_state == INIT)
+    else if (is_auth_endpoint(m_request) && m_request.is_truthy_option("logout"))
     {
-        auto info = MHD_get_connection_info(m_connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
-        if (info && info->client_addr)
-        {
-            // Check binary address against allowed hosts now, before authentication. If only binary subnets
-            // are defined, this weeds out any unwanted REST-API clients before they can ask for GUI files and
-            // cause significant traffic.
-            client_addr = mxb::sockaddr_to_storage(info->client_addr);
-            host_allowed = check_subnet_match(method, client_addr);
-        }
-
-        if (host_allowed == HostMatchResult::NO)
-        {
-            send_basic_auth_error();
-            m_state = state::FAILED;
-            return MHD_YES;
-        }
+        return queue_response(clear_auth_cookies());
     }
 
-    if (this_unit.cors && send_cors_preflight_request(method))
-    {
-        return MHD_YES;
-    }
-
-    if (mxs::Config::get().gui && method == MHD_HTTP_METHOD_GET && serve_file(url))
-    {
-        return MHD_YES;
-    }
-
-    Client::state state = get_state();
     MHD_Result rval = MHD_NO;
 
-    if (state != Client::CLOSED)
+    switch (get_state())
     {
-        if (is_auth_endpoint(m_request) && m_request.is_truthy_option("logout"))
+    case Client::INIT:
         {
-            return queue_response(clear_auth_cookies());
-        }
+            // The first time the callback is called is when the headers have been read. At this point,
+            // we can perform the authentication. If the authentication fails and a response is sent,
+            // the callback is not called and the library closes the connection with "Connection: close".
+            auto host_allowed = HostMatchResult::NO;
+            sockaddr_storage client_addr {};
+            auto info = MHD_get_connection_info(m_connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
 
-        if (state == Client::INIT)
-        {
-            // First request, do authentication.
-            if (auth(m_connection, url.c_str(), method.c_str()))
+            if (info && info->client_addr)
+            {
+                // Check binary address against allowed hosts now, before authentication. If only binary
+                // subnets are defined, this weeds out any unwanted REST-API clients before they can ask for
+                // GUI files and cause significant traffic.
+                client_addr = mxb::sockaddr_to_storage(info->client_addr);
+                host_allowed = check_subnet_match(method, client_addr);
+            }
+
+            if (host_allowed == HostMatchResult::NO)
+            {
+                send_basic_auth_error();
+                m_state = state::FAILED;
+            }
+            else if (auth(m_connection, url.c_str(), method.c_str()))
             {
                 // If client host was not yet fully checked, complete the check now.
                 if (host_allowed == HostMatchResult::MAYBE
@@ -1014,49 +996,35 @@ MHD_Result Client::handle(const std::string& url, const std::string& method,
                 {
                     send_basic_auth_error();
                     m_state = Client::FAILED;
-                    rval = MHD_YES;
                 }
             }
-            else
-            {
-                rval = MHD_YES;
-            }
-        }
 
-        if (get_state() == Client::OK)
-        {
-            // Authentication was successful, start processing the request
-            if (state == Client::INIT && request_data_length())
-            {
-                // The first call doesn't have any data
-                rval = MHD_YES;
-            }
-            else
-            {
-                rval = process(url, method, upload_data, upload_data_size);
-            }
-        }
-        else if (get_state() == Client::FAILED)
-        {
-            // Authentication has failed, an error will be sent to the client
             rval = MHD_YES;
-
-            if (*upload_data_size != 0)
-            {
-                m_data = std::string(upload_data, *upload_data_size);
-            }
-
-            if (*upload_data_size || (state == Client::INIT && request_data_length()))
-            {
-                // The client is uploading data, discard it so we can send the error
-                *upload_data_size = 0;
-            }
-            else if (state != Client::INIT)
-            {
-                // No pending upload data, close the connection
-                close();
-            }
         }
+        break;
+
+    case Client::OK:
+        // Authentication was successful, start processing the request. The callback is called multiple
+        // times if data is being uploaded. This is handled inside the process() function.
+        if (this_unit.cors && send_cors_preflight_request(method))
+        {
+            rval = MHD_YES;
+        }
+        else if (mxs::Config::get().gui && method == MHD_HTTP_METHOD_GET && serve_file(url))
+        {
+            rval = MHD_YES;
+        }
+        else
+        {
+            rval = process(url, method, upload_data, upload_data_size);
+        }
+        break;
+
+    default:
+        // Authentication has failed and an error was sent to the client. Somehow the callback
+        // was called again which should be an error.
+        mxb_assert_message(false, "This should be dead code");
+        break;
     }
 
     return rval;

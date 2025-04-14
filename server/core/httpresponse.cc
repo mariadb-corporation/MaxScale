@@ -358,7 +358,6 @@ void filter_body(json_t* body, const std::string& json_ptr, Compare comp)
 HttpResponse::HttpResponse(int code, json_t* response)
     : m_body(response)
     , m_code(code)
-    , m_headers{{HTTP_RESPONSE_HEADER_DATE, http_get_date()}}
 {
     if (m_body)
     {
