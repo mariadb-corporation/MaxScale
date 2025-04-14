@@ -15,6 +15,8 @@
 #include "internal/httprequest.hh"
 #include "internal/admin.hh"
 
+#include <maxscale/paths.hh>
+
 #include <ctype.h>
 #include <string.h>
 #include <sstream>
@@ -28,6 +30,8 @@ using std::deque;
 const std::string HttpRequest::HTTP_PREFIX = "http://";
 const std::string HttpRequest::HTTPS_PREFIX = "https://";
 
+namespace
+{
 static void process_uri(string& uri, std::deque<string>& uri_parts)
 {
     /** Clean up trailing slashes in requested resource */
@@ -50,6 +54,40 @@ static void process_uri(string& uri, std::deque<string>& uri_parts)
         my_uri.erase(0, pos == string::npos ? pos : pos + 1);
         uri_parts.push_back(part);
     }
+}
+
+std::string get_filename(const HttpRequest& request)
+{
+    std::string sharedir = mxs::sharedir();
+    sharedir += "/gui/";
+    std::string path = sharedir;
+
+    if (request.uri_part_count() == 0)
+    {
+        path += "index.html";
+    }
+    else
+    {
+        path += request.uri_segment(0, request.uri_part_count());
+    }
+
+    char pathbuf[PATH_MAX + 1] = "";
+    char sharebuf[PATH_MAX + 1] = "";
+
+    if (realpath(path.c_str(), pathbuf) && access(pathbuf, R_OK) == 0
+        && realpath(sharedir.c_str(), sharebuf)
+        && strncmp(pathbuf, sharebuf, strlen(sharebuf)) == 0)
+    {
+        // A valid file that's stored in the GUI directory
+        path.assign(pathbuf);
+    }
+    else
+    {
+        path.clear();
+    }
+
+    return path;
+}
 }
 
 HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string method, json_t* data)
@@ -89,6 +127,8 @@ HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string m
 
     // Store the URI without the API version
     m_resource = uri_segment(0, uri_part_count());
+
+    m_filename = get_filename(*this);
 }
 
 HttpRequest::~HttpRequest()
