@@ -108,11 +108,9 @@ private:
     /**
      * Serve a file that the client is requesting
      *
-     * @param url   The URL the client is requesting
-     *
      * @return True if a file was served and the processing should stop
      */
-    bool serve_file(const std::string& url);
+    bool serve_file();
 
     /**
      * Get the client IP address
