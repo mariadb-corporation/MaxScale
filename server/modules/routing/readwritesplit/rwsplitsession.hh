@@ -34,6 +34,9 @@
 #define TARGET_IS_RLAG_MAX(t)     mariadb::QueryClassifier::target_is_rlag_max(t)
 #define TARGET_IS_LAST_USED(t)    mariadb::QueryClassifier::target_is_last_used(t)
 
+// The query that's used by causal_reads=universal to probe the current GTID value
+#define GTID_PROBE_QUERY "SELECT @@gtid_binlog_pos"
+
 struct ExecInfo
 {
     // The latest server this was executed on, used to figure out where COM_STMT_FETCH needs to be sent.

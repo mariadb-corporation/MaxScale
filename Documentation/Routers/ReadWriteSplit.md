@@ -837,10 +837,13 @@ The possible values for this parameter are:
 
   * The universal mode guarantees that all SELECT statements always see the
     latest observable transaction state on a database cluster. The basis of this
-    is the `@@gtid_current_pos` variable which is read from the current primary
+    is the `@@gtid_binlog_pos` variable which is read from the current primary
     server before each read. This guarantees that if a transaction was visible
     at the time the read is received by readwritesplit, the transaction is
-    guaranteed to be complete on the replica server where the read is done.
+    guaranteed to be complete on the replica server where the read is
+    done. Versions 23.02.13 and older used `@@gtid_current_pos` as the GTID
+    value ([MXS-5588](https://jira.mariadb.org/browse/MXS-5588)) but this caused
+    problems with Galera clusters.
 
     This mode is the most consistent of all the modes. It provides consistency
     regardless of where a write originated from but it comes at the cost of

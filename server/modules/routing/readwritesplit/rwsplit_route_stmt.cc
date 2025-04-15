@@ -190,7 +190,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
 
     if (m_wait_gtid == READING_GTID)
     {
-        mxb_assert(buffer.get_sql() == "SELECT @@gtid_current_pos");
+        mxb_assert(buffer.get_sql() == GTID_PROBE_QUERY);
         buffer = reset_gtid_probe();
     }
 
