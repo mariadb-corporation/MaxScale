@@ -259,7 +259,7 @@ std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
 
     m_wait_gtid = READING_GTID;
     auto& [buffer, plan] = rval;
-    buffer = mariadb::create_query("SELECT @@gtid_binlog_pos");
+    buffer = mariadb::create_query(GTID_PROBE_QUERY);
     buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
     buffer.set_type(GWBUF::TYPE_COLLECT_ROWS);
 
