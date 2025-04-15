@@ -283,7 +283,7 @@ std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_p
     MXB_INFO("Starting GTID probe");
 
     m_wait_gtid = READING_GTID;
-    mxs::Buffer buffer(modutil_create_query("SELECT @@gtid_binlog_pos"));
+    mxs::Buffer buffer(modutil_create_query(GTID_PROBE_QUERY));
     buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
     buffer.set_type(GWBUF::TYPE_COLLECT_ROWS);
 
