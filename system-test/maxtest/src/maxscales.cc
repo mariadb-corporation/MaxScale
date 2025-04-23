@@ -628,11 +628,12 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
             "if (( have_core == 1 )); then cp /tmp/core* %s/ >& /dev/null; fi; "
             "cp %s %s/; "
             "chmod 777 -R %s; "
-            "if (( have_core == 1 )); then exit 42; fi",
+            "if (( have_core == 1 )); then exit 42; fi;"
+            "grep 'alert.*fatal signal' %s/* && exit 42",
             temp_logdirc, temp_logdirc, m_log_dir.c_str(), temp_logdirc,
             temp_logdirc,
             mxs_cnf_file, temp_logdirc,
-            temp_logdirc);
+            temp_logdirc, temp_logdirc);
 
         remote_cmd += mxb::string_printf(
             "; if grep VALGRIND_ERROR %s/* 1> /dev/null 2>&1; then exit 44; fi", temp_logdirc);
