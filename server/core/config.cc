@@ -1576,9 +1576,11 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 bool Config::need_tls_reload(json_t* json) const
 {
     // The certificates need to be reloaded if either admin_ssl_cert or admin_ssl_key was provided, even if
-    // the values would compare equal to the old ones.
+    // the values would compare equal to the old ones. Similarly if admin_oidc_url has changed, the
+    // certificates need to be reloaded.
     return json_object_get(json, s_admin_ssl_cert.name().c_str())
-           || json_object_get(json, s_admin_ssl_key.name().c_str());
+           || json_object_get(json, s_admin_ssl_key.name().c_str())
+           || json_object_get(json, s_admin_oidc_url.name().c_str());
 }
 
 void Config::check_cpu_situation() const

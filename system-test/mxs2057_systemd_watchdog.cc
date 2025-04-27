@@ -79,6 +79,10 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
                     break;
                 }
             }
+
+            // Replace the 'fatal signal' log line so that it doesn't trigger a test failure
+            test.maxscale->ssh_node_f(true, "sed -i 's/fatal signal/REDACTED/' "
+                                            "/var/log/maxscale/maxscale.log");
         }
     }
 }

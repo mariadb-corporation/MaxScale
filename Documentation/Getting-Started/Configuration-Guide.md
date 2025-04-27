@@ -1780,7 +1780,7 @@ from the `/sql` endpoint.
 
 - **Type**: string
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: `""`
 
 The URL to a OpenID Connect server that is used for JWT validation.
@@ -1794,8 +1794,13 @@ REST-API. This means that all users must be first created with `maxctrl create
 user` before the tokens are accepted if the OIDC provider is not able to add the
 `"account"` claim.
 
-If this URL is changed at runtime, the new certificates will not be
-fetched until a `maxctrl reload tls` command is executed.
+Modifying `admin_oidc_url` will cause the certificates to be fetched
+again. They are also fetched when the `maxctrl reload tls` command is
+executed or when the `admin_ssl_cert` and `admin_ssl_key` settings are
+modified.
+
+MaxScale versions 22.08.16 and earlier only fetched the new certificates when
+the `maxctrl reload tls` command was executed.
 
 ### `admin_verify_url`
 
