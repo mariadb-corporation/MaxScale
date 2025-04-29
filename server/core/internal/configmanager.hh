@@ -198,7 +198,7 @@ private:
                                       std::ostringstream& reason);
     void remove_old_object(const std::string& name, const std::string& type);
     void create_new_object(const std::string& name, const std::string& type, mxb::Json& obj);
-    void update_object(const std::string& name, const std::string& type, const mxb::Json& json);
+    void update_object(const std::string& name, const std::string& type, mxb::Json& json);
     void save_config(const std::string& payload);
     bool discard_config();
 
