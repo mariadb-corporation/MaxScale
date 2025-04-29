@@ -253,3 +253,19 @@ _priority_ value are not available.
 
 With priority ranks you can control the order in which MaxScale chooses the
 master node. This will allow for a controlled failure and replacement of nodes.
+
+### Switchover
+
+Priorities can be used to force a runtime change of the primary server in a
+Galera Cluster. For example, if *server1* has a priority of 1 and *server2*
+a priority of 2 (with *server1* being primary), the roles can be reversed with
+MaxCtrl:
+```
+maxctrl alter server server1 priority=2
+maxctrl alter server server2 priority=1
+```
+
+This does not affect the Galera Cluster itself, just the roles MaxScale assigns
+to the servers. If multiple MaxScales monitor the same Galera Cluster without
+[configuration synchronization](../Getting-Started/Configuration-Guide.md#configuration-synchronization),
+the commands should be run on all MaxScales.

@@ -29,6 +29,8 @@
 #include <maxtest/testconnections.hh>
 #include <maxtest/galera_cluster.hh>
 
+namespace
+{
 void check_server_id(TestConnections& test, const std::string& id)
 {
     test.tprintf("Expecting '%s'...", id.c_str());
@@ -40,12 +42,13 @@ void check_server_id(TestConnections& test, const std::string& id)
     test.expect(conn.query("COMMIT"), "BEGIN should work: %s", conn.error());
 }
 
-void test_main(TestConnections& test);
-
-int main(int argc, char** argv)
+void restore_priorities(TestConnections& test)
 {
-    TestConnections test;
-    return test.run_test(argc, argv, test_main);
+    test.log_printf("Restore original priorities");
+    test.check_maxctrl("alter server server1 priority 2");
+    test.check_maxctrl("alter server server2 priority 4");
+    test.check_maxctrl("alter server server3 priority 1");
+    test.check_maxctrl("alter server server4 priority 3");
 }
 
 void mxs4165_zero_priority(TestConnections& test, const std::vector<std::string>& ids)
@@ -96,11 +99,50 @@ void mxs4165_zero_priority(TestConnections& test, const std::vector<std::string>
     mxs.wait_for_monitor(2);
     check_server_id(test, ids[0]);
 
-    test.log_printf("Restore original priorities");
-    test.check_maxctrl("alter server server1 priority 2");
-    test.check_maxctrl("alter server server2 priority 4");
-    test.check_maxctrl("alter server server3 priority 1");
-    test.check_maxctrl("alter server server4 priority 3");
+    restore_priorities(test);
+}
+
+void mxs5096_switchover(TestConnections& test)
+{
+    auto& galera = *test.galera;
+    auto& mxs = *test.maxscale;
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+
+    auto set_prio = [&](int server_num, int prio) {
+        std::string cmd = mxb::string_printf("alter server server%i priority %i", server_num, prio);
+        mxs.maxctrl(cmd);
+    };
+    test.log_printf("Alter servers with new priorities, 1 to 4.");
+    set_prio(1, 1);
+    set_prio(2, 2);
+    set_prio(3, 3);
+    set_prio(4, 4);
+
+    mxs.check_print_servers_status({master, slave, slave, slave});
+    test.tprintf("Swap priorities of servers 3 and 1: 3 should be master.");
+    set_prio(1, 3);
+    set_prio(3, 1);
+    mxs.wait_for_monitor();
+    mxs.check_print_servers_status({slave, slave, master, slave});
+
+    test.tprintf("Swap priorities of servers 2 and 3: 2 should be master.");
+    set_prio(2, 1);
+    set_prio(3, 2);
+    mxs.wait_for_monitor();
+    mxs.check_print_servers_status({slave, master, slave, slave});
+
+    test.tprintf("Stop server2, 3 should be master again.");
+    galera.stop_node(1);
+    mxs.wait_for_monitor();
+    mxs.check_print_servers_status({slave, mxt::ServerInfo::DOWN, master, slave});
+
+    test.tprintf("Start server2, it should regain master.");
+    galera.start_node(1);
+    mxs.wait_for_monitor(1);
+    mxs.check_print_servers_status({slave, master, slave, slave});
+
+    restore_priorities(test);
 }
 
 void test_main(TestConnections& test)
@@ -261,4 +303,15 @@ void test_main(TestConnections& test)
     {
         mxs4165_zero_priority(test, ids);
     }
+    if (test.ok())
+    {
+        mxs5096_switchover(test);
+    }
+}
+}
+
+int main(int argc, char** argv)
+{
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
 }
