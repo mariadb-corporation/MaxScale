@@ -262,17 +262,29 @@ void RWSplit::gtid::parse(std::string_view sv)
 
 std::string RWSplit::gtid::to_string() const
 {
+    std::string rval;
     char buf[GTID_MAX_LEN + 1];
     char* end = buf + sizeof(buf);
     auto res = std::to_chars(buf, end, this->domain);
-    mxb_assert(res.ec == std::errc {} && res.ptr < end);
-    *res.ptr++ = '-';
-    res = std::to_chars(res.ptr, end, this->server_id);
-    mxb_assert(res.ec == std::errc {} && res.ptr < end);
-    *res.ptr++ = '-';
-    res = std::to_chars(res.ptr, end, this->sequence);
-    mxb_assert(res.ec == std::errc {});
-    return std::string(buf, res.ptr);
+
+    if (res.ec == std::errc {} && res.ptr < end)
+    {
+        *res.ptr++ = '-';
+        res = std::to_chars(res.ptr, end, this->server_id);
+
+        if (res.ec == std::errc {} && res.ptr < end)
+        {
+            *res.ptr++ = '-';
+            res = std::to_chars(res.ptr, end, this->sequence);
+
+            if (res.ec == std::errc {})
+            {
+                rval.assign(buf, res.ptr);
+            }
+        }
+    }
+
+    return rval;
 }
 
 bool RWSplit::gtid::empty() const
