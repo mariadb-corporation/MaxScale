@@ -33,15 +33,27 @@ int TesterLRUStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
         size += gwbuf_length(i->second);
     }
 
-    int rv1 = test_smoke(cache_items);
-    out() << endl;
-    int rv2 = test_lru(cache_items, size);
-    out() << endl;
-    int rv3 = test_max_count(n_threads, n_seconds, cache_items, size);
-    out() << endl;
-    int rv4 = test_max_size(n_threads, n_seconds, cache_items, size);
-    out() << endl;
-    int rv5 = test_max_count_and_size(n_threads, n_seconds, cache_items, size);
+    auto smoke_res = run_task([&](){
+        return test_smoke(cache_items);
+    });
+    auto lru_res = run_task([&](){
+        return test_lru(cache_items, size);
+    });
+    auto max_count_res = run_task([&](){
+        return test_max_count(n_threads, n_seconds, cache_items, size);
+    });
+    auto max_size_res = run_task([&](){
+        return test_max_size(n_threads, n_seconds, cache_items, size);
+    });
+    auto max_count_and_size_res = run_task([&](){
+        return test_max_count_and_size(n_threads, n_seconds, cache_items, size);
+    });
+
+    int rv1 = smoke_res.get();
+    int rv2 = lru_res.get();
+    int rv3 = max_count_res.get();
+    int rv4 = max_size_res.get();
+    int rv5 = max_count_and_size_res.get();
 
     return combine_rvs(rv1, rv2, rv3, rv4, rv5);
 }

@@ -702,7 +702,7 @@ void ConfigManager::process_config(const mxb::Json& new_json)
         }
     }
 
-    for (const auto& obj : new_objects)
+    for (auto& obj : new_objects)
     {
         auto name = obj.get_string(CN_ID);
         auto type = obj.get_string(CN_TYPE);
@@ -932,7 +932,8 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
     {
     case Type::SERVERS:
         {
-            // Hide the relationships for new objects, the relationships are handled in the update step.
+            // Hide the relationships of servers. Since servers are leaf nodes in
+            // the dependency tree, they never have to express their relationships.
             auto rel = obj.get_object(CN_RELATIONSHIPS);
 
             if (rel)
@@ -954,8 +955,7 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
 
     case Type::MONITORS:
         {
-            // Hide the service relationship for new objects, it will be handled in the update step. Leaving
-            // the servers relationship intact reduces the amount of messages that are logged.
+            // Hide the service relationship for monitors, it will be handled by the services.
             mxb::Json svc = obj.at("/relationships/services");
 
             if (svc)
@@ -1023,7 +1023,7 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
     }
 }
 
-void ConfigManager::update_object(const std::string& name, const std::string& type, const mxb::Json& json)
+void ConfigManager::update_object(const std::string& name, const std::string& type, mxb::Json& json)
 {
     m_tmp.set_object(CN_DATA, json);
     json_t* js = m_tmp.get_json();
@@ -1033,6 +1033,15 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
     case Type::SERVERS:
         if (auto* server = ServerManager::find_by_unique_name(name))
         {
+            // Hide the relationships of servers. Since servers are leaf nodes in
+            // the dependency tree, they never have to express their relationships.
+            auto rel = json.get_object(CN_RELATIONSHIPS);
+
+            if (rel)
+            {
+                json.erase(CN_RELATIONSHIPS);
+            }
+
             if (!runtime_alter_server_from_json(server, js))
             {
                 throw error("Failed to update server '", name, "'");
@@ -1062,6 +1071,11 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
                     MonitorManager::clear_server_status(server, SERVER_DRAINING, &err);
                 }
             }
+
+            if (rel)
+            {
+                json.set_object(CN_RELATIONSHIPS, rel);
+            }
         }
         else
         {
@@ -1072,9 +1086,22 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
     case Type::MONITORS:
         if (auto* monitor = MonitorManager::find_monitor(name.c_str()))
         {
+            // Hide the service relationship for monitors, it will be handled by the services.
+            mxb::Json svc = json.at("/relationships/services");
+
+            if (svc)
+            {
+                json.get_object(CN_RELATIONSHIPS).erase(CN_SERVICES);
+            }
+
             if (!runtime_alter_monitor_from_json(monitor, js))
             {
                 throw error("Failed to update monitor '", name, "'");
+            }
+
+            if (svc)
+            {
+                json.get_object(CN_RELATIONSHIPS).set_object(CN_SERVICES, svc);
             }
         }
         else
