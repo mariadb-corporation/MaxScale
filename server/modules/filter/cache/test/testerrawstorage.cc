@@ -24,18 +24,27 @@ TesterRawStorage::TesterRawStorage(std::ostream* pOut, StorageFactory* pFactory)
 
 int TesterRawStorage::execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items)
 {
-    int rv1 = test_smoke(cache_items);
+    auto smoke_res = run_task([&](){
+        return test_smoke(cache_items);
+    });
 
-    int rv2 = EXIT_FAILURE;
-    Storage::Config config(CACHE_THREAD_MODEL_MT);
+    auto task_res = run_task([&](){
+        int rv = EXIT_FAILURE;
+        Storage::Config config(CACHE_THREAD_MODEL_MT);
 
-    Storage* pStorage = get_storage(config);
+        Storage* pStorage = get_storage(config);
 
-    if (pStorage)
-    {
-        rv2 = execute_tasks(n_threads, n_seconds, cache_items, *pStorage);
-        delete pStorage;
-    }
+        if (pStorage)
+        {
+            rv = execute_tasks(n_threads, n_seconds, cache_items, *pStorage);
+            delete pStorage;
+        }
+
+        return rv;
+    });
+
+    int rv1 = smoke_res.get();
+    int rv2 = task_res.get();
 
     return combine_rvs(rv1, rv2);
 }

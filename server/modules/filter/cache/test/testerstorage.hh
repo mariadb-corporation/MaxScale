@@ -15,6 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include "tester.hh"
+#include <future>
 
 class Storage;
 class StorageFactory;
@@ -189,3 +190,5 @@ private:
     TesterStorage(const TesterStorage&);
     TesterStorage& operator=(const TesterStorage&);
 };
+
+std::future<int> run_task(std::function<int()> func);

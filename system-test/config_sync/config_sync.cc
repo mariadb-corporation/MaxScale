@@ -961,38 +961,40 @@ void test_custom_db(TestConnections& test)
     test.maxscale2->ssh_output("sed -i 's/config_sync_db=test/config_sync_db=mysql/' /etc/maxscale.cnf");
 }
 
+void test_service_cluster(TestConnections& test)
+{
+    int version = 1;
+    std::string user = test.maxscale->user_name();
+    std::string pw = test.maxscale->password();
+    test.check_maxctrl("create service service-with-cluster readconnroute "
+                       "user=" + user + " password=" + pw + " --cluster=MariaDB-Monitor");
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "services/service-with-cluster", "/data/relationships");
+}
+
+static int num = 1;
+
+#define TEST_CASE(x) test.log_printf("%d. " #x, num++); x(test);
+
 int main(int argc, char** argv)
 {
+    TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
     api1 = create_api1(test);
     api2 = create_api2(test);
+    reset(test);
 
-    test.log_printf("1. test_config_parameters");
-    test_config_parameters(test);
-
-    test.log_printf("2. test_sync");
-    test_sync(test);
-
-    test.log_printf("3. test_bad_change");
-    test_bad_change(test);
-
-    test.log_printf("4. test_failures");
-    test_failures(test);
-
-    test.log_printf("5. test_bad_cache");
-    test_bad_cache(test);
-
-    test.log_printf("6. test_conflicts");
-    test_conflicts(test);
-
-    test.log_printf("7. test_server_state");
-    test_server_state(test);
-
-    test.log_printf("8. test_admin_users");
-    test_admin_users(test);
-
-    test.log_printf("9. test_custom_db");
-    test_custom_db(test);
+    TEST_CASE(test_config_parameters);
+    TEST_CASE(test_sync);
+    TEST_CASE(test_bad_change);
+    TEST_CASE(test_failures);
+    TEST_CASE(test_bad_cache);
+    TEST_CASE(test_conflicts);
+    TEST_CASE(test_server_state);
+    TEST_CASE(test_admin_users);
+    TEST_CASE(test_custom_db);
+    TEST_CASE(test_service_cluster);
 
     return test.global_result;
 }

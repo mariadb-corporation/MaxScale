@@ -26,6 +26,7 @@
 #include <iostream>
 #include <thread>
 #include <maxbase/semaphore.hh>
+#include <sys/wait.h>
 
 using namespace maxbase;
 using namespace std;
@@ -185,11 +186,39 @@ void test_signal()
 }
 }
 
+int wait_for_child(pid_t pid)
+{
+    int status = 0;
+    pid_t rc = waitpid(pid, &status, 0);
+    return rc == pid && WIFEXITED(status) && WEXITSTATUS(status) == EXIT_SUCCESS ? 0 : 1;
+}
+
 int main(int argc, char* argv[])
 {
-    test_simple();
-    test_threads();
-    test_signal();
+    int err = 0;
+    pid_t simple = 0;
+    pid_t threads = 0;
+    pid_t signals = 0;
 
-    return EXIT_SUCCESS;
+    if ((simple = fork()) == 0)
+    {
+        test_simple();
+    }
+    else if ((threads = fork()) == 0)
+    {
+        test_threads();
+    }
+    else if ((signals = fork()) == 0)
+    {
+        test_signal();
+    }
+    else
+    {
+        mxb_assert(simple != 0 && threads != 0 && signals != 0);
+        err += wait_for_child(simple);
+        err += wait_for_child(threads);
+        err += wait_for_child(signals);
+    }
+
+    return err;
 }
