@@ -15,9 +15,29 @@
 #include "testerstorage.hh"
 #include <algorithm>
 #include <sstream>
+#include <iostream>
 #include "storage.hh"
 
 using namespace std;
+
+static const bool PARALLEL = [](){
+    const char* no_parallel = getenv("NO_PARALLEL");
+
+    if (no_parallel == nullptr)
+    {
+        std::cout <<
+            R"(
+################################################
+# Running tests in parallel, to run serially:  #
+#                                              #
+#   export NO_PARALLEL=1                       #
+#                                              #
+################################################
+        )" << std::endl;
+    }
+
+    return no_parallel == nullptr;
+}();
 
 namespace
 {
@@ -35,6 +55,20 @@ unsigned int millisleep(unsigned int milliseconds)
 
     return rem.tv_sec * 1000 + rem.tv_nsec / 1000000;
 }
+}
+
+std::future<int> run_task(std::function<int()> func)
+{
+    if (PARALLEL)
+    {
+        return std::async(std::launch::async, func);
+    }
+    else
+    {
+        std::promise<int> p;
+        p.set_value(func());
+        return p.get_future();
+    }
 }
 
 //
@@ -297,39 +331,48 @@ int TesterStorage::test_smoke(const CacheItems& cache_items)
 
 int TesterStorage::test_ttl(const CacheItems& cache_items)
 {
-    Storage::Config config;
+    auto st_res = run_task([&](){
+        out() << "ST" << endl;
 
-    out() << "ST" << endl;
+        Storage::Config config;
+        config.thread_model = CACHE_THREAD_MODEL_ST;
+        config.hard_ttl = 6000;
+        config.soft_ttl = 3000;
 
-    config.thread_model = CACHE_THREAD_MODEL_ST;
-    config.hard_ttl = 6000;
-    config.soft_ttl = 3000;
+        int rv = EXIT_FAILURE;
+        Storage* pStorage = get_storage(config);
 
-    Storage* pStorage;
+        if (pStorage)
+        {
+            rv = test_ttl(cache_items, *pStorage);
+            delete pStorage;
+        }
 
-    int rv1 = EXIT_FAILURE;
-    pStorage = get_storage(config);
+        return rv;
+    });
 
-    if (pStorage)
-    {
-        rv1 = test_ttl(cache_items, *pStorage);
-        delete pStorage;
-    }
+    auto mt_res = run_task([&](){
+        out() << "MT" << endl;
 
-    out() << "MT" << endl;
+        Storage::Config config;
+        config.thread_model = CACHE_THREAD_MODEL_MT;
+        config.hard_ttl = 6000;
+        config.soft_ttl = 3000;
 
-    config.thread_model = CACHE_THREAD_MODEL_MT;
-    config.hard_ttl = 6000;
-    config.soft_ttl = 3000;
+        int rv = EXIT_FAILURE;
+        Storage* pStorage = get_storage(config);
 
-    int rv2 = EXIT_FAILURE;
-    pStorage = get_storage(config);
+        if (pStorage)
+        {
+            rv = test_ttl(cache_items, *pStorage);
+            delete pStorage;
+        }
 
-    if (pStorage)
-    {
-        rv2 = test_ttl(cache_items, *pStorage);
-        delete pStorage;
-    }
+        return rv;
+    });
+
+    int rv1 = st_res.get();
+    int rv2 = mt_res.get();
 
     return combine_rvs(rv1, rv2);
 }
