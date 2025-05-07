@@ -378,14 +378,8 @@ module.exports.execute = function (argv, opts) {
   return doCommand(argv);
 };
 
-async function readCommands(argv, options) {
+async function runCommands(argv, options, input) {
   var rval = [];
-  var input = fs
-    .readFileSync(0)
-    .toString()
-    .split(os.EOL)
-    .map((str) => str.trim())
-    .filter((val) => val);
 
   for (const line of input) {
     try {
@@ -395,7 +389,35 @@ async function readCommands(argv, options) {
     }
   }
 
-  argv.resolve(argv.quiet ? undefined : rval.join(os.EOL));
+  return argv.quiet ? undefined : rval.join(os.EOL);
+}
+
+async function readCommands(argv, options) {
+  var data = null;
+
+  process.stdin.on("readable", function () {
+    var chunk = process.stdin.read();
+
+    while (chunk) {
+      if (data) {
+        data = Buffer.concat([data, chunk]);
+      } else {
+        data = chunk;
+      }
+
+      chunk = process.stdin.read();
+    }
+  });
+
+  process.stdin.on("end", async function () {
+    const input = data
+      .toString()
+      .split(os.EOL)
+      .map((str) => str.trim())
+      .filter((val) => val);
+
+    argv.resolve(await runCommands(argv, options, input));
+  });
 }
 
 async function askQuestion(argv) {
