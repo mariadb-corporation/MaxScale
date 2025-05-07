@@ -287,6 +287,11 @@ static bool drop_path_part(std::string& path)
 class ResourceWatcher
 {
 public:
+    struct WatchedResource
+    {
+        time_t  last_modified = 0;
+        int64_t version = 0;
+    };
 
     ResourceWatcher()
         : m_init(time(NULL))
@@ -295,18 +300,21 @@ public:
 
     void modify(const std::string& orig_path)
     {
+        time_t t = time(nullptr);
         std::string path = orig_path;
 
         do
         {
-            m_last_modified[path] = time(NULL);
+            auto& watched_res = m_last_modified[path];
+            watched_res.last_modified = t;
+            watched_res.version++;
         }
         while (drop_path_part(path));
     }
 
-    time_t last_modified(const string& path) const
+    WatchedResource get(const string& path) const
     {
-        map<string, time_t>::const_iterator it = m_last_modified.find(path);
+        auto it = m_last_modified.find(path);
 
         if (it != m_last_modified.end())
         {
@@ -314,12 +322,14 @@ public:
         }
 
         // Resource has not yet been updated
-        return m_init;
+        WatchedResource res;
+        res.last_modified = m_init;
+        return res;
     }
 
 private:
-    time_t              m_init;
-    map<string, time_t> m_last_modified;
+    time_t                       m_init;
+    map<string, WatchedResource> m_last_modified;
 };
 
 HttpResponse cb_stop_monitor(const HttpRequest& request)
@@ -1963,8 +1973,7 @@ static bool request_reads_data(const string& verb)
            || verb == MHD_HTTP_METHOD_HEAD;
 }
 
-static bool request_precondition_met(const HttpRequest& request, HttpResponse& response,
-                                     const std::string& cksum)
+static bool request_precondition_met(const HttpRequest& request, HttpResponse& response)
 {
     bool rval = false;
     const string& uri = request.get_uri();
@@ -1972,21 +1981,17 @@ static bool request_precondition_met(const HttpRequest& request, HttpResponse& r
     auto if_unmodified_since = request.get_header(MHD_HTTP_HEADER_IF_UNMODIFIED_SINCE);
     auto if_match = request.get_header(MHD_HTTP_HEADER_IF_MATCH);
     auto if_none_match = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH);
+    auto watched_res = this_unit.watcher.get(uri);
 
-    if ((!if_unmodified_since.empty()
-         && this_unit.watcher.last_modified(uri) > http_from_date(if_unmodified_since))
-        || (!if_match.empty() && cksum != if_match))
+    if ((!if_unmodified_since.empty() && watched_res.last_modified > http_from_date(if_unmodified_since))
+        || (!if_match.empty() && std::to_string(watched_res.version) != if_match))
     {
         response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
     }
-    else if (!if_modified_since.empty() || !if_none_match.empty())
+    else if ((!if_modified_since.empty() && watched_res.last_modified <= http_from_date(if_modified_since))
+             || (!if_none_match.empty() && std::to_string(watched_res.version) == if_none_match))
     {
-        if ((if_modified_since.empty()
-             || this_unit.watcher.last_modified(uri) <= http_from_date(if_modified_since))
-            && (if_none_match.empty() || cksum == if_none_match))
-        {
-            response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
-        }
+        response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
     }
     else
     {
@@ -2095,6 +2100,13 @@ static HttpResponse handle_request(const HttpRequest& request)
               request.get_uri().c_str(),
               request.get_json_str().c_str());
 
+    HttpResponse rval;
+
+    if (!request_precondition_met(request, rval))
+    {
+        return rval;
+    }
+
     const Resource* resource = this_unit.resources.find_resource(request);
     bool modifies_data = request_modifies_data(request.get_verb());
     bool requires_sync = false;
@@ -2124,7 +2136,7 @@ static HttpResponse handle_request(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
     }
 
-    HttpResponse rval = this_unit.resources.process_request(request, resource);
+    rval = this_unit.resources.process_request(request, resource);
 
     std::string warning = runtime_get_warnings();
 
@@ -2133,62 +2145,54 @@ static HttpResponse handle_request(const HttpRequest& request)
         rval.add_header("Mxs-Warning", warning);
     }
 
-    // Calculate the checksum from the generated JSON
-    auto str = mxb::json_dump(rval.get_response(), JSON_COMPACT);
-    auto cksum = '"' + mxb::checksum<mxb::Sha1Sum>(str) + '"';
-
-    if (request_precondition_met(request, rval, cksum))
+    if (modifies_data)
     {
-        if (modifies_data)
+        switch (rval.get_code())
         {
-            switch (rval.get_code())
+        case MHD_HTTP_OK:
+        case MHD_HTTP_NO_CONTENT:
+        case MHD_HTTP_CREATED:
+            this_unit.watcher.modify(request.get_uri());
+
+            if (requires_sync)
             {
-            case MHD_HTTP_OK:
-            case MHD_HTTP_NO_CONTENT:
-            case MHD_HTTP_CREATED:
-                this_unit.watcher.modify(request.get_uri());
-
-                if (requires_sync)
+                if (skip_sync)
                 {
-                    if (skip_sync)
-                    {
-                        // No synchronization, just update the JSON representation of the configuration
-                        manager->refresh();
-                    }
-                    else if (!manager->commit())
-                    {
-                        rval = HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
-                    }
+                    // No synchronization, just update the JSON representation of the configuration
+                    manager->refresh();
                 }
-                break;
-
-            default:
-                if (requires_sync && !skip_sync)
+                else if (!manager->commit())
                 {
-                    manager->rollback();
+                    rval = HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
                 }
-                break;
             }
-        }
-        else if (request_reads_data(request.get_verb()))
-        {
-            const auto& uri = request.get_uri();
-            rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED,
-                            http_to_date(this_unit.watcher.last_modified(uri)));
-            rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
-        }
+            break;
 
-        // Only filter successful results
-        if (rval.get_code() < MHD_HTTP_BAD_REQUEST)
-        {
-            if (!remove_unwanted_rows(request, rval))
+        default:
+            if (requires_sync && !skip_sync)
             {
-                return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+                manager->rollback();
             }
-
-            paginate_result(request, rval);
-            remove_unwanted_fields(request, rval);
+            break;
         }
+    }
+    else if (request_reads_data(request.get_verb()))
+    {
+        auto watched_res = this_unit.watcher.get(request.get_uri());
+        rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED, http_to_date(watched_res.last_modified));
+        rval.add_header(HTTP_RESPONSE_HEADER_ETAG, std::to_string(watched_res.version));
+    }
+
+    // Only filter successful results
+    if (rval.get_code() < MHD_HTTP_BAD_REQUEST)
+    {
+        if (!remove_unwanted_rows(request, rval))
+        {
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+        }
+
+        paginate_result(request, rval);
+        remove_unwanted_fields(request, rval);
     }
 
     return rval;
