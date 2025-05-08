@@ -13,6 +13,7 @@
  */
 
 #include <iostream>
+#include <sstream>
 #include <algorithm>
 #include <maxbase/assert.hh>
 #include <maxbase/maxbase.hh>
@@ -34,6 +35,8 @@ int64_t get_monotonic_time_ms()
 
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
+
+std::mutex log_lock;
 
 class TimerTest : public Worker::Callable
 {
@@ -62,15 +65,15 @@ public:
             size_t idx = (m_tick_durations.size() - 1) * 0.95;
             int64_t diff = m_tick_durations[idx];
 
-            cout << "Delay: " << delay() << "ms, "
-                 << "95th percentile: " << diff << "ms, "
-                 << "Ticks: " << m_tick_durations.size() << ", "
-                 << "95th percentile index: " << idx
-                 << endl;
+            m_out << "Delay: " << delay().count() << "ms, "
+                  << "95th percentile: " << diff << "ms, "
+                  << "Ticks: " << m_tick_durations.size() << ", "
+                  << "95th percentile index: " << idx
+                  << endl;
 
             if (diff > 50)
             {
-                cout << "Error: 95th percentile difference between expected and happened > 50: " << diff <<
+                m_out << "Error: 95th percentile difference between expected and happened > 50: " << diff <<
                     endl;
                 m_rv = EXIT_FAILURE;
             }
@@ -80,6 +83,9 @@ public:
         {
             cancel_dcall(m_dcid);
         }
+
+        std::lock_guard<std::mutex> guard(log_lock);
+        std::cout << m_out.str();
     }
 
     std::chrono::milliseconds delay() const
@@ -101,7 +107,7 @@ public:
             int64_t now = get_monotonic_time_ms();
             int64_t diff = abs(now - m_at);
             m_tick_durations.push_back(diff);
-            cout << m_id << ": " << diff << endl;
+            m_out << m_id << ": " << diff << endl;
 
             m_at += m_delay.count();
 
@@ -127,6 +133,7 @@ private:
     Worker::DCId              m_dcid {0};
     bool                      m_cancel_at_destruct;
     std::vector<int64_t>      m_tick_durations;
+    std::ostringstream        m_out;
 };
 
 int TimerTest::s_id = 1;
@@ -136,17 +143,17 @@ int run_timer_test()
 {
     int rv = EXIT_SUCCESS;
 
-    TimerTest::s_ticks = 100;
+    TimerTest::s_ticks = 50;
 
     Worker w;
 
-    TimerTest t1(&w, &rv, 200ms);
-    TimerTest t2(&w, &rv, 300ms);
-    TimerTest t3(&w, &rv, 400ms);
-    TimerTest t4(&w, &rv, 500ms);
-    TimerTest t5(&w, &rv, 600ms);
+    TimerTest t1(&w, &rv, 100ms);
+    TimerTest t2(&w, &rv, 150ms);
+    TimerTest t3(&w, &rv, 200ms);
+    TimerTest t4(&w, &rv, 250ms);
+    TimerTest t5(&w, &rv, 300ms);
     auto cancel_at_destruct = false;
-    TimerTest* pT6 = new TimerTest(&w, &rv, 500ms, cancel_at_destruct);
+    TimerTest* pT6 = new TimerTest(&w, &rv, 250ms, cancel_at_destruct);
     Worker::Callable callable(&w);
 
     w.execute([&]() {
@@ -199,11 +206,14 @@ public:
     ~MoveTest()
     {
         cancel_dcalls();
+
+        std::lock_guard<std::mutex> guard(log_lock);
+        std::cout << m_out.str();
     }
 
     void start()
     {
-        cout << "Ping: " << flush;
+        m_out << "Ping: " << flush;
         dcall(1ms, &MoveTest::ping, this);
     }
 
@@ -216,7 +226,7 @@ public:
 
         ++m_nMoves;
 
-        cout << "Move(" << m_nMoves << "): " << m_pW << endl;
+        m_out << "Move(" << m_nMoves << "): " << m_pW << endl;
 
         m_pW = nullptr;
 
@@ -242,7 +252,7 @@ public:
             resume_dcalls();
             m_stopwatch.restart();
 
-            cout << "Ping: " << flush;
+            m_out << "Ping: " << flush;
             m_moving = false;
         }, mxb::Worker::EXECUTE_QUEUED);
     }
@@ -259,39 +269,37 @@ public:
         auto* pW = worker();
         mxb_assert(pW == m_pW);
 
-        cout << "." << flush;
+        m_out << "." << flush;
 
-        if (m_stopwatch.split() > std::chrono::milliseconds(10))
+        m_out << endl;
+
+        if (m_nMoves < 1000)
         {
-            cout << endl;
+            suspend_dcalls();
 
-            if (m_nMoves < 1000)
-            {
-                suspend_dcalls();
-
-                pW->execute([this](){
-                    move();
-                }, mxb::Worker::EXECUTE_QUEUED);
-            }
-            else
-            {
-                m_pW3->shutdown();
-                m_pW2->shutdown();
-                m_pW1->shutdown();
-            }
+            pW->execute([this](){
+                move();
+            }, mxb::Worker::EXECUTE_QUEUED);
+        }
+        else
+        {
+            m_pW3->shutdown();
+            m_pW2->shutdown();
+            m_pW1->shutdown();
         }
 
         return true;
     }
 
 private:
-    Worker*        m_pW {nullptr};
-    Worker*        m_pW1;
-    Worker*        m_pW2;
-    Worker*        m_pW3;
-    int32_t        m_nMoves {0};
-    mxb::StopWatch m_stopwatch;
-    bool           m_moving {false};
+    Worker*            m_pW {nullptr};
+    Worker*            m_pW1;
+    Worker*            m_pW2;
+    Worker*            m_pW3;
+    int32_t            m_nMoves {0};
+    mxb::StopWatch     m_stopwatch;
+    bool               m_moving {false};
+    std::ostringstream m_out;
 };
 
 void run_move_test()
@@ -319,9 +327,19 @@ int main()
 {
     mxb::MaxBase mxb(MXB_LOG_TARGET_STDOUT);
 
-    int rv = 0;
-    rv = run_timer_test();
-    run_move_test();    // Expected to crash, if there are issues.
+    std::vector<std::thread> threads;
+
+    for (int i = 0; i < 10; i++)
+    {
+        threads.emplace_back(run_move_test);    // Expected to crash, if there are issues.
+    }
+
+    int rv = run_timer_test();
+
+    for (auto& thr : threads)
+    {
+        thr.join();
+    }
 
     return rv;
 }

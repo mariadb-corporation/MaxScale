@@ -897,8 +897,9 @@ The possible values for this parameter are:
     server before each read. This guarantees that if a transaction was visible
     at the time the read is received by readwritesplit, the transaction is
     guaranteed to be complete on the replica server where the read is
-    done. Versions 23.02.13 and older used `@@gtid_current_pos` as the GTID
-    value ([MXS-5588](https://jira.mariadb.org/browse/MXS-5588)) but this caused
+    done. Versions 22.08.16, 23.02.13, 23.08.9, 24.02.5 and older used
+    `@@gtid_current_pos` as the GTID value
+    ([MXS-5588](https://jira.mariadb.org/browse/MXS-5588)) but this caused
     problems with Galera clusters.
 
     This mode is the most consistent of all the modes. It provides consistency
