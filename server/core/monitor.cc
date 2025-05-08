@@ -406,8 +406,10 @@ bool Monitor::post_configure()
 
     for (auto elem : m_settings.servers)
     {
-        MXB_AT_DEBUG(bool ok = ) add_server(elem);
-        mxb_assert(ok);
+        if (!add_server(elem))
+        {
+            ok = false;
+        }
     }
 
     return ok;
@@ -480,8 +482,8 @@ bool Monitor::add_server(SERVER* server)
     }
     else
     {
-        MXB_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
-                  server->name(), existing_owner.c_str());
+        MXB_ERROR("Server '%s' is already monitored by '%s', cannot add it to monitor '%s'.",
+                  server->name(), existing_owner.c_str(), name());
     }
     return success;
 }
