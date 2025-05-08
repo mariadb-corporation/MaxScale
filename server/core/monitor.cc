@@ -538,7 +538,6 @@ bool Monitor::post_configure()
     if (ok)
     {
         ok = prepare_servers();
-        mxb_assert(ok);
     }
     return ok;
 }

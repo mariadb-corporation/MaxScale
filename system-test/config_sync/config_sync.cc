@@ -255,20 +255,20 @@ void expect_sync(TestConnections& test, int expected_version, size_t num_maxscal
     std::ostringstream ss;
 
     auto check = [&](auto status, const char* who) {
-            int version = status.get_int("version");
-            test.expect(version == expected_version,
-                        "Expected version %d, got %d from %s", expected_version, version, who);
+        int version = status.get_int("version");
+        test.expect(version == expected_version,
+                    "Expected version %d, got %d from %s", expected_version, version, who);
 
-            auto nodes = status.get_object("nodes");
-            size_t num_fields = json_object_size(nodes.get_json());
+        auto nodes = status.get_object("nodes");
+        size_t num_fields = json_object_size(nodes.get_json());
 
-            test.expect(num_fields == num_maxscales,
-                        "Expected \"nodes\" object to have %lu fields, got %lu from %s: %s",
-                        num_maxscales, num_fields, who, nodes.to_string(NORMAL).c_str());
+        test.expect(num_fields == num_maxscales,
+                    "Expected \"nodes\" object to have %lu fields, got %lu from %s: %s",
+                    num_maxscales, num_fields, who, nodes.to_string(NORMAL).c_str());
 
-            test.expect(status.contains("origin"), "Expected \"origin\" to not be empty.");
-            test.expect(status.contains("status"), "Expected \"status\" to not be empty.");
-        };
+        test.expect(status.contains("origin"), "Expected \"origin\" to not be empty.");
+        test.expect(status.contains("status"), "Expected \"status\" to not be empty.");
+    };
 
     wait_for_sync();
 
@@ -305,8 +305,8 @@ void reset(TestConnections& test)
 {
     test.stop_all_maxscales();
 
-    test.maxscale->ssh_output("rm -r /var/lib/maxscale/*");
-    test.maxscale2->ssh_output("rm -r /var/lib/maxscale/*");
+    test.maxscale->ssh_output("rm -rf /var/lib/maxscale/*");
+    test.maxscale2->ssh_output("rm -rf /var/lib/maxscale/*");
 
     auto conn = test.repl->get_connection(0);
     test.expect(conn.connect(), "Connection failed: %s", conn.error());
@@ -397,8 +397,6 @@ void test_config_parameters(TestConnections& test)
     res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=124");
     test.expect(res.rc == 0, "Config change with good credentials should work");
     expect_sync(test, version0 + 1, 2);
-
-    reset(test);
 }
 
 void test_sync(TestConnections& test)
@@ -450,8 +448,6 @@ void test_sync(TestConnections& test)
 
     version += 2;
     expect_sync(test, version, 2);
-
-    reset(test);
 }
 
 void test_bad_change(TestConnections& test)
@@ -566,8 +562,6 @@ void test_bad_change(TestConnections& test)
     test.expect(res.rc == 0, "Command should work: %s", res.output.c_str());
     expect_sync(test, version_start + 2, 2);
     expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
-
-    reset(test);
 }
 
 void test_failures(TestConnections& test)
@@ -575,12 +569,12 @@ void test_failures(TestConnections& test)
     int value = 10;
     int version = 1;
     auto config_update = [&](auto mxs) {
-            auto rv = mxs->maxctrl("alter service RW-Split-Router max_sescmd_history="
-                                   + std::to_string(value++));
-            test.expect(rv.rc == 0, "Expected alter service to work: %s", rv.output.c_str());
-            expect_sync(test, version++, 2);
-            expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
-        };
+        auto rv = mxs->maxctrl("alter service RW-Split-Router max_sescmd_history="
+                               + std::to_string(value++));
+        test.expect(rv.rc == 0, "Expected alter service to work: %s", rv.output.c_str());
+        expect_sync(test, version++, 2);
+        expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
+    };
 
     config_update(test.maxscale);
 
@@ -668,24 +662,22 @@ void test_failures(TestConnections& test)
     wait_for_sync(105);
     mxs_version = get_version(api1);
     test.expect(mxs_version != 105, "Configuration with bad JSON should not increment version");
-
-    reset(test);
 }
 
 void test_bad_cache(TestConnections& test)
 {
     auto expect_empty = [&]() {
-            auto sync1 = get(api1, "maxscale", "/data/attributes/config_sync");
-            int64_t version = -1;
-            test.expect(sync1.try_get_int("version", &version) && version == 0,
-                        "Wrong cached configuration should not be read: %s",
-                        sync1.to_string(NORMAL).c_str());
-        };
+        auto sync1 = get(api1, "maxscale", "/data/attributes/config_sync");
+        int64_t version = -1;
+        test.expect(sync1.try_get_int("version", &version) && version == 0,
+                    "Wrong cached configuration should not be read: %s",
+                    sync1.to_string(NORMAL).c_str());
+    };
 
     auto expect_discarded = [&]() {
-            int rc = test.maxscale->ssh_node("test -f /var/lib/maxscale/maxscale-config.json", true);
-            test.expect(rc != 0, "Bad cached configuration should be discarded");
-        };
+        int rc = test.maxscale->ssh_node("test -f /var/lib/maxscale/maxscale-config.json", true);
+        test.expect(rc != 0, "Bad cached configuration should be discarded");
+    };
 
     test.tprintf("Create a cached configuration with no monitor");
     std::string NO_MONITOR =
@@ -706,8 +698,6 @@ void test_bad_cache(TestConnections& test)
     create_config(test.maxscale, BAD_CONFIG);
     expect_empty();
     expect_discarded();
-
-    reset(test);
 }
 
 void test_conflicts(TestConnections& test)
@@ -788,8 +778,6 @@ void test_conflicts(TestConnections& test)
 
     expect_sync(test, version, 2);
     expect_equal(test, "filters/test-object", "/data/attributes/parameters");
-
-    reset(test);
 }
 
 
@@ -853,8 +841,6 @@ void test_one_server_state(TestConnections& test, const std::string& state)
 
     expect_sync(test, version, 2);
     expect_equal(test, "servers/server4", "/data/attributes/state");
-
-    reset(test);
 }
 
 void test_server_state(TestConnections& test)
@@ -932,8 +918,6 @@ void test_admin_users(TestConnections& test)
     login_err("bob", "bob3");
     login_err("bob", "bob2");
     login_err("bob", "bob");
-
-    reset(test);
 }
 
 void test_custom_db(TestConnections& test)
@@ -975,7 +959,7 @@ void test_service_cluster(TestConnections& test)
 
 static int num = 1;
 
-#define TEST_CASE(x) test.log_printf("%d. " #x, num++); x(test);
+#define TEST_CASE(x) reset(test); test.log_printf("%d. " #x, num++); x(test);
 
 int main(int argc, char** argv)
 {
@@ -983,7 +967,6 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     api1 = create_api1(test);
     api2 = create_api2(test);
-    reset(test);
 
     TEST_CASE(test_config_parameters);
     TEST_CASE(test_sync);
