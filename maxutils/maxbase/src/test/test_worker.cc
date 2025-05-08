@@ -143,17 +143,17 @@ int run_timer_test()
 {
     int rv = EXIT_SUCCESS;
 
-    TimerTest::s_ticks = 100;
+    TimerTest::s_ticks = 50;
 
     Worker w;
 
-    TimerTest t1(&w, &rv, 200ms);
-    TimerTest t2(&w, &rv, 300ms);
-    TimerTest t3(&w, &rv, 400ms);
-    TimerTest t4(&w, &rv, 500ms);
-    TimerTest t5(&w, &rv, 600ms);
+    TimerTest t1(&w, &rv, 100ms);
+    TimerTest t2(&w, &rv, 150ms);
+    TimerTest t3(&w, &rv, 200ms);
+    TimerTest t4(&w, &rv, 250ms);
+    TimerTest t5(&w, &rv, 300ms);
     auto cancel_at_destruct = false;
-    TimerTest* pT6 = new TimerTest(&w, &rv, 500ms, cancel_at_destruct);
+    TimerTest* pT6 = new TimerTest(&w, &rv, 250ms, cancel_at_destruct);
     Worker::Callable callable(&w);
 
     w.execute([&]() {
