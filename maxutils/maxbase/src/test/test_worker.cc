@@ -115,15 +115,15 @@ int run()
 {
     int rv = EXIT_SUCCESS;
 
-    TimerTest::s_ticks = 100;
+    TimerTest::s_ticks = 50;
 
     Worker w;
 
-    TimerTest t1(&w, &rv, 200);
-    TimerTest t2(&w, &rv, 300);
-    TimerTest t3(&w, &rv, 400);
-    TimerTest t4(&w, &rv, 500);
-    TimerTest t5(&w, &rv, 600);
+    TimerTest t1(&w, &rv, 100);
+    TimerTest t2(&w, &rv, 150);
+    TimerTest t3(&w, &rv, 200);
+    TimerTest t4(&w, &rv, 250);
+    TimerTest t5(&w, &rv, 300);
 
     w.execute([&]() {
         w.dcall(t1.delay(), &TimerTest::tick, &t1);
