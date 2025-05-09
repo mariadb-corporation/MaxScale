@@ -843,12 +843,13 @@ void test_one_server_state(TestConnections& test, const std::string& state)
     expect_equal(test, "servers/server4", "/data/attributes/state");
 }
 
-void test_server_state(TestConnections& test)
+void test_server_state_maintenance(TestConnections& test)
 {
-    test.tprintf("  Testing state: maintenance");
     test_one_server_state(test, "maintenance");
+}
 
-    test.tprintf("  Testing state: drain");
+void test_server_state_drain(TestConnections& test)
+{
     test_one_server_state(test, "drain");
 }
 
@@ -974,7 +975,8 @@ int main(int argc, char** argv)
     TEST_CASE(test_failures);
     TEST_CASE(test_bad_cache);
     TEST_CASE(test_conflicts);
-    TEST_CASE(test_server_state);
+    TEST_CASE(test_server_state_maintenance);
+    TEST_CASE(test_server_state_drain);
     TEST_CASE(test_admin_users);
     TEST_CASE(test_custom_db);
     TEST_CASE(test_service_cluster);
