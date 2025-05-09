@@ -50,14 +50,36 @@ void exit_on_error(const S& s)
 void generate_input_data(const TempFile& input)
 {
     maxbase::StopWatch sw;
-    maxbase::XorShiftRandom rnd;
     std::string chars = "abc ";
     auto os = input.make_stream<std::ofstream>(ios_base::trunc);
-    for (size_t i = 0; i < 100 * 1024 * 1024; ++i)
+    std::vector<std::future<std::string>> results;
+    size_t TOTAL_SIZE = 100 * 1024 * 1024;
+    size_t THREADS = std::max(std::thread::hardware_concurrency(), 1U);
+    size_t CHUNK_SIZE = TOTAL_SIZE / THREADS;
+
+    for (size_t x = 0; x < THREADS; x++)
     {
-        // not quite random so it compresses well enough, about 2/1.
-        os << chars[rnd.b_to_e_co(0, chars.size() - 1)];
+        results.emplace_back(std::async(std::launch::async, [&](){
+
+            maxbase::XorShiftRandom rnd;
+            std::string rval;
+            rval.reserve(CHUNK_SIZE);
+
+            for (size_t i = 0; i < CHUNK_SIZE; ++i)
+            {
+                // not quite random so it compresses well enough, about 2/1.
+                rval += chars[rnd.b_to_e_co(0, chars.size() - 1)];
+            }
+
+            return rval;
+        }));
     }
+
+    for (auto& result : results)
+    {
+        os << result.get();
+    }
+
     std::cout << "Generate input " << maxbase::to_string(sw.split()) << std::endl;
 }
 
