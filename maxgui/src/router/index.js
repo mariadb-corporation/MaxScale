@@ -68,7 +68,7 @@ async function resolvingGuardedRoutes(to, from, next) {
         }
         next()
     } else {
-        await showLoadingOverlay(OVERLAY_LOGOUT)
+        if (from.path !== '/') await showLoadingOverlay(OVERLAY_LOGOUT)
         next({
             path: '/login',
             query: { redirect: to.path },
