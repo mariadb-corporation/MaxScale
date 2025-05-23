@@ -154,6 +154,19 @@ int main(int argc, char** argv)
             }
         },
         {
+            "SET AUTOCOMMIT=0 after read-write works",
+            {
+                ok("BEGIN"),
+                ok("SELECT 1"),
+                ok("INSERT INTO test.t1 VALUES (1)"),
+                ok("COMMIT"),
+                ok("SET autocommit=(SELECT CASE @@server_id WHEN " + master_id
+                   + " THEN SLEEP(1) ELSE 0 END)"),
+                equal("SELECT 1", "1"),
+                ok("COMMIT")
+            }
+        },
+        {
             "Blocking slave moves transaction to the master",
             {
                 start_transaction,
