@@ -72,7 +72,6 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Consistent Critical Read Filter](Filters/CCRFilter.md)
  - [Hint Filter](Filters/Hintfilter.md)
  - [Insert Stream Filter](Filters/Insert-Stream-Filter.md)
- - [Luafilter](Filters/Luafilter.md)
  - [Masking Filter](Filters/Masking.md)
  - [Maxrows Filter](Filters/Maxrows.md)
  - [Named Server Filter](Filters/Named-Server-Filter.md)
@@ -82,7 +81,6 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Tee Filter](Filters/Tee-Filter.md)
  - [Throttle Filter](Filters/Throttle.md)
  - [Top N Filter](Filters/Top-N-Filter.md)
- - [Transaction Performance Monitoring Filter](Filters/Transaction-Performance-Monitoring-Filter.md)
 
 ## Monitors
 

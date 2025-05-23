@@ -661,6 +661,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             if (m_state == OTRX_ROLLBACK)
             {
                 // Transaction rolled back, start replaying it on the master
+                backend->ack_write();
                 m_state = ROUTING;
                 start_trx_replay();
                 gwbuf_free(writebuf);

@@ -8,17 +8,20 @@ configuration parameters with their descriptions.
 
 ## Overview
 
-The readconnroute router provides simple and lightweight load balancing
-across a set of servers. The router can also be configured to balance
-connections based on a weighting parameter defined in the server's section.
+The readconnroute router provides simple and lightweight load balancing across a
+set of servers.
 
-Note that **readconnroute* balances _connections_ and not _statements_.
-When a client connects, the router selects a server based upon the router
-configuration and current server load, but the single created connection
-is fixed and will not be changed for the duration of the session. If the
-connection between MaxScale and the server breaks, the connection can not
-be re-established and the session will be closed. The fact that the server
+Note that **readconnroute* balances _connections_ and not _statements_.  When a
+client connects, the router selects the server that matches the value of
+`router_options` and has the least number of connections. Once the connection is
+opened, it will not be changed for the duration of the session. If the
+connection between MaxScale and the server breaks, the connection can not be
+re-established and the client session will be closed. The fact that the server
 is fixed when the client connects also means that routing hints are ignored.
+
+Connections from other MaxScale instances or connections done directly on a
+database are not taken into account. Only connections done through the same
+Maxscale instance are taken into account.
 
 **Warning:** `readconnroute` will not prevent writes from being done even if you
   define `router_options=slave`. The client application is responsible for
@@ -64,10 +67,17 @@ the router will use the default value of `running`. This means that it will
 load balance connections across all running servers defined in the `servers`
 parameter of the service.
 
-When a connection is being created and the candidate server is being chosen,
-the list of servers is processed in from first entry to last. This means
-that if two servers with equal weight and status are found, the one that's
+When a connection is being created and the candidate server is being chosen, the
+list of servers is processed in from first entry to last. This means that if two
+servers with equal rank and number of connections are found, the one that's
 listed first in the _servers_ parameter for the service is chosen.
+
+When using `router_options=slave`, only servers with the `Slave` status are
+used. If there are no servers with the `Slave` status but there is a `Master`
+status, it will be used as the fallback server. Note that the use of
+`router_options=slave` does not prevent writes from being done and the client
+application is responsible for making sure that no writes are done on a `Slave`
+server.
 
 ### `master_accept_reads`
 

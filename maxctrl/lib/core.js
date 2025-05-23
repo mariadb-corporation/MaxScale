@@ -335,7 +335,7 @@ Use 'exit' to exit the interactive mode.
         // the string 'undefined'
         for (var i of base_opts_keys) {
           const key = i.replace(/-*/, "");
-          if (argv[key]) {
+          if (argv[key] !== undefined) {
             base_opts[key] = argv[key];
           }
         }
