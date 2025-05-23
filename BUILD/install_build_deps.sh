@@ -143,7 +143,7 @@ then
         sudo yum -d1 -y install $package && break
     done
 
-    sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} lua lua-devel libedit-devel
+    sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} libedit-devel
 
     if is_arm
     then
@@ -204,7 +204,7 @@ then
     sudo zypper -n install gcc gcc-c++ cmake ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex \
          git wget tcl tcl-devel libuuid-devel \
-         xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
+         xz-devel sqlite3 sqlite3-devel pkg-config \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1 \
          cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel pcre2-devel libjansson-devel \
          libmicrohttpd-devel boost-devel librdkafka-devel libmemcached-devel unixODBC-devel \

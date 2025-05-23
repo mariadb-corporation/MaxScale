@@ -13,7 +13,9 @@ The **readwritesplit** router is designed to increase the read-only processing
 capability of a cluster while maintaining consistency. This is achieved by
 splitting the query load into read and write queries. Read queries, which do not
 modify data, are spread across multiple nodes while all write queries will be
-sent to a single node.
+sent to a single node. For more details on how the load balancing works, refer
+to [slave_selection_criteria](#slave_selection_criteria) and
+[master_accept_reads](#master_accept_reads).
 
 The router is designed to be used with a traditional Primary-Replica replication
 cluster. It automatically detects changes in the primary server and will use the
@@ -277,6 +279,15 @@ connects to and how the load balancing is done. The default behavior is to route
 read queries to the replica server with the lowest amount of ongoing queries i.e.
 `least_current_operations`.
 
+All of the load balancing methods use MaxScale's own accounting. Connections and
+queries done directly on the database and not through MaxScale are not taken
+into account by readwritesplit. For example, if server A has 100 queries running
+all of which are routed through MaxScale and server B has 115 queries but only
+95 of those were routed through MaxScale, server B is considered a better
+candidate even if the absolute number of active queries on it is higher. This is
+because MaxScale only tracks the connections and queries routed through the same
+process.
+
 The option syntax:
 
 ```
@@ -294,15 +305,19 @@ Where `<criteria>` is one of the following values.
 `least_current_operations` uses the current number of active operations
 (i.e. SQL queries) as the load balancing metric and it optimizes for maximal
 query throughput. Each query gets routed to the server with the least active
-operations which results in faster servers processing more traffic.
+operations which results in faster servers processing more traffic. If two
+servers have an equal number of active operations, the one that was least
+recently used is chosen.
 
 `adaptive_routing` uses the server response time and current estimated server
 load as the load balancing metric. The server that is estimated to finish an
 additional query first is chosen. A modified average response time for each
 server is continuously updated to allow slow servers at least some traffic and
-quickly react to changes in server load conditions. This selection criteria is
-designed for heterogeneous clusters: servers of differing hardware, differing
-network distances, or when other loads are running on the servers (including a
+quickly react to changes in server load conditions. If a server has not received
+any traffic, the network lag to the server as measured by the monitor is used as
+the proxy of the true response time. This selection criteria is designed for
+heterogeneous clusters: servers of differing hardware, differing network
+distances, or when other loads are running on the servers (including a
 backup). If the servers are queried by other clients than MaxScale, the load
 caused by them is indirectly taken into account.
 
