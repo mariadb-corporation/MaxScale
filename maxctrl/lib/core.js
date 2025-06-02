@@ -20,7 +20,7 @@ var yargs = require("yargs");
 // Note: The version.js file is generated at configuation time. If you are
 // building in-source, it'll be created automatically. Make sure to remove
 // it if you want to refresh the contents of it.
-const constants = require("./version.js")
+const constants = require("./version.js");
 const maxctrl_version = constants.version;
 
 // Global options given at startup
@@ -48,6 +48,20 @@ const base_opts_short_keys = ["-u", "-p", "-h", "-c", "-t", "-s", "-n"];
 
 const default_filename = "~/.maxctrl.cnf";
 const expanded_default_filename = os.homedir() + "/.maxctrl.cnf";
+
+function createDefaultConfig() {
+  let ret = {};
+
+  if (process.env["MAXCTRL_USER"] !== undefined) {
+    ret.user = process.env["MAXCTRL_USER"];
+  }
+
+  if (process.env["MAXCTRL_PASSWORD"] !== undefined) {
+    ret.password = process.env["MAXCTRL_PASSWORD"];
+  }
+
+  return ret;
+}
 
 function configParser(filename) {
   // Yargs does not understand ~ and unless the default filename starts
@@ -259,6 +273,7 @@ function program() {
       default: false,
       type: "boolean",
     })
+    .config(createDefaultConfig())
 
     .command(require("./list.js"))
     .command(require("./show.js"))
@@ -304,6 +319,15 @@ To hide all warnings from maxctrl, run:
 
 If no commands are given, maxctrl is started in interactive mode.
 Use 'exit' to exit the interactive mode.
+
+The credentials can also be defined using the MAXCTRL_USER and MAXCTRL_PASSWORD
+environment variables:
+
+   MAXCTRL_USER=my-user MAXCTRL_PASSWORD=my-secret maxctrl list servers
+
+The use of the -p,--password options is discouraged as the process arguments are
+visible to other users. Environment variables are not visible and thus they are
+more secure.
 `
     )
     .help()
