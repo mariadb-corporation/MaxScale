@@ -135,6 +135,10 @@ add_test_executable_ex(NAME mdbmon_master_slave_conditions SOURCE mdbmon_master_
 add_test_executable_ex(NAME mariadbmon_rebuild_server SOURCE mariadbmon_rebuild_server.cc
         CONFIG mariadbmon_rebuild_server.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
+# MXS-5366 Rebuild and backup creation with data-at-rest encryption.
+add_test_executable_ex(NAME mdbmon_enc_backup SOURCE mdbmon_enc_backup.cc
+        CONFIG mdbmon_enc_backup.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
+
 add_test_executable_ex(NAME mariadbmon_prom_dem_files SOURCE mariadbmon_prom_dem_files.cc
         CONFIG mariadbmon_prom_dem_files.cnf VMS repl_backend LABELS mysqlmon)
 
