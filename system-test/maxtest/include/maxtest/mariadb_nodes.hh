@@ -145,6 +145,11 @@ public:
 
     const std::string& remote_cnf_dir() const;
 
+    void stash_server_settings();
+    void add_server_setting(const char* setting);
+    void disable_server_setting(const char* setting);
+    void restore_server_settings();
+
 private:
     Status   m_status;
     SMariaDB m_admin_conn;      /**< Admin-level connection to server. Usually kept open. */
@@ -164,7 +169,8 @@ private:
         m_port = port;
     }
 
-    bool init_docker_server();
+    bool             init_docker_server();
+    mxt::TestLogger& log();
 };
 }
 

@@ -133,7 +133,7 @@ add_test_executable_ex(NAME mdbmon_master_slave_conditions SOURCE mdbmon_master_
 
 # MXS-5366 Rebuild with special chars in username/pw.
 add_test_executable_ex(NAME mariadbmon_rebuild_server SOURCE mariadbmon_rebuild_server.cc
-        CONFIG mariadbmon_rebuild_server.cnf VMS repl_backend LABELS mysqlmon)
+        CONFIG mariadbmon_rebuild_server.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 add_test_executable_ex(NAME mariadbmon_prom_dem_files SOURCE mariadbmon_prom_dem_files.cc
         CONFIG mariadbmon_prom_dem_files.cnf VMS repl_backend LABELS mysqlmon)
