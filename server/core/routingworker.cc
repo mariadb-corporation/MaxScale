@@ -153,9 +153,9 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 }
 
 
-RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
+RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier, int idx)
     : mxb::WatchedWorker(pNotifier)
-    , m_name(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << index()))
+    , m_name(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << idx))
     , m_callable(this)
     , m_pool_handler(this)
 {
@@ -193,7 +193,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
             int i;
             for (i = 0; i < nWorkers; ++i)
             {
-                RoutingWorker* pWorker = RoutingWorker::create(pNotifier, this_unit.epoll_listener_fd);
+                RoutingWorker* pWorker = RoutingWorker::create(pNotifier, this_unit.epoll_listener_fd, i);
                 AverageN* pAverage = new AverageN(rebalance_window);
 
                 if (pWorker && pAverage)
@@ -986,13 +986,14 @@ void RoutingWorker::post_run()
  * @param pNotifier          The watchdog notifier.
  * @param epoll_listener_fd  The file descriptor of the epoll set to which listening
  *                           sockets will be placed.
+ * @param idx                The zero based index of the routing worker.
  *
  * @return A worker instance if successful, otherwise NULL.
  */
 // static
-RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd)
+RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd, int idx)
 {
-    RoutingWorker* pThis = new(std::nothrow) RoutingWorker(pNotifier);
+    RoutingWorker* pThis = new(std::nothrow) RoutingWorker(pNotifier, idx);
 
     if (pThis)
     {

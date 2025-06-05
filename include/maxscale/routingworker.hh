@@ -516,10 +516,10 @@ private:
         }
     } m_rebalance;
 
-    RoutingWorker(mxb::WatchdogNotifier* pNotifier);
+    RoutingWorker(mxb::WatchdogNotifier* pNotifier, int idx);
     virtual ~RoutingWorker();
 
-    static RoutingWorker* create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd);
+    static RoutingWorker* create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd, int idx);
 
     bool pre_run() override;
     void post_run() override;
