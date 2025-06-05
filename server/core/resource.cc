@@ -1103,7 +1103,7 @@ HttpResponse cb_debug_server_diagnostics(const HttpRequest& request)
 #ifdef SS_DEBUG
 HttpResponse cb_debug_hang(const HttpRequest& request)
 {
-    mxs::RoutingWorker::get(0)->execute([](){
+    mxs::RoutingWorker::get_by_index(0)->execute([](){
         sleep(86400);
     }, mxb::Worker::EXECUTE_AUTO);
 
