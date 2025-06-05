@@ -116,6 +116,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 22.08.17 Release Notes](Release-Notes/MaxScale-22.08.17-Release-Notes.md)
 * [MariaDB MaxScale 22.08.16 Release Notes](Release-Notes/MaxScale-22.08.16-Release-Notes.md)
 * [MariaDB MaxScale 22.08.15 Release Notes](Release-Notes/MaxScale-22.08.15-Release-Notes.md)
 * [MariaDB MaxScale 22.08.14 Release Notes](Release-Notes/MaxScale-22.08.14-Release-Notes.md)
