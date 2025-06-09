@@ -10,3 +10,6 @@ add_test_executable_ex(NAME connector_nodejs SOURCE connector_nodejs.cc CONFIG c
 
 # Runs the Connector/ODBC test suite through MaxScale
 add_test_executable_ex(NAME connector_odbc SOURCE connector_odbc.cc CONFIG connectors.cnf VMS repl_backend backend_ssl LABELS readwritesplit)
+
+# Runs the Connector/C test suite through MaxScale
+add_test_executable_ex(NAME connector_c SOURCE connector_c.cc CONFIG connectors.cnf VMS repl_backend backend_ssl LABELS readwritesplit)
