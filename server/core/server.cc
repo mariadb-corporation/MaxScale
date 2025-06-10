@@ -319,14 +319,7 @@ bool Server::ParamDiskSpaceLimits::from_string(const std::string& value, value_t
 
 json_t* Server::ParamDiskSpaceLimits::to_json(value_type value) const
 {
-    json_t* obj = value.empty() ? json_null() : json_object();
-
-    for (const auto& a : value)
-    {
-        json_object_set_new(obj, a.first.c_str(), json_integer(a.second));
-    }
-
-    return obj;
+    return json_string(to_string(value).c_str());
 }
 
 bool Server::ParamDiskSpaceLimits::from_json(const json_t* pJson, value_type* pValue,
