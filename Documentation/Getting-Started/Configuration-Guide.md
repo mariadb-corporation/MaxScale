@@ -3149,7 +3149,7 @@ both PROXY-headered and headerless connections from a proxy-enabled IP.
 
 - **Type**: Custom
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: None
 
 This parameter specifies how full a disk may be, before MaxScale should start
