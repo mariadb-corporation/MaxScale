@@ -184,30 +184,31 @@ if [[ ${packager_type} == "zypper" ]]
 then
     install_libdir=/usr/lib64
     # We need zypper here
-    sudo zypper -n refresh
-    sudo zypper -n update
-    sudo zypper -n remove gettext-runtime-mini
-    sudo zypper -n install gcc gcc-c++ cmake ncurses-devel bison glibc-devel libgcc_s1 perl \
+    zypper_cmd="zypper -t -n"
+    sudo $zypper_cmd refresh
+    sudo $zypper_cmd update
+    sudo $zypper_cmd remove gettext-runtime-mini
+    sudo $zypper_cmd install gcc gcc-c++ cmake ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex \
          git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1 \
          cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel pcre2-devel libjansson-devel \
          libmicrohttpd-devel boost-devel librdkafka-devel libmemcached-devel
-    sudo zypper -n install rpm-build
+    sudo $zypper_cmd install rpm-build
 
     if is_arm
     then
        # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
-       sudo zypper -n install python3
+       sudo $zypper_cmd install python3
        # See: YUM version explains why we need this
-       sudo zypper -n install python2
+       sudo $zypper_cmd install python2
     fi
 
     # Install a newer compiler
     for version in 14 13 12 11 10 9
     do
-        sudo zypper -n install gcc${version} gcc${version}-c++
+        sudo $zypper_cmd install gcc${version} gcc${version}-c++
         if [ $? == 0 ]
         then
             echo "export CC=/usr/bin/gcc-${version}" >> ~/.bashrc
