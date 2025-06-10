@@ -184,18 +184,18 @@ if [[ ${packager_type} == "zypper" ]]
 then
     install_libdir=/usr/lib64
     # We need zypper here
-    zypper_cmd="zypper --allow-downgrade -t -n"
+    zypper_cmd="zypper -t -n"
     sudo $zypper_cmd refresh
     sudo $zypper_cmd update
     sudo $zypper_cmd remove gettext-runtime-mini
-    sudo $zypper_cmd install gcc gcc-c++ cmake ncurses-devel bison glibc-devel libgcc_s1 perl \
+    sudo $zypper_cmd install --allow-downgrade gcc gcc-c++ cmake ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex \
          git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1 \
          cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel pcre2-devel libjansson-devel \
          libmicrohttpd-devel boost-devel librdkafka-devel libmemcached-devel libssh-devel
-    sudo $zypper_cmd install rpm-build
+    sudo $zypper_cmd install --allow-downgrade rpm-build
 
     if is_arm
     then
