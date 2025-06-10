@@ -190,7 +190,7 @@ if [[ ${packager_type} == "zypper" ]]
 then
     install_libdir=/usr/lib64
     # We need zypper here
-    zypper_cmd="zypper -t -n"
+    zypper_cmd="zypper --allow-downgrade -t -n"
     sudo $zypper_cmd refresh
     sudo $zypper_cmd update
     sudo $zypper_cmd remove gettext-runtime-mini
