@@ -169,7 +169,8 @@ private:
         m_port = port;
     }
 
-    bool init_docker_server();
+    bool             init_docker_server();
+    mxt::TestLogger& log();
 };
 }
 

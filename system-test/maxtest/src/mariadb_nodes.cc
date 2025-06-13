@@ -53,6 +53,8 @@ namespace
 // These need to match the values in create_user.sh.
 const string admin_user = "test-admin";
 const string admin_pw = "test-admin-pw";
+
+const char backup_dir[] = "/etc/my.cnf.d.backup/";
 }
 
 /**
@@ -913,7 +915,6 @@ void MariaDBCluster::close_active_connections()
     }
 }
 
-
 void MariaDBCluster::stash_server_settings(int node)
 {
     m_backends[node]->stash_server_settings();
@@ -1556,7 +1557,7 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection(const std::string& db
 
 MariaDBServer::SMariaDB MariaDBServer::open_connection(const string& db)
 {
-    auto conn = try_open_connection(m_cluster.ssl_mode());
+    auto conn = try_open_connection(m_cluster.ssl_mode(), db);
     m_shared.log.expect(conn->is_open(), "Failed to open MySQL connection to '%s'.", m_vm.m_name.c_str());
     return conn;
 }
@@ -1697,28 +1698,32 @@ bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl, bool su
 
 void MariaDBServer::stash_server_settings()
 {
-    m_vm.run_cmd_output_sudo("rm -rf /etc/my.cnf.d.backup/");
-    m_vm.run_cmd_output_sudo("mkdir /etc/my.cnf.d.backup/");
-    m_vm.run_cmd_output_sudo("cp -r /etc/my.cnf.d/* /etc/my.cnf.d.backup/");
+    string cmd = mxb::string_printf("rm -rf %s; mkdir %s; cp -r /etc/my.cnf.d/* %s", backup_dir, backup_dir,
+                                    backup_dir);
+    int rc = vm_node().run_cmd_sudo(cmd);
+    log().expect(rc == 0, "Failed to backup config files of %s. Error %i.", m_cnf_name.c_str(), rc);
 }
 
 void MariaDBServer::restore_server_settings()
 {
-    m_vm.run_cmd_output_sudo("mv -f /etc/my.cnf.d.backup/* /etc/my.cnf.d/");
+    string cmd = mxb::string_printf("mv -f %s* /etc/my.cnf.d/", backup_dir);
+    int rc = vm_node().run_cmd_sudo(cmd);
+    log().expect(rc == 0, "Failed to restore config files of %s. Error %i.", m_cnf_name.c_str(), rc);
 }
 
 void MariaDBServer::disable_server_setting(const char* setting)
 {
-    m_vm.run_cmd(mxb::string_printf("sed -i 's/%s/#%s/' /etc/my.cnf.d/*", setting, setting),
-                 VMNode::CmdPriv::SUDO);
+    string cmd = mxb::string_printf("sed -i 's/%s/#%s/' /etc/my.cnf.d/*", setting, setting);
+    int rc = vm_node().run_cmd_sudo(cmd);
+    log().expect(rc == 0, "Failed to alter config file of %s. Error %i.", m_cnf_name.c_str(), rc);
 }
 
 void MariaDBServer::add_server_setting(const char* setting, const std::string& section)
 {
-    auto cmd = MAKE_STR("sed -i '$a [" << section << "]' /etc/my.cnf.d/*server*.cnf");
-    m_vm.run_cmd(cmd.c_str(), VMNode::CmdPriv::SUDO);
-    m_vm.run_cmd(mxb::string_printf("sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting),
-                 VMNode::CmdPriv::SUDO);
+    const char target_file[] = "/etc/my.cnf.d/server.cnf";
+    string cmd = mxb::string_printf("sed -i '$a [%s]\\n%s' %s", section.c_str(), setting, target_file);
+    int rc = vm_node().run_cmd_sudo(cmd);
+    log().expect(rc == 0, "Failed to alter config file of %s. Error %i.", m_cnf_name.c_str(), rc);
 }
 
 const char* MariaDBServer::ip() const
@@ -1739,6 +1744,11 @@ const char* MariaDBServer::socket_cmd() const
 const std::string& MariaDBServer::remote_cnf_dir() const
 {
     return m_remote_cnf_dir;
+}
+
+mxt::TestLogger& MariaDBServer::log()
+{
+    return vm_node().log();
 }
 
 bool MariaDBServer::init_docker_server()
