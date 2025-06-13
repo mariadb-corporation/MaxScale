@@ -143,3 +143,21 @@ struct MonitorInfo
 const MonitorInfo* get_primary_monitor(TestConnections& test, MonitorInfo* monitors);
 bool               monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info);
 }
+
+namespace backup
+{
+void install_tools(TestConnections& test, int ind);
+
+/**
+ * Copy ssh key from server1 to MaxScale node. Check that the key is accepted on targets.
+ */
+void copy_ssh_keyfile(TestConnections& test, const std::vector<mxt::MariaDBServer*>& targets);
+
+/**
+ * Delete ssh keyfile on MaxScale node.
+ */
+void delete_ssh_keyfile(TestConnections& test);
+
+void stop_firewall(TestConnections& test, int ind);
+void start_firewall(TestConnections& test, int ind);
+}

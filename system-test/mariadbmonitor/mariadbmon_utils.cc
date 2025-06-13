@@ -32,6 +32,8 @@ const char select_fmt[] = "SELECT value FROM %s WHERE id=%i;";
 const char update_fmt[] = "UPDATE %s SET value=%d WHERE id=%i;";
 const char unexpected_val_fmt[] = "Client %i got wrong answer. Row %i had value %i when %i was expected.";
 const char row_not_found_fmt[] = "Table %s does not contain id %i when it should.";
+
+const string keypath = "/tmp/sshkey.pem";
 }
 
 /**
@@ -856,5 +858,75 @@ bool monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info)
         test.tprintf("MaxCtrl command failed, %s  is likely down.", mxs_name.c_str());
     }
     return rval;
+}
+}
+
+namespace backup
+{
+void install_tools(TestConnections& test, int ind)
+{
+    auto be = test.repl->backend(ind);
+    test.tprintf("Installing tools to %s", be->cnf_name().c_str());
+    const char install_fmt[] = "yum -y install %s";
+    be->vm_node().run_cmd_output_sudof(install_fmt, "pigz");
+    be->vm_node().run_cmd_output_sudof(install_fmt, "MariaDB-backup");
+}
+
+void copy_ssh_keyfile(TestConnections& test, const std::vector<mxt::MariaDBServer*>& targets)
+{
+    // Copy ssh keyfile to maxscale VM from server1.
+    auto& mxs = *test.maxscale;
+    mxs.vm_node().delete_from_node(keypath);
+    mxt::Node& key_source = test.repl->backend(0)->vm_node();
+
+    mxs.copy_to_node(key_source.sshkey(), keypath.c_str());
+    auto chmod = mxb::string_printf("chmod a+rx %s", keypath.c_str());
+    mxs.vm_node().run_cmd(chmod);
+    // Read the contents of authorized_keys on server1. Check that the same line exists on other targets.
+    // If not, edit the other files.
+    const string authorized_keys_path = mxb::string_printf("%s/.ssh/authorized_keys",
+                                                           key_source.access_homedir());
+    const string read_pubkey_cmd = mxb::string_printf("head -n1 %s", authorized_keys_path.c_str());
+    auto pubkey_res = key_source.run_cmd_output(read_pubkey_cmd);
+
+    if (pubkey_res.rc == 0 && !pubkey_res.output.empty())
+    {
+        test.tprintf("Expecting authorized_keys to contain line '%s'.", pubkey_res.output.c_str());
+        string grep_cmd = mxb::string_printf("cat %s | grep \"%s\"", authorized_keys_path.c_str(),
+                                             pubkey_res.output.c_str());
+        string concat_cmd = mxb::string_printf("echo \"%s\" >> %s", pubkey_res.output.c_str(),
+                                               authorized_keys_path.c_str());
+        for (auto* be : targets)
+        {
+            auto grep_res = be->vm_node().run_cmd_output(grep_cmd);
+            if (grep_res.rc != 0)
+            {
+                test.tprintf("Public key not found on %s, adding it.", be->vm_node().name());
+                be->vm_node().run_cmd_output(concat_cmd);
+                grep_res = be->vm_node().run_cmd_output(grep_cmd);
+                test.expect(grep_res.rc == 0, "Failed to add public key to %s.", be->vm_node().name());
+            }
+        }
+    }
+    else
+    {
+        test.add_failure("Command '%s' failed or gave no results. Error: %s",
+                         read_pubkey_cmd.c_str(), pubkey_res.output.c_str());
+    }
+}
+
+void delete_ssh_keyfile(TestConnections& test)
+{
+    test.maxscale->vm_node().delete_from_node(keypath);
+}
+
+void stop_firewall(TestConnections& test, int ind)
+{
+    test.repl->backend(ind)->vm_node().run_cmd_output_sudo("systemctl stop iptables");
+}
+
+void start_firewall(TestConnections& test, int ind)
+{
+    test.repl->backend(ind)->vm_node().run_cmd_output_sudo("systemctl start iptables");
 }
 }

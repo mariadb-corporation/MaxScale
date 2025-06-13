@@ -17,16 +17,13 @@
 #include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/string.hh>
+#include "mariadbmon_utils.hh"
 
 using std::string;
 using mxt::MaxScale;
 
 namespace
 {
-const string keypath = "/tmp/sshkey.pem";
-
-void copy_ssh_keyfile(TestConnections& test, mxt::MariaDBServer* target1, mxt::MariaDBServer* target2);
-void install_tools(TestConnections& test, int ind);
 void prepare_to_test_rebuild(TestConnections& test, int target_ind, int master_ind);
 void run_rebuild(TestConnections& test, const string& rebuild_cmd, int target_ind, int master_ind);
 void test_special_characters(TestConnections& test, int target_ind, int master_ind);
@@ -50,22 +47,21 @@ void test_main(TestConnections& test)
     auto& repl = *test.repl;
     auto* source_be = repl.backend(source_ind);
     auto* target_be = repl.backend(target_ind);
-    copy_ssh_keyfile(test, source_be, target_be);
+    backup::copy_ssh_keyfile(test, {source_be, target_be});
 
     mxs.start();
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
     // Firewall may interfere with the transfer, stop it on all servers.
-    const string stop_firewall = "systemctl stop iptables";
     for (int i = 0; i < repl.N; i++)
     {
-        repl.backend(i)->vm_node().run_cmd_output_sudo(stop_firewall);
+        backup::stop_firewall(test, i);
     }
 
     if (test.ok())
     {
-        install_tools(test, source_ind);
-        install_tools(test, target_ind);
+        backup::install_tools(test, source_ind);
+        backup::install_tools(test, target_ind);
     }
 
     if (test.ok())
@@ -98,65 +94,11 @@ void test_main(TestConnections& test)
         test_create_restore_backup(test);
     }
 
-    const string start_firewall = "systemctl start iptables";
     for (int i = 0; i < repl.N; i++)
     {
-        repl.backend(i)->vm_node().run_cmd_output_sudo(start_firewall);
+        backup::start_firewall(test, i);
     }
-    repl.backend(source_ind)->vm_node().run_cmd_output_sudo(start_firewall);
-    mxs.vm_node().delete_from_node(keypath);
-}
-
-void copy_ssh_keyfile(TestConnections& test, mxt::MariaDBServer* target1, mxt::MariaDBServer* target2)
-{
-    // Copy ssh keyfile to maxscale VM from server1.
-    auto& mxs = *test.maxscale;
-    mxs.vm_node().delete_from_node(keypath);
-    mxt::Node& key_source = test.repl->backend(0)->vm_node();
-
-    mxs.copy_to_node(key_source.sshkey(), keypath.c_str());
-    auto chmod = mxb::string_printf("chmod a+rx %s", keypath.c_str());
-    mxs.vm_node().run_cmd(chmod);
-    // Read the contents of authorized_keys on server1. Check that the same line exists on server2 & 4.
-    // If not, edit the other files.
-    const string authorized_keys_path = mxb::string_printf("%s/.ssh/authorized_keys",
-                                                           key_source.access_homedir());
-    const string read_pubkey_cmd = mxb::string_printf("head -n1 %s", authorized_keys_path.c_str());
-    auto pubkey_res = key_source.run_cmd_output(read_pubkey_cmd);
-
-    if (pubkey_res.rc == 0 && !pubkey_res.output.empty())
-    {
-        test.tprintf("Expecting authorized_keys to contain line '%s'.", pubkey_res.output.c_str());
-        string grep_cmd = mxb::string_printf("cat %s | grep \"%s\"", authorized_keys_path.c_str(),
-                                             pubkey_res.output.c_str());
-        string concat_cmd = mxb::string_printf("echo \"%s\" >> %s", pubkey_res.output.c_str(),
-                                               authorized_keys_path.c_str());
-        for (auto* be : {target1, target2})
-        {
-            auto grep_res = be->vm_node().run_cmd_output(grep_cmd);
-            if (grep_res.rc != 0)
-            {
-                test.tprintf("Public key not found on %s, adding it.", be->vm_node().name());
-                be->vm_node().run_cmd_output(concat_cmd);
-                grep_res = be->vm_node().run_cmd_output(grep_cmd);
-                test.expect(grep_res.rc == 0, "Failed to add public key to %s.", be->vm_node().name());
-            }
-        }
-    }
-    else
-    {
-        test.add_failure("Command '%s' failed or gave no results. Error: %s",
-                         read_pubkey_cmd.c_str(), pubkey_res.output.c_str());
-    }
-}
-
-void install_tools(TestConnections& test, int ind)
-{
-    auto be = test.repl->backend(ind);
-    test.tprintf("Installing tools to %s", be->cnf_name().c_str());
-    const char install_fmt[] = "yum -y install %s";
-    be->vm_node().run_cmd_output_sudof(install_fmt, "pigz");
-    be->vm_node().run_cmd_output_sudof(install_fmt, "MariaDB-backup");
+    backup::delete_ssh_keyfile(test);
 }
 
 void prepare_to_test_rebuild(TestConnections& test, int target_ind, int master_ind)
@@ -408,7 +350,7 @@ void test_create_restore_backup(TestConnections& test)
     bu_vm.run_cmd_output_sudof("sudo chown %s:%s %s", ssh_user, ssh_user, bu_dir);
 
     const int bu_target_ind = 0;
-    install_tools(test, bu_target_ind);     // Backup tools may be missing from server1.
+    backup::install_tools(test, bu_target_ind);     // Backup tools may be missing from server1.
 
     if (test.ok())
     {
