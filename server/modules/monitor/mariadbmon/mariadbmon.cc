@@ -1153,29 +1153,38 @@ void MariaDBMonitor::check_acquire_masterlock()
     const auto ml = MariaDBServer::LockType::MASTER;
     for (auto server : m_servers)
     {
+        auto ml_status = server->masterlock_status().status();
         if (server != masterlock_target)
         {
-            if (server->lock_owned(ml))
+            if (ml_status == ServerLock::Status::OWNED_OTHER)
+            {
+                // Another connection holds the masterlock on the wrong server. This can cause other
+                // cooperative monitors to not select a master, as their own findings do not match with
+                // the lock. They may even select the wrong master, depending on how they see the cluster.
+                MXB_WARNING("Lock '%s' is held on '%s' by another monitor (connection id %li). This is "
+                            "not the correct primary server and may cause other monitors to not select a "
+                            "primary or select the wrong primary server.",
+                            MASTER_LOCK_NAME, server->name(), server->masterlock_status().owner());
+            }
+            else if (ml_status == ServerLock::Status::OWNED_SELF)
             {
                 // Should not have the lock, release.
                 server->release_lock(ml);
             }
         }
-        else if (server == masterlock_target)
+        else
         {
-            auto masterlock = server->masterlock_status();
-            if (masterlock.is_free())
+            if (ml_status == ServerLock::Status::FREE)
             {
                 // Don't have the lock when should.
                 server->get_lock(ml);
             }
-            else if (masterlock.status() == ServerLock::Status::OWNED_OTHER)
+            else if (ml_status == ServerLock::Status::OWNED_OTHER)
             {
-                // Someone else is holding the masterlock, even when this monitor has lock majority.
-                // Not a problem for this monitor, but secondary MaxScales may select a wrong master.
-                MXB_ERROR("Cannot acquire lock '%s' on '%s' as it's claimed by another connection (id %li). "
-                          "Secondary MaxScales may select the wrong primary.",
-                          MASTER_LOCK_NAME, name(), masterlock.owner());
+                // Another connection holds the masterlock, even when this monitor has lock majority.
+                // The lock is held on the correct server, so should not be an issue right now. Usually
+                // this is caused by a reconnection and the issue is fixed in a few seconds as the
+                // connection reaches wait_timeout. No logging necessary.
             }
         }
     }
