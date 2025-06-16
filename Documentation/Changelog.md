@@ -69,8 +69,9 @@
 
 For more details, please refer to:
 
-* [MariaDB MaxScale 25.01.2 Release Notes](Release-Notes/MaxScale-Enterprise-25.01.2-Release-Notes.md)
-* [MariaDB MaxScale 25.01.1 Release Notes](Release-Notes/MaxScale-Enterprise-25.01.1-Release-Notes.md)
+* [MariaDB MaxScale 25.01.3 Release Notes](Release-Notes/MaxScale-25.01.3-Release-Notes.md)
+* [MariaDB MaxScale 25.01.2 Release Notes](Release-Notes/MaxScale-25.01.2-Release-Notes.md)
+* [MariaDB MaxScale 25.01.1 Release Notes](Release-Notes/MaxScale-25.01.1-Release-Notes.md)
 
 ## MariaDB MaxScale 24.02
 
@@ -154,6 +155,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 24.02.6 Release Notes](Release-Notes/MaxScale-24.02.6-Release-Notes.md)
 * [MariaDB MaxScale 24.02.5 Release Notes](Release-Notes/MaxScale-24.02.5-Release-Notes.md)
 * [MariaDB MaxScale 24.02.4 Release Notes](Release-Notes/MaxScale-24.02.4-Release-Notes.md)
 * [MariaDB MaxScale 24.02.3 Release Notes](Release-Notes/MaxScale-24.02.3-Release-Notes.md)
@@ -243,6 +245,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 23.08.10 Release Notes](Release-Notes/MaxScale-23.08.10-Release-Notes.md)
 * [MariaDB MaxScale 23.08.9 Release Notes](Release-Notes/MaxScale-23.08.9-Release-Notes.md)
 * [MariaDB MaxScale 23.08.8 Release Notes](Release-Notes/MaxScale-23.08.8-Release-Notes.md)
 * [MariaDB MaxScale 23.08.7 Release Notes](Release-Notes/MaxScale-23.08.7-Release-Notes.md)
@@ -323,6 +326,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 23.02.14 Release Notes](Release-Notes/MaxScale-23.02.14-Release-Notes.md)
 * [MariaDB MaxScale 23.02.13 Release Notes](Release-Notes/MaxScale-23.02.13-Release-Notes.md)
 * [MariaDB MaxScale 23.02.12 Release Notes](Release-Notes/MaxScale-23.02.12-Release-Notes.md)
 * [MariaDB MaxScale 23.02.11 Release Notes](Release-Notes/MaxScale-23.02.11-Release-Notes.md)
@@ -370,6 +374,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 22.08.17 Release Notes](Release-Notes/MaxScale-22.08.17-Release-Notes.md)
 * [MariaDB MaxScale 22.08.16 Release Notes](Release-Notes/MaxScale-22.08.16-Release-Notes.md)
 * [MariaDB MaxScale 22.08.15 Release Notes](Release-Notes/MaxScale-22.08.15-Release-Notes.md)
 * [MariaDB MaxScale 22.08.14 Release Notes](Release-Notes/MaxScale-22.08.14-Release-Notes.md)
@@ -403,6 +408,7 @@ identical. 21.06 denotes the year and month when the first 6 release was made.
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 21.06.20 Release Notes](Release-Notes/MaxScale-21.06.20-Release-Notes.md)
 * [MariaDB MaxScale 21.06.19 Release Notes](Release-Notes/MaxScale-21.06.19-Release-Notes.md)
 * [MariaDB MaxScale 21.06.18 Release Notes](Release-Notes/MaxScale-21.06.18-Release-Notes.md)
 * [MariaDB MaxScale 21.06.17 Release Notes](Release-Notes/MaxScale-21.06.17-Release-Notes.md)

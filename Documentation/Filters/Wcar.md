@@ -208,9 +208,19 @@ maxctrl call command wcar stop CAPTURE_FLTR
 ### Installation
 
 Install the required packages on the MaxScale server where the replay is to be
-done. An additional dependency that must be manually installed is Python,
-version 3.7 or newer. On most linux distributions a new enough version is
-available as the default Python interpreter.
+done.
+
+An additional dependency that must be manually installed is Python, version 3.7
+or newer. On most linux distributions a new enough version is available as the
+default Python interpreter but on RHEL 8 and Rocky Linux 8, a newer one must be
+selected as the default version is Python 3.6. This can be done by installing a
+newer version of Python, which is available in the repositories, and switching
+the default python interpreter to it using `alternatives`.
+
+```
+dnf -y install python39
+alternatives --set python3 /usr/bin/python3.9
+```
 
 The replay consists of restoring the database to the point in time where the
 capture was started. Start by restoring the replay database to this state. Once
@@ -312,6 +322,13 @@ which by default should be `http://localhost:8866/`.
 maxvisualize baseline-summary.json comparison-summary.json
 ```
 
+To listen on all network interfaces, use `--Voila.ip='0.0.0.0'` as the last
+argument.
+
+```
+maxvisualize baseline-summary.json comparison-summary.json --Voila.ip='0.0.0.0'
+```
+
 ## Settings
 
 ### `capture_dir`
@@ -338,7 +355,7 @@ Start capture when maxscale starts.
 
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Default**: 0s
-- **Maximum**: Unlimited in MaxScale, 5min in MaxScale Lite.
+- **Maximum**: Unlimited in MaxScale, 5min in MaxScale Trial.
 - **Mandatory**: No
 - **Dynamic**: No
 
@@ -348,7 +365,7 @@ Limit capture to this duration. If set to zero there is no limit.
 
 - **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
 - **Default**: 0
-- **Maximum**: Unlimited in MaxScale, 10MB in MaxScale Lite.
+- **Maximum**: Unlimited in MaxScale, 10MB in MaxScale Trial.
 - **Mandatory**: No
 - **Dynamic**: No
 

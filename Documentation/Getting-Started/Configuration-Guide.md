@@ -76,7 +76,7 @@ referred to from _services_.
 Limitations:
 
 - MaxScale: No limitations.
-- MaxScale Lite: At most 2 filters can be created.
+- MaxScale Trial: At most 2 filters can be created.
 
 ### Router
 
@@ -104,7 +104,7 @@ Services have sections of their own in the MaxScale configuration file.
 Limitations:
 
 - MaxScale: No limitations.
-- MaxScale Lite: At most 1 service can be created.
+- MaxScale Trial: At most 1 service can be created.
 
 ### Listener
 
@@ -1608,6 +1608,10 @@ The path to the TLS private key in PEM format for the admin interface.
 If the `admin_ssl_key` and `admin_ssl_cert` options are all defined, the admin
 interface will use encrypted HTTPS instead of plain HTTP.
 
+The REST-API only supports PKCS#8 PEM private keys and using a PKCS#1 PEM
+private key will result in an error. If your private key is in PKCS#1 PEM
+format, convert it to PKCS#8 PEM format first before starting up MaxScale.
+
 ### `admin_ssl_cert`
 
 - **Type**: path
@@ -1934,7 +1938,7 @@ from the `/sql` endpoint.
 
 - **Type**: string
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: `""`
 
 The URL to a OpenID Connect server that is used for JWT validation.
@@ -1948,8 +1952,13 @@ REST-API. This means that all users must be first created with `maxctrl create
 user` before the tokens are accepted if the OIDC provider is not able to add the
 `"account"` claim.
 
-If this URL is changed at runtime, the new certificates will not be
-fetched until a `maxctrl reload tls` command is executed.
+Modifying `admin_oidc_url` will cause the certificates to be fetched
+again. They are also fetched when the `maxctrl reload tls` command is
+executed or when the `admin_ssl_cert` and `admin_ssl_key` settings are
+modified.
+
+MaxScale versions 22.08.16 and earlier only fetched the new certificates when
+the `maxctrl reload tls` command was executed.
 
 ### `admin_verify_url`
 
@@ -2602,15 +2611,15 @@ wait_timeout=300s
 - **Type**: number
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: 0 in MaxScale, 15 in MaxScale Lite.
-- **Minimum**: 0 in MaxScale, 1 in MaxScale Lite.
-- **Maximum**: Unlimited in MaxScale, 15 in MaxScale Lite.
+- **Default**: 0 in MaxScale, 15 in MaxScale Trial.
+- **Minimum**: 0 in MaxScale, 1 in MaxScale Trial.
+- **Maximum**: Unlimited in MaxScale, 15 in MaxScale Trial.
 
 The maximum number of simultaneous connections MaxScale should permit to this
 service. Any attempt to make more connections after the limit is reached will
 result in a "Too many connections" error being returned.
 
-A value of 0 means no limit, which is the default for MaxScale. MaxScale Lite
+A value of 0 means no limit, which is the default for MaxScale. MaxScale Trial
 is limited to a maximum of 15 connections per service.
 
 **Warning**: In MaxScale 2.5, it is possible that the number of concurrent
@@ -3212,7 +3221,7 @@ port=3000
 Limitations:
 
 - MaxScale: No limitations.
-- MaxScale Lite: At most 3 servers can be created.
+- MaxScale Trial: At most 2 servers can be created.
 
 ### `address`
 
@@ -3361,14 +3370,14 @@ the DCB will be discarded and the connection closed.
 - **Type**: number
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: 0 in MaxScale, 15 in MaxScale Lite.
-- **Minimum**: 0 in MaxScale, 1 in MaxScale Lite.
-- **Maximum**: Unlimited in MaxScale, 15 in MaxScale Lite.
+- **Default**: 0 in MaxScale, 15 in MaxScale Trial.
+- **Minimum**: 0 in MaxScale, 1 in MaxScale Trial.
+- **Maximum**: Unlimited in MaxScale, 15 in MaxScale Trial.
 
 Maximum number of routing connections to this server. Connections held in a pool
 also count towards this maximum. Does not limit monitor connections or user
 account fetching. A value of 0 means no limit, which is the default for MaxScale.
-MaxScle Lite is limited to a maximum of 15 connections per server.
+MaxScle Trial is limited to a maximum of 15 connections per server.
 
 Since every client session can generate a connection to a server, the server may
 run out of memory when the number of clients is high enough. This setting limits
