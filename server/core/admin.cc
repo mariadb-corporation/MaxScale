@@ -1078,8 +1078,8 @@ MHD_Result Client::queue_response(const HttpResponse& reply)
 
     add_extra_headers(response);
 
-    // Prevent caching without verification
-    MHD_add_response_header(response, "Cache-Control", "no-cache");
+    // Prevent caching
+    MHD_add_response_header(response, "Cache-Control", "no-store");
 
     for (const auto& c : reply.cookies())
     {
