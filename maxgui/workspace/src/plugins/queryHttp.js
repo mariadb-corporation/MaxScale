@@ -82,7 +82,7 @@ function queryHttp(store) {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-store',
         },
     })
     queryHttp.interceptors.request.use(
