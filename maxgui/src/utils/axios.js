@@ -27,7 +27,6 @@ function getBaseHttp() {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/json',
-            'Cache-Control': 'no-store',
         },
     })
 }
