@@ -16,7 +16,6 @@ import ax from 'axios'
 const HEADERS = {
     'X-Requested-With': 'XMLHttpRequest',
     'Content-Type': 'application/json',
-    'Cache-Control': 'no-store',
 }
 const BASE_URL = '/'
 const cancelToken = ax.CancelToken
