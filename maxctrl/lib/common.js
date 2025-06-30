@@ -50,6 +50,8 @@ module.exports = function () {
   // cluster health checks and to propagate the commands to multiple
   // servers.
   this.maxctrl = async function (argv, cb) {
+    process.title = "maxctrl " + argv._.join(" ");
+
     // No password given, ask it from the command line
     if (argv.p == "") {
       if (process.stdin.isTTY) {
@@ -101,6 +103,7 @@ module.exports = function () {
     } catch (err) {
       argv.reject(err);
     }
+    process.title = "maxctrl";
   };
 
   this.parseValue = function (value) {
