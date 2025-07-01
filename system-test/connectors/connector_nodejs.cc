@@ -23,5 +23,5 @@ int main(int argc, char** argv)
     test.reset_timeout(500);
     return run_npm_test(test, argc, argv,
                         "https://github.com/mariadb-corporation/mariadb-connector-nodejs.git",
-                        "master", "mariadb-connector-nodejs");
+                        "main", "mariadb-connector-nodejs");
 }

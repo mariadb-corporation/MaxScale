@@ -55,6 +55,7 @@ async function maxctrl(argv_in, cb) {
   // Store these globally.
   // TODO: Is there a neater way of doing this?
   argv = argv_in;
+  process.title = "maxctrl " + argv._.join(" ");
 
   // No password given, ask it from the command line
   if (argv.p == "") {
@@ -105,6 +106,7 @@ async function maxctrl(argv_in, cb) {
   } catch (err) {
     argv.reject(err);
   }
+  process.title = "maxctrl";
 }
 
 function parseValue(value) {
