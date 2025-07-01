@@ -44,4 +44,5 @@ if (process.argv[0] == process.execPath) {
   process.argv.shift();
 }
 
+process.title = "maxctrl";
 maxctrl.execute(process.argv).then(log, err);
