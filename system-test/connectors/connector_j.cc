@@ -25,5 +25,5 @@ int main(int argc, char** argv)
 
     return run_maven_test(test, argc, argv,
                           "https://github.com/mariadb-corporation/mariadb-connector-j",
-                          "master", "mariadb-connector-j");
+                          "main", "mariadb-connector-j");
 }

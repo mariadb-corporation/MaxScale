@@ -340,6 +340,12 @@ public:
         return res;
     }
 
+    void clear()
+    {
+        m_init = time(nullptr);
+        m_last_modified.clear();
+    }
+
 private:
     time_t                       m_init;
     map<string, WatchedResource> m_last_modified;
@@ -1964,6 +1970,7 @@ struct ThisUnit
 {
     RootResource    resources;          /**< Core resource set */
     ResourceWatcher watcher;            /**< Modification watcher */
+    int64_t         config_sync_version = 0;
 };
 
 ThisUnit this_unit;
@@ -2116,6 +2123,15 @@ static HttpResponse handle_request(const HttpRequest& request)
 
     HttpResponse rval;
 
+    auto manager = mxs::ConfigManager::get();
+    mxb_assert(manager);
+
+    if (manager->version() != this_unit.config_sync_version)
+    {
+        this_unit.watcher.clear();
+        this_unit.config_sync_version = manager->version();
+    }
+
     if (!request_precondition_met(request, rval))
     {
         return rval;
@@ -2141,9 +2157,6 @@ static HttpResponse handle_request(const HttpRequest& request)
             return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("Missing request body"));
         }
     }
-
-    auto manager = mxs::ConfigManager::get();
-    mxb_assert(manager);
 
     if (requires_sync && !skip_sync && !manager->start())
     {

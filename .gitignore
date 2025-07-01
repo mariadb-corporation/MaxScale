@@ -73,3 +73,8 @@ CLion project files
 
 # Emacs
 TAGS
+
+# Clangd files
+/.cache/
+.clangd
+compile_commands.json
