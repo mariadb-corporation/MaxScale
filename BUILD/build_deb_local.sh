@@ -11,3 +11,4 @@ set -x
 mkdir -p MaxScale/_build/
 cp _build/*.deb -t MaxScale/
 cp _build/*.gz -t MaxScale/_build/
+cp _build/*.cxd.json -t MaxScale/_build/
