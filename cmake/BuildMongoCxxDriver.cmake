@@ -32,6 +32,7 @@ ExternalProject_Add(mongo-cxx-driver
   PATCH_COMMAND sed -i s/add_subdirectory\(test\)/\#add_subdirectory\(test\)/ src/bsoncxx/CMakeLists.txt && sed -i s/add_subdirectory\(test\)/\#add_subdirectory\(test\)/ src/mongocxx/CMakeLists.txt
   BUILD_COMMAND make
   INSTALL_COMMAND make install
+  LOG_OUTPUT_ON_FAILURE 1
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
