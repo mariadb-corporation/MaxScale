@@ -27,6 +27,7 @@ ExternalProject_Add(librdkafka
   BUILD_COMMAND make libs
   INSTALL_COMMAND make install-subdirs
   UPDATE_COMMAND ""
+  LOG_OUTPUT_ON_FAILURE 1
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1

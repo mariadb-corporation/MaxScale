@@ -6,6 +6,7 @@ ExternalProject_Add(maxscale_sqlite
   CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/sqlite-src-3110100/configure --with-pic --enable-maxscale
   BUILD_COMMAND make sqlite3.c
   INSTALL_COMMAND ""
+  LOG_OUTPUT_ON_FAILURE 1
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1

@@ -17,6 +17,7 @@ ExternalProject_Add(libkmip
   BUILD_COMMAND make "CFLAGS=-fPIC -std=c11"
   INSTALL_COMMAND make -i PREFIX=${CMAKE_BINARY_DIR}/libkmip/install install
   UPDATE_COMMAND ""
+  LOG_OUTPUT_ON_FAILURE 1
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
