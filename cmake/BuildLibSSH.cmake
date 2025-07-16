@@ -12,6 +12,7 @@ ExternalProject_Add(libssh
         BINARY_DIR ${CMAKE_BINARY_DIR}/libssh/build
         INSTALL_DIR ${LIBSSH_INSTALL_DIR}
         UPDATE_COMMAND ""
+        LOG_OUTPUT_ON_FAILURE 1
         LOG_DOWNLOAD 1
         LOG_UPDATE 1
         LOG_CONFIGURE 1

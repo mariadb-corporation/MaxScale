@@ -28,6 +28,7 @@ ExternalProject_add(hiredis
 # package by changing the ownership of home directories to root.
   INSTALL_COMMAND ""
   UPDATE_COMMAND ""
+  LOG_OUTPUT_ON_FAILURE 1
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
