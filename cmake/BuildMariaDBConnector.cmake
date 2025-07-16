@@ -11,6 +11,7 @@ ExternalProject_Add(connector-c
   BINARY_DIR ${CMAKE_BINARY_DIR}/connector-c
   INSTALL_DIR ${CMAKE_BINARY_DIR}/connector-c/install
   UPDATE_COMMAND ""
+  LOG_OUTPUT_ON_FAILURE 1
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
