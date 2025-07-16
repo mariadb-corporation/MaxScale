@@ -13,6 +13,7 @@ ExternalProject_Add(libgsasl
   BINARY_DIR ${CMAKE_BINARY_DIR}/libgsasl/
   BUILD_COMMAND make
   INSTALL_COMMAND make install
+  LOG_OUTPUT_ON_FAILURE 1
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
