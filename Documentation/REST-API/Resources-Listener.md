@@ -25,6 +25,9 @@ MaxScale.
     "data": {
         "attributes": {
             "parameters": {
+                "MariaDBProtocol": {
+                    "allow_replication": true
+                },
                 "address": "::",
                 "authenticator": null,
                 "authenticator_options": null,
@@ -94,6 +97,9 @@ Get all listeners.
         {
             "attributes": {
                 "parameters": {
+                    "MariaDBProtocol": {
+                        "allow_replication": true
+                    },
                     "address": "::",
                     "authenticator": null,
                     "authenticator_options": null,
@@ -142,6 +148,9 @@ Get all listeners.
         {
             "attributes": {
                 "parameters": {
+                    "MariaDBProtocol": {
+                        "allow_replication": true
+                    },
                     "address": "::",
                     "authenticator": null,
                     "authenticator_options": null,
@@ -190,6 +199,34 @@ Get all listeners.
     ],
     "links": {
         "self": "http://localhost:8989/v1/listeners/"
+    }
+}
+```
+
+### Get listener relationships
+
+```
+GET /v1/listeners/:name/relationships/:type
+```
+
+The _:type_ in the URI must be _services_ as listeners only have service
+relationships.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "RW-Split-Router",
+            "type": "services"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/services/",
+        "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
     }
 }
 ```

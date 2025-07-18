@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Thu, 20 Jul 2023 15:20:06 GMT",
-            "commit": "1dd63c813dccada2dba65e62bfd7faebccaa1bc9",
+            "activated_at": "Fri, 18 Jul 2025 06:38:44 GMT",
+            "commit": "83512fbd98d62864e5290b6b808db2fcc22147db",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
@@ -80,14 +80,16 @@ file locations, configuration options and version information.
                 "piddir": "/var/run/maxscale",
                 "query_classifier": "qc_sqlite",
                 "query_classifier_args": null,
-                "query_classifier_cache_size": 5003807539,
+                "query_classifier_cache_size": 5002189824,
                 "query_retries": 1,
                 "query_retry_timeout": "5000ms",
                 "rebalance_period": "0ms",
                 "rebalance_threshold": 20,
                 "rebalance_window": 10,
                 "retain_last_statements": 0,
+                "secretsdir": null,
                 "session_trace": 0,
+                "session_trace_match": null,
                 "skip_name_resolve": false,
                 "skip_permission_checks": false,
                 "sql_mode": "default",
@@ -98,10 +100,10 @@ file locations, configuration options and version information.
                 "writeq_high_water": 16777216,
                 "writeq_low_water": 8192
             },
-            "process_datadir": "/var/lib/maxscale/data19",
-            "started_at": "Thu, 20 Jul 2023 15:20:06 GMT",
+            "process_datadir": "/var/lib/maxscale/data1",
+            "started_at": "Fri, 18 Jul 2025 06:38:44 GMT",
             "uptime": 10,
-            "version": "6.4.7"
+            "version": "21.06.21"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -596,22 +598,22 @@ This endpoint supports the following parameters:
         "attributes": {
             "log": [
                 {
-                    "id": "42",
+                    "id": "41",
                     "message": "Service 'RW-Split-Router' started (2/2)",
                     "priority": "notice",
-                    "timestamp": "2023-07-20 15:20:06"
+                    "timestamp": "2025-07-18 06:38:44"
+                },
+                {
+                    "id": "42",
+                    "message": "Read 8 user@host entries from 'server1' for service 'RW-Split-Router'.",
+                    "priority": "notice",
+                    "timestamp": "2025-07-18 06:38:45"
                 },
                 {
                     "id": "43",
-                    "message": "Read 5 user@host entries from 'server1' for service 'RW-Split-Router'.",
+                    "message": "Read 8 user@host entries from 'server1' for service 'Read-Connection-Router'.",
                     "priority": "notice",
-                    "timestamp": "2023-07-20 15:20:07"
-                },
-                {
-                    "id": "44",
-                    "message": "Read 5 user@host entries from 'server1' for service 'Read-Connection-Router'.",
-                    "priority": "notice",
-                    "timestamp": "2023-07-20 15:20:07"
+                    "timestamp": "2025-07-18 06:38:45"
                 }
             ],
             "log_source": "maxlog"
@@ -783,25 +785,46 @@ at runtime using a PATCH command on the corresponding object endpoint.
     "data": {
         "attributes": {
             "api": "router",
-            "commands": [],
+            "commands": [
+                {
+                    "attributes": {
+                        "arg_max": 1,
+                        "arg_min": 1,
+                        "description": "Reset global GTID state in readwritesplit.",
+                        "method": "POST",
+                        "parameters": [
+                            {
+                                "description": "Readwritesplit service",
+                                "required": true,
+                                "type": "SERVICE"
+                            }
+                        ]
+                    },
+                    "id": "reset-gtid",
+                    "links": {
+                        "self": "http://localhost:8989/v1/modules/readwritesplit/reset-gtid/"
+                    },
+                    "type": "module_command"
+                }
+            ],
             "description": "A Read/Write splitting router for enhancement read scalability",
             "maturity": "GA",
             "module_type": "Router",
             "parameters": [
                 {
-                    "default_value": "false",
+                    "default_value": "none",
                     "description": "Causal reads mode",
                     "enum_values": [
+                        "none",
+                        "local",
+                        "global",
+                        "fast",
                         "false",
                         "off",
                         "0",
                         "true",
                         "on",
-                        "1",
-                        "none",
-                        "local",
-                        "global",
-                        "fast"
+                        "1"
                     ],
                     "mandatory": false,
                     "modifiable": true,
@@ -815,7 +838,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "modifiable": true,
                     "name": "causal_reads_timeout",
                     "type": "duration",
-                    "unit": "ms"
+                    "unit": "s"
                 },
                 {
                     "default_value": false,
@@ -832,7 +855,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "modifiable": true,
                     "name": "delayed_retry_timeout",
                     "type": "duration",
-                    "unit": "ms"
+                    "unit": "s"
                 },
                 {
                     "default_value": false,
@@ -886,7 +909,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "modifiable": true,
                     "name": "max_slave_replication_lag",
                     "type": "duration",
-                    "unit": "ms"
+                    "unit": "s"
                 },
                 {
                     "default_value": false,
@@ -928,7 +951,12 @@ at runtime using a PATCH command on the corresponding object endpoint.
                         "LEAST_ROUTER_CONNECTIONS",
                         "LEAST_BEHIND_MASTER",
                         "LEAST_CURRENT_OPERATIONS",
-                        "ADAPTIVE_ROUTING"
+                        "ADAPTIVE_ROUTING",
+                        "least_global_connections",
+                        "least_router_connections",
+                        "least_behind_master",
+                        "least_current_operations",
+                        "adaptive_routing"
                     ],
                     "mandatory": false,
                     "modifiable": true,
@@ -1040,7 +1068,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "modifiable": true,
                     "name": "connection_keepalive",
                     "type": "duration",
-                    "unit": "ms"
+                    "unit": "s"
                 },
                 {
                     "default_value": "0ms",
@@ -1049,7 +1077,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "modifiable": true,
                     "name": "connection_timeout",
                     "type": "duration",
-                    "unit": "ms"
+                    "unit": "s"
                 },
                 {
                     "default_value": false,
@@ -1065,6 +1093,14 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "mandatory": false,
                     "modifiable": true,
                     "name": "enable_root_user",
+                    "type": "bool"
+                },
+                {
+                    "default_value": false,
+                    "description": "Ping connections unconditionally",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "force_connection_keepalive",
                     "type": "bool"
                 },
                 {
@@ -1156,7 +1192,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                     "modifiable": true,
                     "name": "net_write_timeout",
                     "type": "duration",
-                    "unit": "ms"
+                    "unit": "s"
                 },
                 {
                     "description": "Password for the user used to retrieve database users",
@@ -1384,18 +1420,22 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "MAX",
-                        "description": "Minimum required TLS protocol version for the REST API",
+                        "description": "Enabled TLS protocol versions for the REST API",
                         "enum_values": [
                             "MAX",
                             "TLSv10",
                             "TLSv11",
                             "TLSv12",
-                            "TLSv13"
+                            "TLSv13",
+                            "TLSv1.0",
+                            "TLSv1.1",
+                            "TLSv1.2",
+                            "TLSv1.3"
                         ],
                         "mandatory": false,
                         "modifiable": false,
                         "name": "admin_ssl_version",
-                        "type": "enum"
+                        "type": "enum_mask"
                     },
                     {
                         "default_value": "10000ms",
@@ -1404,7 +1444,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "auth_connect_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": "10000ms",
@@ -1413,7 +1453,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "auth_read_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": "10000ms",
@@ -1422,7 +1462,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "auth_write_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "description": "Cluster used for configuration synchronization. If left empty (i.e. value is \"\"), synchronization is not done.",
@@ -1462,7 +1502,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "config_sync_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "description": "User account used for configuration synchronization.",
@@ -1628,7 +1668,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "query_retry_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": "0ms",
@@ -1664,12 +1704,26 @@ one to see the parameters of a module before the object is created.
                         "type": "count"
                     },
                     {
+                        "description": "Directory where the .secrets encryption key is located in.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "secretsdir",
+                        "type": "path"
+                    },
+                    {
                         "default_value": 0,
                         "description": "How many log entries are stored in the session specific trace log.",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "session_trace",
                         "type": "count"
+                    },
+                    {
+                        "description": "Regular expression that is matched against the contents of the session trace log and if it matches the contents are logged when the session stops.",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "session_trace_match",
+                        "type": "regex"
                     },
                     {
                         "default_value": false,
@@ -1722,7 +1776,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "users_refresh_interval",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": "30000ms",
@@ -1731,7 +1785,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "users_refresh_time",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": 16777216,
@@ -1750,7 +1804,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "6.4.7"
+                "version": "21.06.21"
             },
             "id": "maxscale",
             "links": {
@@ -1780,6 +1834,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
+                        "default_value": "",
                         "description": "Server disk space threshold",
                         "mandatory": false,
                         "modifiable": true,
@@ -1823,7 +1878,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "persistmaxtime",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": 0,
@@ -1945,18 +2000,22 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "MAX",
-                        "description": "Minimum TLS protocol version",
+                        "description": "Enabled TLS protocol versions",
                         "enum_values": [
                             "MAX",
                             "TLSv10",
                             "TLSv11",
                             "TLSv12",
-                            "TLSv13"
+                            "TLSv13",
+                            "TLSv1.0",
+                            "TLSv1.1",
+                            "TLSv1.2",
+                            "TLSv1.3"
                         ],
                         "mandatory": false,
                         "modifiable": true,
                         "name": "ssl_version",
-                        "type": "enum"
+                        "type": "enum_mask"
                     },
                     {
                         "default_value": "server",
@@ -1967,7 +2026,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "6.4.7"
+                "version": "21.06.21"
             },
             "id": "servers",
             "links": {
@@ -1980,7 +2039,7 @@ one to see the parameters of a module before the object is created.
                 "api": "filter",
                 "commands": [],
                 "description": "A hint parsing filter",
-                "maturity": "Alpha",
+                "maturity": "GA",
                 "module_type": "Filter",
                 "parameters": [],
                 "version": "V1.0.0"
@@ -2387,6 +2446,12 @@ one to see the parameters of a module before the object is created.
                     {
                         "default_value": false,
                         "mandatory": false,
+                        "name": "enforce_read_only_servers",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "mandatory": false,
                         "name": "enforce_writable_master",
                         "type": "bool"
                     },
@@ -2606,6 +2671,14 @@ one to see the parameters of a module before the object is created.
                 "module_type": "Protocol",
                 "parameters": [
                     {
+                        "default_value": true,
+                        "description": "Allow use of the replication protocol through this listener",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "allow_replication",
+                        "type": "bool"
+                    },
+                    {
                         "default_value": "::",
                         "description": "Listener address",
                         "mandatory": false,
@@ -2745,18 +2818,22 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "MAX",
-                        "description": "Minimum TLS protocol version",
+                        "description": "Enabled TLS protocol versions",
                         "enum_values": [
                             "MAX",
                             "TLSv10",
                             "TLSv11",
                             "TLSv12",
-                            "TLSv13"
+                            "TLSv13",
+                            "TLSv1.0",
+                            "TLSv1.1",
+                            "TLSv1.2",
+                            "TLSv1.3"
                         ],
                         "mandatory": false,
                         "modifiable": true,
                         "name": "ssl_version",
-                        "type": "enum"
+                        "type": "enum_mask"
                     },
                     {
                         "description": "Path to user and group mapping file",
@@ -3000,7 +3077,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "max_replication_lag",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": "running",
@@ -3031,7 +3108,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "connection_keepalive",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": "0ms",
@@ -3040,7 +3117,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "connection_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": false,
@@ -3056,6 +3133,14 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "enable_root_user",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Ping connections unconditionally",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "force_connection_keepalive",
                         "type": "bool"
                     },
                     {
@@ -3147,7 +3232,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "net_write_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "description": "Password for the user used to retrieve database users",
@@ -3253,25 +3338,46 @@ one to see the parameters of a module before the object is created.
         {
             "attributes": {
                 "api": "router",
-                "commands": [],
+                "commands": [
+                    {
+                        "attributes": {
+                            "arg_max": 1,
+                            "arg_min": 1,
+                            "description": "Reset global GTID state in readwritesplit.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Readwritesplit service",
+                                    "required": true,
+                                    "type": "SERVICE"
+                                }
+                            ]
+                        },
+                        "id": "reset-gtid",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/readwritesplit/reset-gtid/"
+                        },
+                        "type": "module_command"
+                    }
+                ],
                 "description": "A Read/Write splitting router for enhancement read scalability",
                 "maturity": "GA",
                 "module_type": "Router",
                 "parameters": [
                     {
-                        "default_value": "false",
+                        "default_value": "none",
                         "description": "Causal reads mode",
                         "enum_values": [
+                            "none",
+                            "local",
+                            "global",
+                            "fast",
                             "false",
                             "off",
                             "0",
                             "true",
                             "on",
-                            "1",
-                            "none",
-                            "local",
-                            "global",
-                            "fast"
+                            "1"
                         ],
                         "mandatory": false,
                         "modifiable": true,
@@ -3285,7 +3391,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "causal_reads_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": false,
@@ -3302,7 +3408,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "delayed_retry_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": false,
@@ -3356,7 +3462,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "max_slave_replication_lag",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": false,
@@ -3398,7 +3504,12 @@ one to see the parameters of a module before the object is created.
                             "LEAST_ROUTER_CONNECTIONS",
                             "LEAST_BEHIND_MASTER",
                             "LEAST_CURRENT_OPERATIONS",
-                            "ADAPTIVE_ROUTING"
+                            "ADAPTIVE_ROUTING",
+                            "least_global_connections",
+                            "least_router_connections",
+                            "least_behind_master",
+                            "least_current_operations",
+                            "adaptive_routing"
                         ],
                         "mandatory": false,
                         "modifiable": true,
@@ -3510,7 +3621,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "connection_keepalive",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": "0ms",
@@ -3519,7 +3630,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "connection_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "default_value": false,
@@ -3535,6 +3646,14 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "enable_root_user",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Ping connections unconditionally",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "force_connection_keepalive",
                         "type": "bool"
                     },
                     {
@@ -3626,7 +3745,7 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "net_write_timeout",
                         "type": "duration",
-                        "unit": "ms"
+                        "unit": "s"
                     },
                     {
                         "description": "Password for the user used to retrieve database users",

@@ -30,30 +30,42 @@ an external server, the operation may be expensive.
     "data": {
         "attributes": {
             "client": {
-                "cipher": ""
+                "cipher": "",
+                "connection_attributes": {
+                    "_client_name": "libmariadb",
+                    "_client_version": "3.3.11",
+                    "_os": "Linux",
+                    "_pid": "1006949",
+                    "_platform": "x86_64",
+                    "_server_host": "127.0.0.1"
+                },
+                "sescmd_history_len": 1,
+                "sescmd_history_stored_metadata": 0,
+                "sescmd_history_stored_responses": 1
             },
-            "connected": "Thu Jul 20 15:20:16 2023",
+            "connected": "Fri Jul 18 06:38:54 2025",
             "connections": [
                 {
                     "cipher": "",
-                    "connection_id": 9,
+                    "connection_id": 13,
                     "server": "server1"
                 },
                 {
                     "cipher": "",
-                    "connection_id": 9,
+                    "connection_id": 11,
                     "server": "server2"
                 }
             ],
-            "idle": 0.0,
+            "idle": 0.10000000000000001,
             "log": [],
             "parameters": {
+                "log_debug": false,
                 "log_error": false,
                 "log_info": false,
                 "log_notice": false,
                 "log_warning": false
             },
-            "port": 43050,
+            "port": 46166,
             "queries": [],
             "remote": "::ffff:127.0.0.1",
             "state": "Session started",
@@ -103,30 +115,42 @@ Get all sessions.
         {
             "attributes": {
                 "client": {
-                    "cipher": ""
+                    "cipher": "",
+                    "connection_attributes": {
+                        "_client_name": "libmariadb",
+                        "_client_version": "3.3.11",
+                        "_os": "Linux",
+                        "_pid": "1006949",
+                        "_platform": "x86_64",
+                        "_server_host": "127.0.0.1"
+                    },
+                    "sescmd_history_len": 1,
+                    "sescmd_history_stored_metadata": 0,
+                    "sescmd_history_stored_responses": 1
                 },
-                "connected": "Thu Jul 20 15:20:16 2023",
+                "connected": "Fri Jul 18 06:38:54 2025",
                 "connections": [
                     {
                         "cipher": "",
-                        "connection_id": 9,
+                        "connection_id": 13,
                         "server": "server1"
                     },
                     {
                         "cipher": "",
-                        "connection_id": 9,
+                        "connection_id": 11,
                         "server": "server2"
                     }
                 ],
-                "idle": 0.0,
+                "idle": 0.10000000000000001,
                 "log": [],
                 "parameters": {
+                    "log_debug": false,
                     "log_error": false,
                     "log_info": false,
                     "log_notice": false,
                     "log_warning": false
                 },
-                "port": 43050,
+                "port": 46166,
                 "queries": [],
                 "remote": "::ffff:127.0.0.1",
                 "state": "Session started",
