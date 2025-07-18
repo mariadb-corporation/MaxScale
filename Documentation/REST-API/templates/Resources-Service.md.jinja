@@ -41,6 +41,23 @@ Get all services.
 {{get("/v1/services")}}
 ```
 
+### Get service relationships
+
+```
+GET /v1/services/:name/relationships/:type
+```
+
+The _:type_ in the URI must be either _servers_, _services_ or _filters_,
+depending on which relationship is being retrieved.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/services/Read-Connection-Router/relationships/servers")}}
+```
+
 ### Create a service
 
 ```
