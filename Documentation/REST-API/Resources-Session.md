@@ -30,9 +30,20 @@ an external server, the operation may be expensive.
     "data": {
         "attributes": {
             "client": {
-                "cipher": ""
+                "cipher": "",
+                "connection_attributes": {
+                    "_client_name": "libmariadb",
+                    "_client_version": "3.3.11",
+                    "_os": "Linux",
+                    "_pid": "284269",
+                    "_platform": "x86_64",
+                    "_server_host": "127.0.0.1"
+                },
+                "sescmd_history_len": 1,
+                "sescmd_history_stored_metadata": 0,
+                "sescmd_history_stored_responses": 1
             },
-            "connected": "Fri, 21 Jul 2023 06:46:44 GMT",
+            "connected": "Fri, 25 Jul 2025 14:19:54 GMT",
             "connections": [
                 {
                     "cipher": "",
@@ -40,31 +51,31 @@ an external server, the operation may be expensive.
                     "server": "server1"
                 }
             ],
-            "idle": 5.0999999999999996,
-            "io_activity": 16,
+            "idle": 5.2000000000000002,
+            "io_activity": 18,
             "log": [],
             "memory": {
                 "connection_buffers": {
                     "backends": {
                         "server1": {
-                            "misc": 795,
+                            "misc": 662,
                             "readq": 0,
-                            "total": 795,
+                            "total": 662,
                             "writeq": 0
                         }
                     },
                     "client": {
-                        "misc": 1040,
+                        "misc": 654,
                         "readq": 65536,
-                        "total": 66576,
+                        "total": 66190,
                         "writeq": 0
                     },
-                    "total": 67371
+                    "total": 66852
                 },
                 "exec_metadata": 0,
                 "last_queries": 0,
-                "sescmd_history": 697,
-                "total": 68068,
+                "sescmd_history": 493,
+                "total": 67345,
                 "variables": 0
             },
             "parameters": {
@@ -74,9 +85,9 @@ an external server, the operation may be expensive.
                 "log_notice": false,
                 "log_warning": false
             },
-            "port": 55892,
+            "port": 33764,
             "queries": [],
-            "remote": "::ffff:127.0.0.1",
+            "remote": "127.0.0.1",
             "state": "Session started",
             "thread": 1,
             "user": "maxuser"
@@ -125,9 +136,20 @@ Get all sessions.
         {
             "attributes": {
                 "client": {
-                    "cipher": ""
+                    "cipher": "",
+                    "connection_attributes": {
+                        "_client_name": "libmariadb",
+                        "_client_version": "3.3.11",
+                        "_os": "Linux",
+                        "_pid": "284269",
+                        "_platform": "x86_64",
+                        "_server_host": "127.0.0.1"
+                    },
+                    "sescmd_history_len": 1,
+                    "sescmd_history_stored_metadata": 0,
+                    "sescmd_history_stored_responses": 1
                 },
-                "connected": "Fri, 21 Jul 2023 06:46:44 GMT",
+                "connected": "Fri, 25 Jul 2025 14:19:54 GMT",
                 "connections": [
                     {
                         "cipher": "",
@@ -135,31 +157,31 @@ Get all sessions.
                         "server": "server1"
                     }
                 ],
-                "idle": 5.0999999999999996,
-                "io_activity": 16,
+                "idle": 5.2000000000000002,
+                "io_activity": 18,
                 "log": [],
                 "memory": {
                     "connection_buffers": {
                         "backends": {
                             "server1": {
-                                "misc": 795,
+                                "misc": 662,
                                 "readq": 0,
-                                "total": 795,
+                                "total": 662,
                                 "writeq": 0
                             }
                         },
                         "client": {
-                            "misc": 1040,
+                            "misc": 654,
                             "readq": 65536,
-                            "total": 66576,
+                            "total": 66190,
                             "writeq": 0
                         },
-                        "total": 67371
+                        "total": 66852
                     },
                     "exec_metadata": 0,
                     "last_queries": 0,
-                    "sescmd_history": 697,
-                    "total": 68068,
+                    "sescmd_history": 493,
+                    "total": 67345,
                     "variables": 0
                 },
                 "parameters": {
@@ -169,9 +191,9 @@ Get all sessions.
                     "log_notice": false,
                     "log_warning": false
                 },
-                "port": 55892,
+                "port": 33764,
                 "queries": [],
-                "remote": "::ffff:127.0.0.1",
+                "remote": "127.0.0.1",
                 "state": "Session started",
                 "thread": 1,
                 "user": "maxuser"

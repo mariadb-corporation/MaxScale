@@ -137,7 +137,7 @@ pwd = os.getcwd()
 os.chdir(test_dir)
 os.system("docker-compose up -d server1 server2")
 os.chdir(pwd)
-image = os.environ.get("MAXSCALE_IMAGE", "mariadb/maxscale:22.08")
+image = os.environ.get("MAXSCALE_IMAGE", "maxscale-rest-api")
 os.system("docker rm -vf mxs")
 os.system("docker run --name mxs -d --rm -v " + pwd + "/rest_api.cnf:/etc/maxscale.cnf --network=host " + image)
 

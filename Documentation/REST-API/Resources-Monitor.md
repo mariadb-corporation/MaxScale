@@ -88,6 +88,7 @@ Get a single monitor.
                 "demotion_sql_file": null,
                 "disk_space_check_interval": "0ms",
                 "disk_space_threshold": null,
+                "enforce_read_only_servers": false,
                 "enforce_read_only_slaves": false,
                 "enforce_simple_topology": false,
                 "enforce_writable_master": false,
@@ -97,15 +98,14 @@ Get a single monitor.
                 "handle_events": true,
                 "journal_max_age": "28800000ms",
                 "maintenance_on_low_disk_space": true,
-                "mariabackup_parallel": 1,
-                "mariabackup_use_memory": "1G",
-                "master_conditions": "primary_monitor_master",
+                "master_conditions": "primary_monitor_master,disk_space_ok",
                 "master_failure_timeout": "10000ms",
                 "module": "mariadbmon",
                 "monitor_interval": "1000ms",
                 "password": "*****",
                 "promotion_sql_file": null,
                 "rebuild_port": 4444,
+                "replication_custom_options": null,
                 "replication_master_ssl": false,
                 "replication_password": "*****",
                 "replication_user": "maxuser",
@@ -130,7 +130,7 @@ Get a single monitor.
                 "type": "static"
             },
             "state": "Running",
-            "ticks": 12
+            "ticks": 13
         },
         "id": "MariaDB-Monitor",
         "links": {
@@ -254,6 +254,7 @@ Get all monitors.
                     "demotion_sql_file": null,
                     "disk_space_check_interval": "0ms",
                     "disk_space_threshold": null,
+                    "enforce_read_only_servers": false,
                     "enforce_read_only_slaves": false,
                     "enforce_simple_topology": false,
                     "enforce_writable_master": false,
@@ -263,15 +264,14 @@ Get all monitors.
                     "handle_events": true,
                     "journal_max_age": "28800000ms",
                     "maintenance_on_low_disk_space": true,
-                    "mariabackup_parallel": 1,
-                    "mariabackup_use_memory": "1G",
-                    "master_conditions": "primary_monitor_master",
+                    "master_conditions": "primary_monitor_master,disk_space_ok",
                     "master_failure_timeout": "10000ms",
                     "module": "mariadbmon",
                     "monitor_interval": "1000ms",
                     "password": "*****",
                     "promotion_sql_file": null,
                     "rebuild_port": 4444,
+                    "replication_custom_options": null,
                     "replication_master_ssl": false,
                     "replication_password": "*****",
                     "replication_user": "maxuser",
@@ -296,7 +296,7 @@ Get all monitors.
                     "type": "static"
                 },
                 "state": "Running",
-                "ticks": 12
+                "ticks": 13
             },
             "id": "MariaDB-Monitor",
             "links": {
@@ -337,6 +337,38 @@ Get all monitors.
     ],
     "links": {
         "self": "http://localhost:8989/v1/monitors/"
+    }
+}
+```
+
+### Get monitor relationships
+
+```
+GET /v1/monitors/:name/relationships/servers
+```
+
+The _:type_ in the URI must be either _services_, for service
+relationships, or _servers_, for server relationships.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "server1",
+            "type": "servers"
+        },
+        {
+            "id": "server2",
+            "type": "servers"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/servers/",
+        "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor/relationships/servers/"
     }
 }
 ```
@@ -446,8 +478,11 @@ Invalid request body:
 ### Update monitor relationships
 
 ```
-PATCH /v1/monitors/:name/relationships/servers
+PATCH /v1/monitors/:name/relationships/:type
 ```
+
+The _:type_ in the URI must be either _services_, for service
+relationships, or _servers_, for server relationships.
 
 The request body must be a JSON object that defines only the _data_ field. The
 value of the _data_ field must be an array of relationship objects that define

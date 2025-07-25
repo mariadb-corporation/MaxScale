@@ -332,6 +332,7 @@ private:
 
     mariadb::SClientAuth m_authenticator;   /**< Client authentication data */
     ChangeUserFields     m_change_user;     /**< User account to change to */
+    int                  m_failed_user_changes {0};
 
     std::string m_pending_value;        /**< Role or db client is changing to */
 

@@ -2328,6 +2328,7 @@ void MariaDBClientConnection::cancel_change_user_p1()
     // The main session fields have not been modified at this point, so canceling is simple.
     m_change_user.client_query.clear();
     m_change_user.auth_data.reset();
+    m_failed_user_changes++;
 }
 
 void MariaDBClientConnection::complete_change_user_p2()
@@ -2807,7 +2808,11 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
     {
     case MXS_COM_CHANGE_USER:
         // Client sent a change-user-packet. Parse it but only route it once change-user completes.
-        if (start_change_user(move(buffer)))
+        if (m_failed_user_changes >= 3)
+        {
+            success = write(mariadb::create_error_packet(1, 1047, "08S01", "Unknown command"));
+        }
+        else if (start_change_user(move(buffer)))
         {
             m_state = State::CHANGING_USER;
             m_auth_state = AuthState::FIND_ENTRY;

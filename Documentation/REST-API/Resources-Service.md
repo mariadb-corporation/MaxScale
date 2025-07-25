@@ -30,10 +30,23 @@ Get a single service.
                 {
                     "attributes": {
                         "parameters": {
+                            "MariaDBProtocol": {
+                                "allow_replication": true
+                            },
                             "address": "::",
                             "authenticator": null,
                             "authenticator_options": null,
                             "connection_init_sql_file": null,
+                            "connection_metadata": [
+                                "character_set_client=auto",
+                                "character_set_connection=auto",
+                                "character_set_results=auto",
+                                "max_allowed_packet=auto",
+                                "system_time_zone=auto",
+                                "time_zone=auto",
+                                "tx_isolation=auto",
+                                "maxscale=auto"
+                            ],
                             "port": 4008,
                             "protocol": "MariaDBProtocol",
                             "proxy_protocol_networks": null,
@@ -80,9 +93,9 @@ Get a single service.
             "parameters": {
                 "auth_all_servers": false,
                 "connection_keepalive": "300000ms",
-                "connection_timeout": "0ms",
                 "disable_sescmd_history": false,
                 "enable_root_user": false,
+                "force_connection_keepalive": false,
                 "idle_session_pool_time": "-1ms",
                 "localhost_match_wildcard_host": true,
                 "log_auth_warnings": true,
@@ -103,13 +116,13 @@ Get a single service.
                 "router": "readconnroute",
                 "router_options": "master",
                 "session_trace": false,
-                "session_track_trx_state": false,
                 "strip_db_esc": true,
                 "type": "service",
                 "user": "maxuser",
                 "user_accounts_file": null,
                 "user_accounts_file_usage": "add_when_load_ok",
-                "version_string": null
+                "version_string": null,
+                "wait_timeout": "0ms"
             },
             "router": "readconnroute",
             "router_diagnostics": {
@@ -120,7 +133,7 @@ Get a single service.
                 "file": "/etc/maxscale.cnf",
                 "type": "static"
             },
-            "started": "Fri, 21 Jul 2023 06:46:32 GMT",
+            "started": "Fri, 25 Jul 2025 14:19:42 GMT",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
@@ -132,6 +145,36 @@ Get a single service.
             },
             "total_connections": 0,
             "users": [
+                {
+                    "default_role": "",
+                    "global_priv": false,
+                    "host": "127.0.0.1",
+                    "plugin": "mysql_native_password",
+                    "proxy_priv": false,
+                    "ssl": false,
+                    "super_priv": false,
+                    "user": "healthcheck"
+                },
+                {
+                    "default_role": "",
+                    "global_priv": false,
+                    "host": "::1",
+                    "plugin": "mysql_native_password",
+                    "proxy_priv": false,
+                    "ssl": false,
+                    "super_priv": false,
+                    "user": "healthcheck"
+                },
+                {
+                    "default_role": "",
+                    "global_priv": false,
+                    "host": "localhost",
+                    "plugin": "mysql_native_password",
+                    "proxy_priv": false,
+                    "ssl": false,
+                    "super_priv": false,
+                    "user": "healthcheck"
+                },
                 {
                     "default_role": "",
                     "global_priv": false,
@@ -183,7 +226,7 @@ Get a single service.
                     "user": "root"
                 }
             ],
-            "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
+            "users_last_update": "Fri, 25 Jul 2025 14:19:45 GMT"
         },
         "id": "Read-Connection-Router",
         "links": {
@@ -265,10 +308,23 @@ Get all services.
                     {
                         "attributes": {
                             "parameters": {
+                                "MariaDBProtocol": {
+                                    "allow_replication": true
+                                },
                                 "address": "::",
                                 "authenticator": null,
                                 "authenticator_options": null,
                                 "connection_init_sql_file": null,
+                                "connection_metadata": [
+                                    "character_set_client=auto",
+                                    "character_set_connection=auto",
+                                    "character_set_results=auto",
+                                    "max_allowed_packet=auto",
+                                    "system_time_zone=auto",
+                                    "time_zone=auto",
+                                    "tx_isolation=auto",
+                                    "maxscale=auto"
+                                ],
                                 "port": 4006,
                                 "protocol": "MariaDBProtocol",
                                 "proxy_protocol_networks": null,
@@ -317,11 +373,11 @@ Get all services.
                     "causal_reads": "none",
                     "causal_reads_timeout": "10000ms",
                     "connection_keepalive": "300000ms",
-                    "connection_timeout": "0ms",
                     "delayed_retry": false,
                     "delayed_retry_timeout": "10000ms",
                     "disable_sescmd_history": false,
                     "enable_root_user": false,
+                    "force_connection_keepalive": false,
                     "idle_session_pool_time": "-1ms",
                     "lazy_connect": false,
                     "localhost_match_wildcard_host": true,
@@ -334,9 +390,9 @@ Get all services.
                     "master_failure_mode": "fail_instantly",
                     "master_reconnection": false,
                     "max_connections": 0,
+                    "max_replication_lag": "0ms",
                     "max_sescmd_history": 50,
                     "max_slave_connections": 255,
-                    "max_slave_replication_lag": "0ms",
                     "multiplex_timeout": "60000ms",
                     "net_write_timeout": "0ms",
                     "optimistic_trx": false,
@@ -348,11 +404,11 @@ Get all services.
                     "reuse_prepared_statements": false,
                     "router": "readwritesplit",
                     "session_trace": false,
-                    "session_track_trx_state": false,
                     "slave_connections": 255,
-                    "slave_selection_criteria": "LEAST_CURRENT_OPERATIONS",
+                    "slave_selection_criteria": "least_current_operations",
                     "strict_multi_stmt": false,
                     "strict_sp_calls": false,
+                    "strict_tmp_tables": false,
                     "strip_db_esc": true,
                     "transaction_replay": false,
                     "transaction_replay_attempts": 5,
@@ -360,13 +416,15 @@ Get all services.
                     "transaction_replay_max_size": 1048576,
                     "transaction_replay_retry_on_deadlock": false,
                     "transaction_replay_retry_on_mismatch": false,
+                    "transaction_replay_safe_commit": true,
                     "transaction_replay_timeout": "0ms",
                     "type": "service",
                     "use_sql_variables_in": "all",
                     "user": "maxuser",
                     "user_accounts_file": null,
                     "user_accounts_file_usage": "add_when_load_ok",
-                    "version_string": null
+                    "version_string": null,
+                    "wait_timeout": "0ms"
                 },
                 "router": "readwritesplit",
                 "router_diagnostics": {
@@ -396,13 +454,14 @@ Get all services.
                             "total": 1,
                             "write": 0
                         }
-                    ]
+                    ],
+                    "trx_max_size_exceeded": 0
                 },
                 "source": {
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Fri, 21 Jul 2023 06:46:32 GMT",
+                "started": "Fri, 25 Jul 2025 14:19:42 GMT",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -414,6 +473,36 @@ Get all services.
                 },
                 "total_connections": 1,
                 "users": [
+                    {
+                        "default_role": "",
+                        "global_priv": false,
+                        "host": "127.0.0.1",
+                        "plugin": "mysql_native_password",
+                        "proxy_priv": false,
+                        "ssl": false,
+                        "super_priv": false,
+                        "user": "healthcheck"
+                    },
+                    {
+                        "default_role": "",
+                        "global_priv": false,
+                        "host": "::1",
+                        "plugin": "mysql_native_password",
+                        "proxy_priv": false,
+                        "ssl": false,
+                        "super_priv": false,
+                        "user": "healthcheck"
+                    },
+                    {
+                        "default_role": "",
+                        "global_priv": false,
+                        "host": "localhost",
+                        "plugin": "mysql_native_password",
+                        "proxy_priv": false,
+                        "ssl": false,
+                        "super_priv": false,
+                        "user": "healthcheck"
+                    },
                     {
                         "default_role": "",
                         "global_priv": false,
@@ -465,7 +554,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
+                "users_last_update": "Fri, 25 Jul 2025 14:19:45 GMT"
             },
             "id": "RW-Split-Router",
             "links": {
@@ -506,10 +595,23 @@ Get all services.
                     {
                         "attributes": {
                             "parameters": {
+                                "MariaDBProtocol": {
+                                    "allow_replication": true
+                                },
                                 "address": "::",
                                 "authenticator": null,
                                 "authenticator_options": null,
                                 "connection_init_sql_file": null,
+                                "connection_metadata": [
+                                    "character_set_client=auto",
+                                    "character_set_connection=auto",
+                                    "character_set_results=auto",
+                                    "max_allowed_packet=auto",
+                                    "system_time_zone=auto",
+                                    "time_zone=auto",
+                                    "tx_isolation=auto",
+                                    "maxscale=auto"
+                                ],
                                 "port": 4008,
                                 "protocol": "MariaDBProtocol",
                                 "proxy_protocol_networks": null,
@@ -556,9 +658,9 @@ Get all services.
                 "parameters": {
                     "auth_all_servers": false,
                     "connection_keepalive": "300000ms",
-                    "connection_timeout": "0ms",
                     "disable_sescmd_history": false,
                     "enable_root_user": false,
+                    "force_connection_keepalive": false,
                     "idle_session_pool_time": "-1ms",
                     "localhost_match_wildcard_host": true,
                     "log_auth_warnings": true,
@@ -579,13 +681,13 @@ Get all services.
                     "router": "readconnroute",
                     "router_options": "master",
                     "session_trace": false,
-                    "session_track_trx_state": false,
                     "strip_db_esc": true,
                     "type": "service",
                     "user": "maxuser",
                     "user_accounts_file": null,
                     "user_accounts_file_usage": "add_when_load_ok",
-                    "version_string": null
+                    "version_string": null,
+                    "wait_timeout": "0ms"
                 },
                 "router": "readconnroute",
                 "router_diagnostics": {
@@ -596,7 +698,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Fri, 21 Jul 2023 06:46:32 GMT",
+                "started": "Fri, 25 Jul 2025 14:19:42 GMT",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -608,6 +710,36 @@ Get all services.
                 },
                 "total_connections": 0,
                 "users": [
+                    {
+                        "default_role": "",
+                        "global_priv": false,
+                        "host": "127.0.0.1",
+                        "plugin": "mysql_native_password",
+                        "proxy_priv": false,
+                        "ssl": false,
+                        "super_priv": false,
+                        "user": "healthcheck"
+                    },
+                    {
+                        "default_role": "",
+                        "global_priv": false,
+                        "host": "::1",
+                        "plugin": "mysql_native_password",
+                        "proxy_priv": false,
+                        "ssl": false,
+                        "super_priv": false,
+                        "user": "healthcheck"
+                    },
+                    {
+                        "default_role": "",
+                        "global_priv": false,
+                        "host": "localhost",
+                        "plugin": "mysql_native_password",
+                        "proxy_priv": false,
+                        "ssl": false,
+                        "super_priv": false,
+                        "user": "healthcheck"
+                    },
                     {
                         "default_role": "",
                         "global_priv": false,
@@ -659,7 +791,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
+                "users_last_update": "Fri, 25 Jul 2025 14:19:45 GMT"
             },
             "id": "Read-Connection-Router",
             "links": {
@@ -716,6 +848,38 @@ Get all services.
     ],
     "links": {
         "self": "http://localhost:8989/v1/services/"
+    }
+}
+```
+
+### Get service relationships
+
+```
+GET /v1/services/:name/relationships/:type
+```
+
+The _:type_ in the URI must be either _servers_, _services_ or _filters_,
+depending on which relationship is being retrieved.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "server1",
+            "type": "servers"
+        },
+        {
+            "id": "server2",
+            "type": "servers"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/servers/",
+        "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/servers/"
     }
 }
 ```
