@@ -30,9 +30,20 @@ an external server, the operation may be expensive.
     "data": {
         "attributes": {
             "client": {
-                "cipher": ""
+                "cipher": "",
+                "connection_attributes": {
+                    "_client_name": "libmariadb",
+                    "_client_version": "3.3.11",
+                    "_os": "Linux",
+                    "_pid": "242477",
+                    "_platform": "x86_64",
+                    "_server_host": "127.0.0.1"
+                },
+                "sescmd_history_len": 1,
+                "sescmd_history_stored_metadata": 0,
+                "sescmd_history_stored_responses": 1
             },
-            "connected": "Fri, 21 Jul 2023 06:46:44 GMT",
+            "connected": "Fri, 25 Jul 2025 14:08:12 GMT",
             "connections": [
                 {
                     "cipher": "",
@@ -63,8 +74,8 @@ an external server, the operation may be expensive.
                 },
                 "exec_metadata": 0,
                 "last_queries": 0,
-                "sescmd_history": 697,
-                "total": 68068,
+                "sescmd_history": 689,
+                "total": 68060,
                 "variables": 0
             },
             "parameters": {
@@ -74,7 +85,7 @@ an external server, the operation may be expensive.
                 "log_notice": false,
                 "log_warning": false
             },
-            "port": 55892,
+            "port": 52022,
             "queries": [],
             "remote": "::ffff:127.0.0.1",
             "state": "Session started",
@@ -125,9 +136,20 @@ Get all sessions.
         {
             "attributes": {
                 "client": {
-                    "cipher": ""
+                    "cipher": "",
+                    "connection_attributes": {
+                        "_client_name": "libmariadb",
+                        "_client_version": "3.3.11",
+                        "_os": "Linux",
+                        "_pid": "242477",
+                        "_platform": "x86_64",
+                        "_server_host": "127.0.0.1"
+                    },
+                    "sescmd_history_len": 1,
+                    "sescmd_history_stored_metadata": 0,
+                    "sescmd_history_stored_responses": 1
                 },
-                "connected": "Fri, 21 Jul 2023 06:46:44 GMT",
+                "connected": "Fri, 25 Jul 2025 14:08:12 GMT",
                 "connections": [
                     {
                         "cipher": "",
@@ -158,8 +180,8 @@ Get all sessions.
                     },
                     "exec_metadata": 0,
                     "last_queries": 0,
-                    "sescmd_history": 697,
-                    "total": 68068,
+                    "sescmd_history": 689,
+                    "total": 68060,
                     "variables": 0
                 },
                 "parameters": {
@@ -169,7 +191,7 @@ Get all sessions.
                     "log_notice": false,
                     "log_warning": false
                 },
-                "port": 55892,
+                "port": 52022,
                 "queries": [],
                 "remote": "::ffff:127.0.0.1",
                 "state": "Session started",

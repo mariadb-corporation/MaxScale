@@ -25,6 +25,9 @@ MaxScale.
     "data": {
         "attributes": {
             "parameters": {
+                "MariaDBProtocol": {
+                    "allow_replication": true
+                },
                 "address": "::",
                 "authenticator": null,
                 "authenticator_options": null,
@@ -95,55 +98,9 @@ Get all listeners.
         {
             "attributes": {
                 "parameters": {
-                    "address": "::",
-                    "authenticator": null,
-                    "authenticator_options": null,
-                    "connection_init_sql_file": null,
-                    "port": 4006,
-                    "protocol": "MariaDBProtocol",
-                    "proxy_protocol_networks": null,
-                    "service": "RW-Split-Router",
-                    "socket": null,
-                    "sql_mode": "default",
-                    "ssl": false,
-                    "ssl_ca": null,
-                    "ssl_cert": null,
-                    "ssl_cert_verify_depth": 9,
-                    "ssl_cipher": null,
-                    "ssl_crl": null,
-                    "ssl_key": null,
-                    "ssl_verify_peer_certificate": false,
-                    "ssl_verify_peer_host": false,
-                    "ssl_version": "MAX",
-                    "type": "listener",
-                    "user_mapping_file": null
-                },
-                "source": {
-                    "file": "/etc/maxscale.cnf",
-                    "type": "static"
-                },
-                "state": "Running"
-            },
-            "id": "RW-Split-Listener",
-            "relationships": {
-                "services": {
-                    "data": [
-                        {
-                            "id": "RW-Split-Router",
-                            "type": "services"
-                        }
-                    ],
-                    "links": {
-                        "related": "http://localhost:8989/v1/services/",
-                        "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
-                    }
-                }
-            },
-            "type": "listeners"
-        },
-        {
-            "attributes": {
-                "parameters": {
+                    "MariaDBProtocol": {
+                        "allow_replication": true
+                    },
                     "address": "::",
                     "authenticator": null,
                     "authenticator_options": null,
@@ -189,10 +146,90 @@ Get all listeners.
                 }
             },
             "type": "listeners"
+        },
+        {
+            "attributes": {
+                "parameters": {
+                    "MariaDBProtocol": {
+                        "allow_replication": true
+                    },
+                    "address": "::",
+                    "authenticator": null,
+                    "authenticator_options": null,
+                    "connection_init_sql_file": null,
+                    "port": 4006,
+                    "protocol": "MariaDBProtocol",
+                    "proxy_protocol_networks": null,
+                    "service": "RW-Split-Router",
+                    "socket": null,
+                    "sql_mode": "default",
+                    "ssl": false,
+                    "ssl_ca": null,
+                    "ssl_cert": null,
+                    "ssl_cert_verify_depth": 9,
+                    "ssl_cipher": null,
+                    "ssl_crl": null,
+                    "ssl_key": null,
+                    "ssl_verify_peer_certificate": false,
+                    "ssl_verify_peer_host": false,
+                    "ssl_version": "MAX",
+                    "type": "listener",
+                    "user_mapping_file": null
+                },
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
+                },
+                "state": "Running"
+            },
+            "id": "RW-Split-Listener",
+            "relationships": {
+                "services": {
+                    "data": [
+                        {
+                            "id": "RW-Split-Router",
+                            "type": "services"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
+                    }
+                }
+            },
+            "type": "listeners"
         }
     ],
     "links": {
         "self": "http://localhost:8989/v1/listeners/"
+    }
+}
+```
+
+### Get listener relationships
+
+```
+GET /v1/listeners/:name/relationships/:type
+```
+
+The _:type_ in the URI must be _services_ as listeners only have service
+relationships.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "RW-Split-Router",
+            "type": "services"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/services/",
+        "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
     }
 }
 ```
