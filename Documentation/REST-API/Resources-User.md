@@ -25,8 +25,8 @@ user name.
     "data": {
         "attributes": {
             "account": "admin",
-            "created": "Thu, 20 Jul 2023 15:29:02 GMT",
-            "last_login": "Thu, 20 Jul 2023 15:29:12 GMT",
+            "created": "Fri, 25 Jul 2025 12:37:40 GMT",
+            "last_login": "Fri, 25 Jul 2025 12:37:50 GMT",
             "last_update": null,
             "name": "admin"
         },
@@ -60,8 +60,8 @@ Get all network users.
         {
             "attributes": {
                 "account": "admin",
-                "created": "Thu, 20 Jul 2023 15:29:02 GMT",
-                "last_login": "Thu, 20 Jul 2023 15:29:12 GMT",
+                "created": "Fri, 25 Jul 2025 12:37:40 GMT",
+                "last_login": "Fri, 25 Jul 2025 12:37:50 GMT",
                 "last_update": null,
                 "name": "admin"
             },
@@ -112,8 +112,8 @@ Get all administrative users.
         {
             "attributes": {
                 "account": "admin",
-                "created": "Thu, 20 Jul 2023 15:29:02 GMT",
-                "last_login": "Thu, 20 Jul 2023 15:29:12 GMT",
+                "created": "Fri, 25 Jul 2025 12:37:40 GMT",
+                "last_login": "Fri, 25 Jul 2025 12:37:50 GMT",
                 "last_update": null,
                 "name": "admin"
             },

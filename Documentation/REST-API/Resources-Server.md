@@ -24,8 +24,8 @@ Get a single server.
 {
     "data": {
         "attributes": {
-            "gtid_binlog_pos": "0-3000-5",
-            "gtid_current_pos": "0-3000-5",
+            "gtid_binlog_pos": "0-3000-11",
+            "gtid_current_pos": "0-3000-11",
             "last_event": "master_up",
             "lock_held": null,
             "master_group": null,
@@ -34,7 +34,7 @@ Get a single server.
             "node_id": 3000,
             "parameters": {
                 "address": "127.0.0.1",
-                "disk_space_threshold": null,
+                "disk_space_threshold": "",
                 "extra_port": 0,
                 "max_routing_connections": 0,
                 "monitorpw": null,
@@ -96,7 +96,7 @@ Get a single server.
                             {
                                 "count": 1,
                                 "time": "0.001000",
-                                "total": 0.00026678900000000002
+                                "total": 0.000138095
                             },
                             {
                                 "count": 0,
@@ -160,14 +160,14 @@ Get a single server.
                                 "total": 0.0
                             },
                             {
-                                "count": 0,
+                                "count": 1,
                                 "time": "0.001000",
-                                "total": 0.0
+                                "total": 0.00060420899999999997
                             },
                             {
-                                "count": 1,
+                                "count": 0,
                                 "time": "0.010000",
-                                "total": 0.001274311
+                                "total": 0.0
                             },
                             {
                                 "count": 0,
@@ -213,9 +213,9 @@ Get a single server.
                 "routed_packets": 2,
                 "total_connections": 1
             },
-            "triggered_at": "Thu, 20 Jul 2023 15:29:02 GMT",
-            "uptime": 387,
-            "version_string": "10.5.19-MariaDB-1:10.5.19+maria~ubu2004-log"
+            "triggered_at": "Fri, 25 Jul 2025 12:37:40 GMT",
+            "uptime": 1311,
+            "version_string": "10.11.9-MariaDB-ubu2204-log"
         },
         "id": "server1",
         "links": {
@@ -276,8 +276,8 @@ Response contains a resource collection with all servers.
     "data": [
         {
             "attributes": {
-                "gtid_binlog_pos": "0-3000-5",
-                "gtid_current_pos": "0-3000-5",
+                "gtid_binlog_pos": "0-3000-11",
+                "gtid_current_pos": "0-3000-11",
                 "last_event": "master_up",
                 "lock_held": null,
                 "master_group": null,
@@ -286,7 +286,7 @@ Response contains a resource collection with all servers.
                 "node_id": 3000,
                 "parameters": {
                     "address": "127.0.0.1",
-                    "disk_space_threshold": null,
+                    "disk_space_threshold": "",
                     "extra_port": 0,
                     "max_routing_connections": 0,
                     "monitorpw": null,
@@ -348,7 +348,7 @@ Response contains a resource collection with all servers.
                                 {
                                     "count": 1,
                                     "time": "0.001000",
-                                    "total": 0.00026678900000000002
+                                    "total": 0.000138095
                                 },
                                 {
                                     "count": 0,
@@ -412,14 +412,14 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 0,
+                                    "count": 1,
                                     "time": "0.001000",
-                                    "total": 0.0
+                                    "total": 0.00060420899999999997
                                 },
                                 {
-                                    "count": 1,
+                                    "count": 0,
                                     "time": "0.010000",
-                                    "total": 0.001274311
+                                    "total": 0.0
                                 },
                                 {
                                     "count": 0,
@@ -465,9 +465,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 2,
                     "total_connections": 1
                 },
-                "triggered_at": "Thu, 20 Jul 2023 15:29:02 GMT",
-                "uptime": 387,
-                "version_string": "10.5.19-MariaDB-1:10.5.19+maria~ubu2004-log"
+                "triggered_at": "Fri, 25 Jul 2025 12:37:40 GMT",
+                "uptime": 1311,
+                "version_string": "10.11.9-MariaDB-ubu2204-log"
             },
             "id": "server1",
             "links": {
@@ -507,8 +507,8 @@ Response contains a resource collection with all servers.
         },
         {
             "attributes": {
-                "gtid_binlog_pos": "0-3000-5",
-                "gtid_current_pos": "0-3000-5",
+                "gtid_binlog_pos": "0-3000-11",
+                "gtid_current_pos": "0-3000-11",
                 "last_event": "slave_up",
                 "lock_held": null,
                 "master_group": null,
@@ -517,7 +517,7 @@ Response contains a resource collection with all servers.
                 "node_id": 3001,
                 "parameters": {
                     "address": "127.0.0.1",
-                    "disk_space_threshold": null,
+                    "disk_space_threshold": "",
                     "extra_port": 0,
                     "max_routing_connections": 0,
                     "monitorpw": null,
@@ -591,14 +591,14 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 0,
+                                    "count": 1,
                                     "time": "0.001000",
-                                    "total": 0.0
+                                    "total": 0.00050321299999999997
                                 },
                                 {
-                                    "count": 1,
+                                    "count": 0,
                                     "time": "0.010000",
-                                    "total": 0.0018231790000000001
+                                    "total": 0.0
                                 },
                                 {
                                     "count": 0,
@@ -710,9 +710,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 1,
                     "total_connections": 1
                 },
-                "triggered_at": "Thu, 20 Jul 2023 15:29:02 GMT",
-                "uptime": 387,
-                "version_string": "10.5.19-MariaDB-1:10.5.19+maria~ubu2004-log"
+                "triggered_at": "Fri, 25 Jul 2025 12:37:40 GMT",
+                "uptime": 1311,
+                "version_string": "10.11.9-MariaDB-ubu2204-log"
             },
             "id": "server2",
             "links": {
@@ -753,6 +753,34 @@ Response contains a resource collection with all servers.
     ],
     "links": {
         "self": "http://localhost:8989/v1/servers/"
+    }
+}
+```
+
+### Get server relationships
+
+```
+GET /v1/servers/:name/relationships/:type
+```
+
+The _:type_ in the URI must be either _services_, for service
+relationships, or _monitors_, for monitor relationships.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "MariaDB-Monitor",
+            "type": "monitors"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/monitors/",
+        "self": "http://localhost:8989/v1/servers/server1/relationships/monitors/"
     }
 }
 ```

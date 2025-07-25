@@ -30,38 +30,50 @@ an external server, the operation may be expensive.
     "data": {
         "attributes": {
             "client": {
-                "cipher": ""
+                "cipher": "",
+                "connection_attributes": {
+                    "_client_name": "libmariadb",
+                    "_client_version": "3.3.11",
+                    "_os": "Linux",
+                    "_pid": "149903",
+                    "_platform": "x86_64",
+                    "_server_host": "127.0.0.1"
+                },
+                "sescmd_history_len": 1,
+                "sescmd_history_stored_metadata": 0,
+                "sescmd_history_stored_responses": 1
             },
-            "connected": "Thu Jul 20 15:29:12 2023",
+            "connected": "Fri Jul 25 12:37:50 2025",
             "connections": [
                 {
                     "cipher": "",
-                    "connection_id": 169,
+                    "connection_id": 346,
                     "server": "server1"
                 },
                 {
                     "cipher": "",
-                    "connection_id": 90,
+                    "connection_id": 150,
                     "server": "server2"
                 }
             ],
             "idle": 0.10000000000000001,
             "log": [],
             "memory": {
-                "connection_buffers": 67982,
+                "connection_buffers": 68030,
                 "exec_metadata": 0,
                 "last_queries": 0,
-                "sescmd_history": 369,
-                "total": 68351,
+                "sescmd_history": 377,
+                "total": 68407,
                 "variables": 0
             },
             "parameters": {
+                "log_debug": false,
                 "log_error": false,
                 "log_info": false,
                 "log_notice": false,
                 "log_warning": false
             },
-            "port": 45558,
+            "port": 55974,
             "queries": [],
             "remote": "::ffff:127.0.0.1",
             "state": "Session started",
@@ -111,38 +123,50 @@ Get all sessions.
         {
             "attributes": {
                 "client": {
-                    "cipher": ""
+                    "cipher": "",
+                    "connection_attributes": {
+                        "_client_name": "libmariadb",
+                        "_client_version": "3.3.11",
+                        "_os": "Linux",
+                        "_pid": "149903",
+                        "_platform": "x86_64",
+                        "_server_host": "127.0.0.1"
+                    },
+                    "sescmd_history_len": 1,
+                    "sescmd_history_stored_metadata": 0,
+                    "sescmd_history_stored_responses": 1
                 },
-                "connected": "Thu Jul 20 15:29:12 2023",
+                "connected": "Fri Jul 25 12:37:50 2025",
                 "connections": [
                     {
                         "cipher": "",
-                        "connection_id": 169,
+                        "connection_id": 346,
                         "server": "server1"
                     },
                     {
                         "cipher": "",
-                        "connection_id": 90,
+                        "connection_id": 150,
                         "server": "server2"
                     }
                 ],
                 "idle": 0.10000000000000001,
                 "log": [],
                 "memory": {
-                    "connection_buffers": 67982,
+                    "connection_buffers": 68030,
                     "exec_metadata": 0,
                     "last_queries": 0,
-                    "sescmd_history": 369,
-                    "total": 68351,
+                    "sescmd_history": 377,
+                    "total": 68407,
                     "variables": 0
                 },
                 "parameters": {
+                    "log_debug": false,
                     "log_error": false,
                     "log_info": false,
                     "log_notice": false,
                     "log_warning": false
                 },
-                "port": 45558,
+                "port": 55974,
                 "queries": [],
                 "remote": "::ffff:127.0.0.1",
                 "state": "Session started",

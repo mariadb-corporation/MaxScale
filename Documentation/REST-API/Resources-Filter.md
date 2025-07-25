@@ -92,6 +92,37 @@ GET /v1/filters
     "data": [
         {
             "attributes": {
+                "module": "hintfilter",
+                "parameters": {
+                    "module": "hintfilter"
+                },
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
+                }
+            },
+            "id": "Hint",
+            "links": {
+                "self": "http://localhost:8989/v1/filters/Hint/"
+            },
+            "relationships": {
+                "services": {
+                    "data": [
+                        {
+                            "id": "Read-Connection-Router",
+                            "type": "services"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/filters/Hint/relationships/services/"
+                    }
+                }
+            },
+            "type": "filters"
+        },
+        {
+            "attributes": {
                 "filter_diagnostics": null,
                 "module": "qlafilter",
                 "parameters": {
@@ -135,41 +166,38 @@ GET /v1/filters
                 }
             },
             "type": "filters"
-        },
-        {
-            "attributes": {
-                "module": "hintfilter",
-                "parameters": {
-                    "module": "hintfilter"
-                },
-                "source": {
-                    "file": "/etc/maxscale.cnf",
-                    "type": "static"
-                }
-            },
-            "id": "Hint",
-            "links": {
-                "self": "http://localhost:8989/v1/filters/Hint/"
-            },
-            "relationships": {
-                "services": {
-                    "data": [
-                        {
-                            "id": "Read-Connection-Router",
-                            "type": "services"
-                        }
-                    ],
-                    "links": {
-                        "related": "http://localhost:8989/v1/services/",
-                        "self": "http://localhost:8989/v1/filters/Hint/relationships/services/"
-                    }
-                }
-            },
-            "type": "filters"
         }
     ],
     "links": {
         "self": "http://localhost:8989/v1/filters/"
+    }
+}
+```
+
+### Get filter relationships
+
+```
+GET /v1/filters/:name/relationships/:type
+```
+
+The _:type_ in the URI must be _services_ as filters only have service
+relationships.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "Read-Connection-Router",
+            "type": "services"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/services/",
+        "self": "http://localhost:8989/v1/filters/QLA/relationships/services/"
     }
 }
 ```
