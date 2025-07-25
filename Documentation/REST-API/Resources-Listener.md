@@ -236,6 +236,34 @@ Get all listeners.
 }
 ```
 
+### Get listener relationships
+
+```
+GET /v1/listeners/:name/relationships/:type
+```
+
+The _:type_ in the URI must be _services_ as listeners only have service
+relationships.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "RW-Split-Router",
+            "type": "services"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/services/",
+        "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
+    }
+}
+```
+
 ### Create a new listener
 
 ```

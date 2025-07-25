@@ -33,9 +33,9 @@ an external server, the operation may be expensive.
                 "cipher": "",
                 "connection_attributes": {
                     "_client_name": "libmariadb",
-                    "_client_version": "3.3.4",
+                    "_client_version": "3.3.11",
                     "_os": "Linux",
-                    "_pid": "502300",
+                    "_pid": "340982",
                     "_platform": "x86_64",
                     "_server_host": "127.0.0.1"
                 },
@@ -43,15 +43,15 @@ an external server, the operation may be expensive.
                 "sescmd_history_stored_metadata": 0,
                 "sescmd_history_stored_responses": 1
             },
-            "connected": "Fri, 05 Jan 2024 07:24:06 GMT",
+            "connected": "Fri, 25 Jul 2025 14:40:24 GMT",
             "connections": [
                 {
                     "cipher": "",
-                    "connection_id": 129,
+                    "connection_id": 100,
                     "server": "server1"
                 }
             ],
-            "idle": 5.2000000000000002,
+            "idle": 5.0999999999999996,
             "io_activity": 16,
             "log": [],
             "memory": {
@@ -74,8 +74,8 @@ an external server, the operation may be expensive.
                 },
                 "exec_metadata": 0,
                 "last_queries": 0,
-                "sescmd_history": 485,
-                "total": 67337,
+                "sescmd_history": 493,
+                "total": 67345,
                 "variables": 0
             },
             "parameters": {
@@ -85,10 +85,10 @@ an external server, the operation may be expensive.
                 "log_notice": false,
                 "log_warning": false
             },
-            "port": 40664,
+            "port": 60090,
             "queries": [],
             "remote": "127.0.0.1",
-            "seconds_alive": 5.209291554,
+            "seconds_alive": 5.1156274689999996,
             "state": "Session started",
             "thread": 2,
             "user": "maxuser"
@@ -140,9 +140,9 @@ Get all sessions.
                     "cipher": "",
                     "connection_attributes": {
                         "_client_name": "libmariadb",
-                        "_client_version": "3.3.4",
+                        "_client_version": "3.3.11",
                         "_os": "Linux",
-                        "_pid": "502300",
+                        "_pid": "340982",
                         "_platform": "x86_64",
                         "_server_host": "127.0.0.1"
                     },
@@ -150,15 +150,15 @@ Get all sessions.
                     "sescmd_history_stored_metadata": 0,
                     "sescmd_history_stored_responses": 1
                 },
-                "connected": "Fri, 05 Jan 2024 07:24:06 GMT",
+                "connected": "Fri, 25 Jul 2025 14:40:24 GMT",
                 "connections": [
                     {
                         "cipher": "",
-                        "connection_id": 129,
+                        "connection_id": 100,
                         "server": "server1"
                     }
                 ],
-                "idle": 5.2000000000000002,
+                "idle": 5.0999999999999996,
                 "io_activity": 16,
                 "log": [],
                 "memory": {
@@ -181,8 +181,8 @@ Get all sessions.
                     },
                     "exec_metadata": 0,
                     "last_queries": 0,
-                    "sescmd_history": 485,
-                    "total": 67337,
+                    "sescmd_history": 493,
+                    "total": 67345,
                     "variables": 0
                 },
                 "parameters": {
@@ -192,10 +192,10 @@ Get all sessions.
                     "log_notice": false,
                     "log_warning": false
                 },
-                "port": 40664,
+                "port": 60090,
                 "queries": [],
                 "remote": "127.0.0.1",
-                "seconds_alive": 5.2105843680000001,
+                "seconds_alive": 5.1167515469999998,
                 "state": "Session started",
                 "thread": 2,
                 "user": "maxuser"

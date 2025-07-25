@@ -39,8 +39,7 @@ Get a single monitor.
                         "name": "server1",
                         "read_only": false,
                         "server_id": 3000,
-                        "slave_connections": [],
-                        "state_details": null
+                        "slave_connections": []
                     },
                     {
                         "gtid_binlog_pos": "0-3000-5",
@@ -65,8 +64,7 @@ Get a single monitor.
                                 "slave_sql_running": "Yes",
                                 "using_gtid": "No"
                             }
-                        ],
-                        "state_details": null
+                        ]
                     }
                 ],
                 "state": "Idle"
@@ -88,6 +86,7 @@ Get a single monitor.
                 "demotion_sql_file": null,
                 "disk_space_check_interval": "0ms",
                 "disk_space_threshold": null,
+                "enforce_read_only_servers": false,
                 "enforce_read_only_slaves": false,
                 "enforce_simple_topology": false,
                 "enforce_writable_master": false,
@@ -99,7 +98,7 @@ Get a single monitor.
                 "maintenance_on_low_disk_space": true,
                 "mariabackup_parallel": 1,
                 "mariabackup_use_memory": "1G",
-                "master_conditions": "primary_monitor_master",
+                "master_conditions": "primary_monitor_master,disk_space_ok",
                 "master_failure_timeout": "10000ms",
                 "module": "mariadbmon",
                 "monitor_interval": "1000ms",
@@ -206,8 +205,7 @@ Get all monitors.
                             "name": "server1",
                             "read_only": false,
                             "server_id": 3000,
-                            "slave_connections": [],
-                            "state_details": null
+                            "slave_connections": []
                         },
                         {
                             "gtid_binlog_pos": "0-3000-5",
@@ -232,8 +230,7 @@ Get all monitors.
                                     "slave_sql_running": "Yes",
                                     "using_gtid": "No"
                                 }
-                            ],
-                            "state_details": null
+                            ]
                         }
                     ],
                     "state": "Idle"
@@ -255,6 +252,7 @@ Get all monitors.
                     "demotion_sql_file": null,
                     "disk_space_check_interval": "0ms",
                     "disk_space_threshold": null,
+                    "enforce_read_only_servers": false,
                     "enforce_read_only_slaves": false,
                     "enforce_simple_topology": false,
                     "enforce_writable_master": false,
@@ -266,7 +264,7 @@ Get all monitors.
                     "maintenance_on_low_disk_space": true,
                     "mariabackup_parallel": 1,
                     "mariabackup_use_memory": "1G",
-                    "master_conditions": "primary_monitor_master",
+                    "master_conditions": "primary_monitor_master,disk_space_ok",
                     "master_failure_timeout": "10000ms",
                     "module": "mariadbmon",
                     "monitor_interval": "1000ms",
@@ -339,6 +337,38 @@ Get all monitors.
     ],
     "links": {
         "self": "http://localhost:8989/v1/monitors/"
+    }
+}
+```
+
+### Get monitor relationships
+
+```
+GET /v1/monitors/:name/relationships/servers
+```
+
+The _:type_ in the URI must be either _services_, for service
+relationships, or _servers_, for server relationships.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "server1",
+            "type": "servers"
+        },
+        {
+            "id": "server2",
+            "type": "servers"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/servers/",
+        "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor/relationships/servers/"
     }
 }
 ```
@@ -448,8 +478,11 @@ Invalid request body:
 ### Update monitor relationships
 
 ```
-PATCH /v1/monitors/:name/relationships/servers
+PATCH /v1/monitors/:name/relationships/:type
 ```
+
+The _:type_ in the URI must be either _services_, for service
+relationships, or _servers_, for server relationships.
 
 The request body must be a JSON object that defines only the _data_ field. The
 value of the _data_ field must be an array of relationship objects that define

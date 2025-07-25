@@ -34,7 +34,7 @@ Get a single server.
             "node_id": 3000,
             "parameters": {
                 "address": "127.0.0.1",
-                "disk_space_threshold": null,
+                "disk_space_threshold": "",
                 "extra_port": 0,
                 "max_routing_connections": 0,
                 "monitorpw": null,
@@ -67,7 +67,6 @@ Get a single server.
                 "type": "static"
             },
             "state": "Master, Running",
-            "state_details": null,
             "statistics": {
                 "active_operations": 0,
                 "adaptive_avg_select_time": "0ns",
@@ -157,14 +156,14 @@ Get a single server.
                                 "total": 0.0
                             },
                             {
-                                "count": 1,
+                                "count": 0,
                                 "time": "0.000100",
-                                "total": 9.0147000000000003e-5
+                                "total": 0.0
                             },
                             {
-                                "count": 3,
+                                "count": 4,
                                 "time": "0.001000",
-                                "total": 0.00131908
+                                "total": 0.0015088079999999999
                             },
                             {
                                 "count": 0,
@@ -215,9 +214,9 @@ Get a single server.
                 "routed_packets": 4,
                 "total_connections": 1
             },
-            "triggered_at": "Fri, 05 Jan 2024 07:23:54 GMT",
-            "uptime": 2372,
-            "version_string": "10.6.15-MariaDB-1:10.6.15+maria~ubu2004-log"
+            "triggered_at": "Fri, 25 Jul 2025 14:40:12 GMT",
+            "uptime": 887,
+            "version_string": "10.11.9-MariaDB-ubu2204-log"
         },
         "id": "server1",
         "links": {
@@ -288,7 +287,7 @@ Response contains a resource collection with all servers.
                 "node_id": 3000,
                 "parameters": {
                     "address": "127.0.0.1",
-                    "disk_space_threshold": null,
+                    "disk_space_threshold": "",
                     "extra_port": 0,
                     "max_routing_connections": 0,
                     "monitorpw": null,
@@ -321,7 +320,6 @@ Response contains a resource collection with all servers.
                     "type": "static"
                 },
                 "state": "Master, Running",
-                "state_details": null,
                 "statistics": {
                     "active_operations": 0,
                     "adaptive_avg_select_time": "0ns",
@@ -411,14 +409,14 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 1,
+                                    "count": 0,
                                     "time": "0.000100",
-                                    "total": 9.0147000000000003e-5
+                                    "total": 0.0
                                 },
                                 {
-                                    "count": 3,
+                                    "count": 4,
                                     "time": "0.001000",
-                                    "total": 0.00131908
+                                    "total": 0.0015088079999999999
                                 },
                                 {
                                     "count": 0,
@@ -469,9 +467,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 4,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 05 Jan 2024 07:23:54 GMT",
-                "uptime": 2372,
-                "version_string": "10.6.15-MariaDB-1:10.6.15+maria~ubu2004-log"
+                "triggered_at": "Fri, 25 Jul 2025 14:40:12 GMT",
+                "uptime": 887,
+                "version_string": "10.11.9-MariaDB-ubu2204-log"
             },
             "id": "server1",
             "links": {
@@ -521,7 +519,7 @@ Response contains a resource collection with all servers.
                 "node_id": 3001,
                 "parameters": {
                     "address": "127.0.0.1",
-                    "disk_space_threshold": null,
+                    "disk_space_threshold": "",
                     "extra_port": 0,
                     "max_routing_connections": 0,
                     "monitorpw": null,
@@ -568,7 +566,6 @@ Response contains a resource collection with all servers.
                     "type": "static"
                 },
                 "state": "Running",
-                "state_details": null,
                 "statistics": {
                     "active_operations": 0,
                     "adaptive_avg_select_time": "0ns",
@@ -599,7 +596,7 @@ Response contains a resource collection with all servers.
                                 {
                                     "count": 1,
                                     "time": "0.001000",
-                                    "total": 0.00037632399999999998
+                                    "total": 0.00061659799999999999
                                 },
                                 {
                                     "count": 0,
@@ -716,9 +713,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 1,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 05 Jan 2024 07:24:07 GMT",
-                "uptime": 2372,
-                "version_string": "10.6.15-MariaDB-1:10.6.15+maria~ubu2004-log"
+                "triggered_at": "Fri, 25 Jul 2025 14:40:25 GMT",
+                "uptime": 887,
+                "version_string": "10.11.9-MariaDB-ubu2204-log"
             },
             "id": "server2",
             "links": {
@@ -759,6 +756,34 @@ Response contains a resource collection with all servers.
     ],
     "links": {
         "self": "http://localhost:8989/v1/servers/"
+    }
+}
+```
+
+### Get server relationships
+
+```
+GET /v1/servers/:name/relationships/:type
+```
+
+The _:type_ in the URI must be either _services_, for service
+relationships, or _monitors_, for monitor relationships.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "id": "MariaDB-Monitor",
+            "type": "monitors"
+        }
+    ],
+    "links": {
+        "related": "http://localhost:8989/v1/monitors/",
+        "self": "http://localhost:8989/v1/servers/server1/relationships/monitors/"
     }
 }
 ```

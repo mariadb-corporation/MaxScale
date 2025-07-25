@@ -1247,7 +1247,7 @@ config::ParamBool Config::s_secure_gui(
 config::ParamPath Config::s_secretsdir(
     &Config::s_specification,
     "secretsdir",
-    "Directory where the .secrets encryption key is localted in.",
+    "Directory where the .secrets encryption key is located in.",
     cfg::ParamPath::R,
     "");
 
