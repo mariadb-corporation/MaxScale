@@ -291,6 +291,12 @@ private:
             }
         }
 
+        if (rval && std::all_of(m_raw_backends.begin(), m_raw_backends.end(),
+                                std::mem_fn(&mxs::RWBackend::has_failed)))
+        {
+            rval = false;
+        }
+
         return rval;
     }
 
