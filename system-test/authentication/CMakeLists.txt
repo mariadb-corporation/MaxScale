@@ -35,3 +35,7 @@ add_test_executable_ex(NAME lower_case_table_names SOURCE lower_case_table_names
 # MXS-5239 Users with REQUIRE SSL should only work with SSL-enabled listeners.
 add_test_executable_ex(NAME require_ssl SOURCE require_ssl.cc
         CONFIG require_ssl.cnf VMS repl_backend backend_ssl)
+
+# MXS-5760: Authentication failures do not immediately close rwsplit sessions
+add_test_executable_ex(NAME mxs5760_bad_db_access SOURCE mxs5760_bad_db_access.cc
+        CONFIG mxs5760_bad_db_access.cnf VMS repl_backend LABELS readwritesplit)
