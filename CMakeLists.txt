@@ -276,6 +276,8 @@ if(PACKAGE)
   # node_modules so that they don't need to be downloaded.
   set(CPACK_SOURCE_INSTALLED_DIRECTORIES "${CMAKE_SOURCE_DIR};.")
 
+  set(CPACK_PACKAGE_CHECKSUM "SHA256")
+
   if (BUILD_GUI)
     set(CPACK_SOURCE_INSTALLED_DIRECTORIES "${CPACK_SOURCE_INSTALLED_DIRECTORIES};${CMAKE_BINARY_DIR}/maxgui/node_modules;./maxgui/node_modules")
     add_dependencies(dist maxgui_node_modules)
