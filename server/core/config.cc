@@ -3526,15 +3526,20 @@ int create_new_service(ConfigSection* obj)
  */
 int create_new_server(ConfigSection* obj)
 {
-    bool error = false;
+    int error_count = 0;
+    Server* server = ServerManager::create_server(obj->name(), obj->m_parameters);
 
-    if (!ServerManager::create_server(obj->name(), obj->m_parameters))
+    if (!server)
     {
         MXB_ERROR("Failed to create a new server.");
-        error = true;
+        error_count++;
+    }
+    else if (obj->source_type != ConfigSection::SourceType::RUNTIME)
+    {
+        server->store_config_state();
     }
 
-    return error;
+    return error_count;
 }
 
 /**
