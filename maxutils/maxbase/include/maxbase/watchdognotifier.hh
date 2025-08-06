@@ -15,6 +15,7 @@
 
 #include <maxbase/ccdefs.hh>
 #include <atomic>
+#include <array>
 #include <mutex>
 #include <thread>
 #include <unordered_set>
@@ -23,6 +24,7 @@
 #include <maxbase/condition_variable.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/jansson.h>
 
 namespace maxbase
 {
@@ -163,6 +165,11 @@ public:
     WatchdogNotifier& operator=(const WatchdogNotifier&) = delete;
 
     /**
+     * @return Get the WatchdogNotifier if it's been created or nullptr if it hasn't been
+     */
+    static WatchdogNotifier* get();
+
+    /**
      * Constructor
      *
      * @param usec  The systemd notification interval in micro seconds.
@@ -193,6 +200,8 @@ public:
      */
     void stop();
 
+    json_t* diagnostics() const;
+
 private:
     friend Dependent;
 
@@ -211,5 +220,7 @@ private:
     std::unordered_set<Dependent*> m_dependents;
     std::mutex                     m_dependents_lock;
     Clock::time_point              m_last_notify;
+
+    std::array<time_t, 5> m_last_notifications {};
 };
 }
