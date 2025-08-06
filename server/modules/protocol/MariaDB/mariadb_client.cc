@@ -47,6 +47,7 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/utils.h>
 #include <maxbase/format.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxscale/event.hh>
 #include <maxscale/version.h>
 
@@ -1414,6 +1415,18 @@ void MariaDBClientConnection::prune_history()
 
     if (it == history.end())
     {
+        size_t sz = std::accumulate(history.begin(), history.end(), 0UL,
+                                    [](const auto& val, const auto& buffer){
+            return val + buffer.length();
+        });
+
+        // Log a warning if the client is using more than 100MiB of memory for prepared statements.
+        if (sz > 100 * 1024 * 1024)
+        {
+            MXB_WARNING("Client %s has %lu open prepared statements that uses %s of memory.",
+                        m_session->user_and_host().c_str(), history.size(), mxb::pretty_size(sz).c_str());
+        }
+
         // The history consists solely of COM_STMT_PREPARE commands, cannot prune anything.
         return;
     }
