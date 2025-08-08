@@ -1379,25 +1379,38 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
 {
     if (reply.is_complete())
     {
-        MXS_INFO("Added %s to history with ID %u: %s (result: %s)",
-                 STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
-                 mxs::extract_sql(m_pending_cmd, 200).c_str(),
-                 reply.is_ok() ? "OK" : reply.error().message().c_str());
-
-        if (reply.command() == MXS_COM_STMT_PREPARE)
+        if (reply.command() == MXS_COM_STMT_PREPARE && reply.error())
         {
-            m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
+            // A failing prepared statement must not be added to the history as prepared statements are only
+            // removed when a COM_STMT_CLOSE with the correct ID is done. Naturally, if there is no ID, it
+            // can't be removed.
+            MXS_INFO("Prepared statement %u failed: %s (result: %s)", m_pending_cmd.id(),
+                     mxs::extract_sql(m_pending_cmd, 200).c_str(), reply.error().message().c_str());
+            m_pending_cmd.reset();
+        }
+        else
+        {
+            MXS_INFO("Added %s to history with ID %u: %s (result: %s)",
+                     STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
+                     mxs::extract_sql(m_pending_cmd, 200).c_str(),
+                     reply.is_ok() ? "OK" : reply.error().message().c_str());
+
+            if (reply.command() == MXS_COM_STMT_PREPARE)
+            {
+                m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
+            }
+
+            m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
+            m_session_data->history.emplace_back(m_pending_cmd.release());
+
+            if (m_session_data->history.size() > m_session_data->max_sescmd_history)
+            {
+                prune_history();
+            }
         }
 
         m_routing_state = RoutingState::COMPARE_RESPONSES;
         m_dcb->trigger_read_event();
-        m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
-        m_session_data->history.emplace_back(m_pending_cmd.release());
-
-        if (m_session_data->history.size() > m_session_data->max_sescmd_history)
-        {
-            prune_history();
-        }
     }
 }
 
