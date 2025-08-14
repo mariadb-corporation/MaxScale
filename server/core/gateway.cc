@@ -517,9 +517,12 @@ static void sigfatal_handler(int i)
 
     if (this_unit.watchdog)
     {
-        MXB_ALERT("Last systemd watchdog notification was %s ago, notification interval is %s.",
+        json_t* diag = this_unit.watchdog->diagnostics();
+        MXB_ALERT("Last systemd watchdog notification was %s ago, notification interval is %s. Last %lu notifications: %s",
                   mxb::to_string(mxb::Clock::now() - this_unit.watchdog->last_notify()).c_str(),
-                  mxb::to_string(this_unit.watchdog->interval()).c_str());
+                  mxb::to_string(this_unit.watchdog->interval()).c_str(),
+                  json_array_size(diag), mxb::json_dump(diag).c_str());
+        json_decref(diag);
     }
 
     const char* pStmt;

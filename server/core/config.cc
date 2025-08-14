@@ -44,6 +44,7 @@
 #include <maxbase/pretty_print.hh>
 #include <maxbase/system.hh>
 #include <maxscale/clock.hh>
+#include <maxbase/watchdognotifier.hh>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/key_manager.hh>
@@ -3292,6 +3293,11 @@ json_t* mxs::Config::maxscale_to_json(const char* host) const
     json_object_set_new(attr, "config_sync", json_incref(manager.get_json()));
 
     json_object_set_new(attr, "system", system_to_json());
+
+    if (auto* notifier = mxb::WatchdogNotifier::get())
+    {
+        json_object_set_new(attr, "watchdog_notifications", notifier->diagnostics());
+    }
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
