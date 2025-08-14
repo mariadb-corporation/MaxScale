@@ -88,15 +88,33 @@ void mxs5536_early_response(TestConnections& test)
                 "Failed to prepare: %s", mysql_stmt_error(stmt));
     test.expect(mysql_stmt_execute(stmt) == 0,
                 "Failed to execute: %s", mysql_stmt_error(stmt));
-
+    mysql_stmt_close(stmt);
     thr.join();
 
     test.repl->execute_query_all_nodes("DROP TABLE IF EXISTS test.t1");
 }
 
-int main(int argc, char** argv)
+void mxs5897_ps_errors_stored_in_history(TestConnections& test)
 {
-    TestConnections test(argc, argv);
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+
+    for (int i = 0; i < 1000; i++)
+    {
+        MYSQL_STMT* stmt = c.stmt();
+        std::string sql = "This is not valid SQL";
+        mysql_stmt_prepare(stmt, sql.c_str(), sql.size());
+        mysql_stmt_close(stmt);
+    }
+
+    auto me = std::to_string(c.thread_id());
+    auto output = test.maxctrl("api get --pretty sessions/" + me
+                               + " data.attributes.client.sescmd_history_len").output;
+    test.expect(output == "0", "Expected 0 session commands, have %s", output.c_str());
+}
+
+void sanity_check(TestConnections& test)
+{
     char server_id[test.repl->N][1024];
 
     test.repl->connect();
@@ -173,10 +191,17 @@ int main(int argc, char** argv)
 
     // MXS-2266: COM_STMT_CLOSE causes a warning to be logged
     test.log_excludes("Closing unknown prepared statement");
+}
 
+int main(int argc, char** argv)
+{
+    TestConnections test(argc, argv);
+
+    sanity_check(test);
     mxs4921_ps_history_responses(test);
     mxs4922_change_user_history_responses(test);
     mxs5536_early_response(test);
+    mxs5897_ps_errors_stored_in_history(test);
 
     return test.global_result;
 }

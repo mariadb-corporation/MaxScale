@@ -44,6 +44,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
 #include <maxbase/format.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxscale/event.hh>
 #include <maxscale/version.hh>
 
@@ -1400,25 +1401,38 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
 {
     if (reply.is_complete())
     {
-        MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
-                 STRPACKETTYPE(m_pending_cmd[4]), m_pending_cmd.id(),
-                 maxbase::show_some(m_pending_cmd.get_sql(), 200).c_str(),
-                 reply.is_ok() ? "OK" : reply.error().message().c_str());
-
-        if (reply.command() == MXS_COM_STMT_PREPARE)
+        if (reply.command() == MXS_COM_STMT_PREPARE && reply.error())
         {
-            m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
+            // A failing prepared statement must not be added to the history as prepared statements are only
+            // removed when a COM_STMT_CLOSE with the correct ID is done. Naturally, if there is no ID, it
+            // can't be removed.
+            MXB_INFO("Prepared statement %u failed: %s (result: %s)", m_pending_cmd.id(),
+                     mxb::show_some(m_pending_cmd.get_sql(), 200).c_str(), reply.error().message().c_str());
+            m_pending_cmd.reset();
+        }
+        else
+        {
+            MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
+                     STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
+                     mxb::show_some(m_pending_cmd.get_sql(), 200).c_str(),
+                     reply.is_ok() ? "OK" : reply.error().message().c_str());
+
+            if (reply.command() == MXS_COM_STMT_PREPARE)
+            {
+                m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
+            }
+
+            m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
+            m_session_data->history.emplace_back(std::move(m_pending_cmd));
+
+            if (m_session_data->history.size() > m_session_data->max_sescmd_history)
+            {
+                prune_history();
+            }
         }
 
         m_routing_state = RoutingState::COMPARE_RESPONSES;
         m_dcb->trigger_read_event();
-        m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
-        m_session_data->history.emplace_back(move(m_pending_cmd));
-
-        if (m_session_data->history.size() > m_session_data->max_sescmd_history)
-        {
-            prune_history();
-        }
     }
 }
 
@@ -1436,6 +1450,18 @@ void MariaDBClientConnection::prune_history()
 
     if (it == history.end())
     {
+        size_t sz = std::accumulate(history.begin(), history.end(), 0UL,
+                                    [](const auto& val, const auto& buffer){
+            return val + buffer.length();
+        });
+
+        // Log a warning if the client is using more than 100MiB of memory for prepared statements.
+        if (sz > 100 * 1024 * 1024)
+        {
+            MXB_WARNING("Client %s has %lu open prepared statements that uses %s of memory.",
+                        m_session->user_and_host().c_str(), history.size(), mxb::pretty_size(sz).c_str());
+        }
+
         // The history consists solely of COM_STMT_PREPARE commands, cannot prune anything.
         return;
     }
