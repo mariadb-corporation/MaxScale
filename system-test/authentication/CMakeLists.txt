@@ -72,3 +72,7 @@ add_test_executable_ex(NAME require_ssl SOURCE require_ssl.cc
 # Peer certificate host verification.
 add_test_executable_ex(NAME auth_verify_peer_host SOURCE auth_verify_peer_host.cc
         CONFIG auth_verify_peer_host.cnf VMS repl_backend backend_ssl LABELS LISTENER_SSL)
+
+# MXS-5760: Authentication failures do not immediately close rwsplit sessions
+add_test_executable_ex(NAME mxs5760_bad_db_access SOURCE mxs5760_bad_db_access.cc
+        CONFIG mxs5760_bad_db_access.cnf VMS repl_backend LABELS readwritesplit)

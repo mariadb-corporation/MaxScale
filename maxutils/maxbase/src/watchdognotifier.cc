@@ -33,6 +33,11 @@ static struct ThisUnit
 
 namespace maxbase
 {
+WatchdogNotifier* WatchdogNotifier::get()
+{
+    return this_unit.pNotifier;
+}
+
 WatchdogNotifier::Dependent::Dependent(WatchdogNotifier* pNotifier)
     : m_notifier(*pNotifier)
 {
@@ -149,6 +154,27 @@ void WatchdogNotifier::notify_systemd_watchdog()
         sd_notify(false, "WATCHDOG=1");
 #endif
         m_last_notify = Clock::now();
+        std::copy(m_last_notifications.begin() + 1, m_last_notifications.end(), m_last_notifications.begin());
+        m_last_notifications.back() = time(nullptr);
     }
+}
+
+json_t* WatchdogNotifier::diagnostics() const
+{
+    json_t* arr = json_array();
+    struct tm tm;
+    char buf[200];      // Enough to store all dates
+
+    for (time_t t : m_last_notifications)
+    {
+        if (t)
+        {
+            localtime_r(&t, &tm);
+            strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S%z", &tm);
+            json_array_append_new(arr, json_string(buf));
+        }
+    }
+
+    return arr;
 }
 }

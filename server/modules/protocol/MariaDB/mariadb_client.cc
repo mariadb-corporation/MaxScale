@@ -31,6 +31,7 @@
 
 #include <maxbase/proxy_protocol.hh>
 #include <maxbase/format.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxscale/event.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
@@ -1483,42 +1484,67 @@ void MariaDBClientConnection::finish_recording_history(const mxs::Reply& reply)
 {
     if (reply.is_complete())
     {
-        if (reply.command() == MXS_COM_STMT_EXECUTE)
+        if (reply.command() == MXS_COM_STMT_PREPARE && reply.error())
         {
-            uint32_t ps_id = mxs_mysql_extract_ps_id(m_pending_cmd);
-            mxb_assert(m_qc.get_param_count(ps_id) == 0);
-            const GWBUF* ps = m_session_data->history().get(ps_id);
-            mxb_assert(ps);
+            // A failing prepared statement must not be added to the history as prepared statements are only
+            // removed when a COM_STMT_CLOSE with the correct ID is done. Naturally, if there is no ID, it
+            // can't be removed.
+            MXB_INFO("Prepared statement %u failed: %s (result: %s)", m_pending_cmd.id(),
+                     mxb::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),
+                     reply.error().message().c_str());
+        }
+        else
+        {
+            if (reply.command() == MXS_COM_STMT_EXECUTE)
+            {
+                uint32_t ps_id = mxs_mysql_extract_ps_id(m_pending_cmd);
+                mxb_assert(m_qc.get_param_count(ps_id) == 0);
+                const GWBUF* ps = m_session_data->history().get(ps_id);
+                mxb_assert(ps);
 
-            // The COM_STMT_EXECUTE was executed successfully, store a COM_QUERY version of the
-            // COM_STMT_PREPARE in the history.
-            GWBUF tmp(ps->data(), ps->length());
-            tmp.set_id(m_pending_cmd.id());
-            tmp.data()[MYSQL_HEADER_LEN] = MXS_COM_QUERY;
-            m_pending_cmd = std::move(tmp);
-            MXB_INFO("Storing COM_STMT_EXECUTE as a COM_QUERY in the history");
+                // The COM_STMT_EXECUTE was executed successfully, store a COM_QUERY version of the
+                // COM_STMT_PREPARE in the history.
+                GWBUF tmp(ps->data(), ps->length());
+                tmp.set_id(m_pending_cmd.id());
+                tmp.data()[MYSQL_HEADER_LEN] = MXS_COM_QUERY;
+                m_pending_cmd = std::move(tmp);
+                MXB_INFO("Storing COM_STMT_EXECUTE as a COM_QUERY in the history");
+            }
+
+            MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
+                     mariadb::cmd_to_string(m_pending_cmd[4]), m_pending_cmd.id(),
+                     maxbase::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),
+                     reply.is_ok() ? "OK" : reply.error().message().c_str());
+
+            // Check the early responses to this command that arrived and were discarded before the accepted
+            // response that ended up here was received. Doing this with lcall() allows the command ID and the
+            // result to be stored inside it which removes the need to permanently store the latest command in
+            // MariaDBClientConnection as a member variable.
+            m_session->worker()->lcall([this, id = m_pending_cmd.id(), ok = reply.is_ok()](){
+                if (m_session->is_alive())
+                {
+                    m_session_data->history().check_early_responses(id, ok);
+                }
+            });
+
+            m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok(),
+                                          reply.command() != MXS_COM_STMT_PREPARE);
+
+            if (m_session_data->history().size() > m_session_data->history().max_size())
+            {
+                size_t sz = m_session_data->history().runtime_size();
+
+                // Log a warning if the client is using more than 100MiB of memory.
+                if (sz > 100 * 1024 * 1024)
+                {
+                    MXB_WARNING("Client %s is using %s of memory for session commands.",
+                                m_session->user_and_host().c_str(), mxb::pretty_size(sz).c_str());
+                }
+            }
         }
 
-        MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
-                 mariadb::cmd_to_string(m_pending_cmd[4]), m_pending_cmd.id(),
-                 maxbase::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),
-                 reply.is_ok() ? "OK" : reply.error().message().c_str());
-
-        // Check the early responses to this command that arrived and were discarded before the accepted
-        // response that ended up here was received. Doing this with lcall() allows the command ID and the
-        // result to be stored inside it which removes the need to permanently store the latest command in
-        // MariaDBClientConnection as a member variable.
-        m_session->worker()->lcall([this, id = m_pending_cmd.id(), ok = reply.is_ok()](){
-            if (m_session->is_alive())
-            {
-                m_session_data->history().check_early_responses(id, ok);
-            }
-        });
-
-        m_routing_state = RoutingState::PACKET_START;
-        m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok(),
-                                      reply.command() != MXS_COM_STMT_PREPARE);
         m_pending_cmd.clear();
+        m_routing_state = RoutingState::PACKET_START;
 
         // There's possibly another packet ready to be read in either the DCB's readq or in the socket. This
         // happens for example when direct execution of prepared statements is done where the COM_STMT_PREPARE
@@ -2355,7 +2381,8 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 m_session_data->auth_data = std::make_unique<mariadb::AuthenticationData>();
                 m_next_sequence = 2;    // Handshake had seq 0, the response has 1 so any errors will have 2.
                 // Even if inbound proxy protocol is not enabled at all (typical case), the proxy header must
-                // be read to produce correct error messages for the clients. This is also how MariaDB behaves.
+                // be read to produce correct error messages for the clients. This is also how MariaDB
+                // behaves.
                 m_handshake_state = HSState::EXPECT_PROXY_HDR;
             }
             break;
@@ -2438,7 +2465,8 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 }
                 else
                 {
-                    write(mariadb::create_error_packet(m_next_sequence, 1045, "28000", "Access without SSL denied"));
+                    write(mariadb::create_error_packet(m_next_sequence, 1045, "28000",
+                                                       "Access without SSL denied"));
                     MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
                     m_handshake_state = HSState::FAIL;
                 }

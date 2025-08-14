@@ -175,9 +175,8 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
         buffer = reset_gtid_probe();
     }
 
-    mxb_assert_message(
-        !std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)),
-        "At least one functional backend should exist if a query was routed.");
+    mxb_assert_message(!all_backends_have_failed(),
+                       "At least one functional backend should exist if a query was routed.");
 
     if (replaying_trx())
     {

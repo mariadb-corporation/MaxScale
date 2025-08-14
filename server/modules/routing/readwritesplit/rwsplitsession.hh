@@ -317,9 +317,15 @@ private:
      */
     void check_trx_replay() const;
 
+    inline bool all_backends_have_failed() const
+    {
+        return std::all_of(m_raw_backends.begin(), m_raw_backends.end(),
+                           std::mem_fn(&mxs::RWBackend::has_failed));
+    }
+
     inline bool can_recover_servers() const
     {
-        return protocol_data().can_recover_state();
+        return protocol_data().can_recover_state() && !all_backends_have_failed();
     }
 
     inline bool can_recover_master() const
