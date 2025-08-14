@@ -286,7 +286,7 @@ void MariaDBBackendConnection::handle_error_response(const GWBUF& buffer)
                   "'max_connect_errors' to a larger value in the backend server.",
                   m_server.name(), m_server.address(), m_server.port());
     }
-    else if (errcode == ER_ACCESS_DENIED_ERROR)
+    else if (errcode == ER_ACCESS_DENIED_ERROR || errcode == ER_DBACCESS_DENIED_ERROR)
     {
         m_session->service->stats().add_failed_auth();
 

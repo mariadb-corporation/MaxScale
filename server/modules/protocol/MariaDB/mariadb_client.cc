@@ -31,6 +31,7 @@
 
 #include <maxbase/proxy_protocol.hh>
 #include <maxbase/format.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxscale/event.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
@@ -1374,31 +1375,56 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
 {
     if (reply.is_complete())
     {
-        MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
-                 mariadb::cmd_to_string(m_pending_cmd[4]), m_pending_cmd.id(),
-                 maxbase::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),
-                 reply.is_ok() ? "OK" : reply.error().message().c_str());
-
-        if (reply.command() == MXS_COM_STMT_PREPARE)
+        if (reply.command() == MXS_COM_STMT_PREPARE && reply.error())
         {
-            m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
+            // A failing prepared statement must not be added to the history as prepared statements are only
+            // removed when a COM_STMT_CLOSE with the correct ID is done. Naturally, if there is no ID, it
+            // can't be removed.
+            MXB_INFO("Prepared statement %u failed: %s (result: %s)", m_pending_cmd.id(),
+                     mxb::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),
+                     reply.error().message().c_str());
+        }
+        else
+        {
+            MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
+                     mariadb::cmd_to_string(m_pending_cmd[4]), m_pending_cmd.id(),
+                     mxb::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),
+                     reply.is_ok() ? "OK" : reply.error().message().c_str());
+
+            if (reply.command() == MXS_COM_STMT_PREPARE)
+            {
+                m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
+            }
+
+            // Check the early responses to this command that arrived and were discarded before the accepted
+            // response that ended up here was received. Doing this with lcall() allows the command ID and the
+            // result to be stored inside it which removes the need to permanently store the latest command in
+            // MariaDBClientConnection as a member variable.
+            m_session->worker()->lcall([this, id = m_pending_cmd.id(), ok = reply.is_ok()](){
+                if (m_session->is_alive())
+                {
+                    m_session_data->history().check_early_responses(id, ok);
+                }
+            });
+
+            m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok(),
+                                          reply.command() != MXS_COM_STMT_PREPARE);
+
+            if (m_session_data->history().size() > m_session_data->history().max_size())
+            {
+                size_t sz = m_session_data->history().runtime_size();
+
+                // Log a warning if the client is using more than 100MiB of memory.
+                if (sz > 100 * 1024 * 1024)
+                {
+                    MXB_WARNING("Client %s is using %s of memory for session commands.",
+                                m_session->user_and_host().c_str(), mxb::pretty_size(sz).c_str());
+                }
+            }
         }
 
-        // Check the early responses to this command that arrived and were discarded before the accepted
-        // response that ended up here was received. Doing this with lcall() allows the command ID and the
-        // result to be stored inside it which removes the need to permanently store the latest command in
-        // MariaDBClientConnection as a member variable.
-        m_session->worker()->lcall([this, id = m_pending_cmd.id(), ok = reply.is_ok()](){
-            if (m_session->is_alive())
-            {
-                m_session_data->history().check_early_responses(id, ok);
-            }
-        });
-
-        m_routing_state = RoutingState::PACKET_START;
-        m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok(),
-                                      reply.command() != MXS_COM_STMT_PREPARE);
         m_pending_cmd.clear();
+        m_routing_state = RoutingState::PACKET_START;
 
         // There's possibly another packet ready to be read in either the DCB's readq or in the socket. This
         // happens for example when direct execution of prepared statements is done where the COM_STMT_PREPARE

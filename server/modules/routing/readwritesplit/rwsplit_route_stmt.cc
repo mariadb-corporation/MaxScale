@@ -177,7 +177,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
         buffer = reset_gtid_probe();
     }
 
-    if (std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)))
+    if (all_backends_have_failed())
     {
         MXB_ERROR("All backends are permanently unusable for %s (%s: %s), closing connection.\n%s",
                   route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
