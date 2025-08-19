@@ -202,6 +202,7 @@ static void enable_cors(const char* arg);
 static void cors_allow_origin(const char* arg);
 static void allow_duplicate_servers(const char* arg);
 static void use_gdb(const char* arg);
+static void dump_network_traffic(const char* arg);
 static void redirect_output_to_file(const char* arg);
 static bool user_is_acceptable(const char* specified_user);
 static bool init_sqlite3();
@@ -315,6 +316,10 @@ const DEBUG_ARGUMENT debug_arguments[] =
     },
     {
         "sql-batch-size", set_sql_batch_size, "Set maximum batch size for the REST-API (default: 10MiB)"
+    },
+    {
+        "dump-network-traffic", dump_network_traffic, "Dump all network traffic as log_info messages."
+
     },
     {NULL, NULL, NULL}
 };
@@ -3043,6 +3048,11 @@ static void allow_duplicate_servers(const char* arg)
 static void use_gdb(const char* arg)
 {
     this_unit.use_gdb = !arg || config_truth_value(arg) == 1;
+}
+
+static void dump_network_traffic(const char* arg)
+{
+    DCB::dump_network_traffic(true);
 }
 
 static void redirect_output_to_file(const char* arg)

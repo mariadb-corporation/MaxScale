@@ -81,6 +81,7 @@ static struct THIS_UNIT
 #else
     static constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
 #endif
+    bool dump_network_traffic {false};
 } this_unit;
 
 static thread_local struct
@@ -428,7 +429,11 @@ bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
         m_stats.n_reads++;
         if (ret > 0)
         {
-            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
+            if (this_unit.dump_network_traffic)
+            {
+                MXB_INFO("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
+            }
+
             m_readq.write_complete(ret);
             bytes_from_socket += ret;
             if (ret < (int64_t)read_limit)
@@ -542,7 +547,11 @@ bool DCB::socket_read_SSL(size_t maxbytes)
         m_stats.n_reads++;
         if (ret > 0)
         {
-            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
+            if (this_unit.dump_network_traffic)
+            {
+                MXB_INFO("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
+            }
+
             m_readq.write_complete(ret);
             bytes_from_socket += ret;
 
@@ -910,7 +919,11 @@ void DCB::socket_write_SSL()
         int res = SSL_write(m_encryption.handle, m_writeq.data(), writable);
         if (res > 0)
         {
-            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
+            if (this_unit.dump_network_traffic)
+            {
+                MXB_INFO("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
+            }
+
             m_writeq.consume(res);
             total_written += res;
 
@@ -976,7 +989,11 @@ void DCB::socket_write()
         auto res = ::write(m_fd, m_writeq.data(), writable_bytes);
         if (res > 0)
         {
-            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
+            if (this_unit.dump_network_traffic)
+            {
+                MXB_INFO("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
+            }
+
             m_writeq.consume(res);
             total_written += res;
 
@@ -2400,4 +2417,10 @@ bool mxs::ClientConnectionBase::in_routing_state() const
 size_t mxs::ClientConnectionBase::sizeof_buffers() const
 {
     return m_dcb ? m_dcb->runtime_size() : 0;
+}
+
+// static
+void DCB::dump_network_traffic(bool enable)
+{
+    this_unit.dump_network_traffic = enable;
 }
