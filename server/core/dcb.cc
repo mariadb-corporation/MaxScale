@@ -76,6 +76,7 @@ static struct THIS_UNIT
 {
     std::atomic<uint64_t> uid_generator {0};
     static constexpr uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
+    bool dump_network_traffic {false};
 } this_unit;
 
 static thread_local struct
@@ -382,7 +383,11 @@ bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
         auto ret = ::read(m_fd, ptr, read_limit);
         if (ret > 0)
         {
-            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
+            if (this_unit.dump_network_traffic)
+            {
+                MXB_INFO("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
+            }
+
             m_readq.write_complete(ret);
             bytes_from_socket += ret;
             if (ret < (int64_t)read_limit)
@@ -501,7 +506,11 @@ bool DCB::socket_read_SSL(size_t maxbytes)
         auto ret = SSL_read(m_encryption.handle, ptr, read_limit);
         if (ret > 0)
         {
-            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
+            if (this_unit.dump_network_traffic)
+            {
+                MXB_INFO("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
+            }
+
             m_readq.write_complete(ret);
             bytes_from_socket += ret;
 
@@ -911,7 +920,11 @@ void DCB::socket_write_SSL()
         int res = SSL_write(m_encryption.handle, m_writeq.data(), writable);
         if (res > 0)
         {
-            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
+            if (this_unit.dump_network_traffic)
+            {
+                MXB_INFO("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
+            }
+
             m_writeq.consume(res);
             total_written += res;
 
@@ -976,7 +989,11 @@ void DCB::socket_write()
         auto res = ::write(m_fd, m_writeq.data(), writable_bytes);
         if (res > 0)
         {
-            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
+            if (this_unit.dump_network_traffic)
+            {
+                MXB_INFO("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
+            }
+
             m_writeq.consume(res);
             total_written += res;
 
@@ -2240,4 +2257,10 @@ size_t mxs::ClientConnectionBase::sizeof_buffers() const
 std::string DCB::ssl_cipher() const
 {
     return m_encryption.handle ? SSL_get_cipher_name(m_encryption.handle) : "";
+}
+
+// static
+void DCB::dump_network_traffic(bool enable)
+{
+    this_unit.dump_network_traffic = enable;
 }

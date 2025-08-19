@@ -480,6 +480,8 @@ public:
         struct CALLBACK* next;      /*< Next callback for this DCB */
     };
 
+    static void dump_network_traffic(bool enable);
+
     static void destroy(DCB* dcb)
     {
         dcb->destroy();
