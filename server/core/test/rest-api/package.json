@@ -21,7 +21,7 @@
     "mocha": "^9.2.0",
     "prettier": "^2.2.1",
     "tough-cookie": "^4.0.0",
-    "ws": "^7.5.3"
+    "ws": "^7.5.10"
   },
   "prettier": {
     "printWidth": 110
