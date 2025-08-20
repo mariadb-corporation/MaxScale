@@ -18,6 +18,7 @@
 #include <maxbase/string.hh>
 
 #include <fstream>
+#include <filesystem>
 
 namespace maxbase
 {
@@ -35,12 +36,18 @@ std::pair<Container, std::string> load_file(std::string file)
     static_assert(sizeof(typename Container::iterator::value_type) == sizeof(char));
     std::string err;
     Container data;
-    std::ifstream infile(file, std::ios_base::ate | std::ios_base::binary);
+    std::error_code ec{};
+    std::uintmax_t size = std::filesystem::file_size(file, ec);
+    std::ifstream infile(file, std::ios_base::binary);
 
-    if (infile)
+    if (size == static_cast<std::uintmax_t>(-1))
     {
-        data.resize(infile.tellg());
-        infile.seekg(0, std::ios_base::beg);
+        err = mxb::string_printf("Failed to get length of file '%s': %d, %s",
+                                 file.c_str(), ec.value(), ec.message().c_str());
+    }
+    else if (infile)
+    {
+        data.resize(size);
 
         if (!infile.read(reinterpret_cast<char*>(data.data()), data.size()))
         {
