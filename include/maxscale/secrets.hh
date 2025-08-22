@@ -38,4 +38,6 @@ std::string decrypt_password(const std::string& input);
  * @return The encrypted password
  */
 std::string encrypt_password(const std::string& input);
+
+bool using_encrypted_passwords();
 }

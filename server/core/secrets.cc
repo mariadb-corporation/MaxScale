@@ -321,6 +321,11 @@ string encrypt_password(const string& input)
     const auto& key = this_unit.key;
     return key.empty() ? input : ::encrypt_password(key, input);
 }
+
+bool using_encrypted_passwords()
+{
+    return !this_unit.key.empty();
+}
 }
 
 /**
