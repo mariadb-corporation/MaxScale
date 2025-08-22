@@ -234,7 +234,7 @@ void MariaDBUserManager::updater_thread_function()
          */
         mxs::Config& glob_config = mxs::Config::get();
         auto max_refresh_interval = glob_config.users_refresh_interval.get();
-        auto min_refresh_interval = glob_config.users_refresh_time.get();
+        auto min_refresh_interval = std::min(glob_config.users_refresh_time.get(), max_refresh_interval);
 
         // Calculate the earliest allowed time for next update. If throttling is not on, next update can
         // happen immediately.

@@ -619,3 +619,8 @@ void service_add_server(mxs::Monitor* pMonitor, SERVER* pServer);
  * @param server   A server.
  */
 void service_remove_server(mxs::Monitor* pMonitor, SERVER* pServer);
+
+/**
+ * Reloads the users on all services
+ */
+void service_reload_all_users();
