@@ -279,10 +279,12 @@ cfg::ParamCount s_ssh_port(&s_spec, "ssh_port", "SSH port. Used for running remo
 
 cfg::ParamCount s_rebuild_port(&s_spec, "rebuild_port", "Listen port used for transferring server backup.",
                                4444, 0, 65535, cfg::Param::AT_RUNTIME);
-cfg::ParamString s_mbu_use_memory(&s_spec, "mariabackup_use_memory", "Mariabackup buffer pool size.",
-                                  "1G", cfg::Param::AT_RUNTIME);
-cfg::ParamInteger s_mbu_parallel(&s_spec, "mariabackup_parallel", "Mariabackup thread count.",
-                                 1, 1, 1000, cfg::Param::AT_RUNTIME);
+cfg::ParamString s_bu_use_memory(&s_spec, "mariadb_backup_use_memory", "mariadb-backup buffer pool size.",
+                                 "1G", cfg::Param::AT_RUNTIME);
+cfg::ParamDeprecated<cfg::ParamAlias> s_mbu_use_memory(&s_spec, "mariabackup_use_memory", &s_bu_use_memory);
+cfg::ParamInteger s_bu_parallel(&s_spec, "mariadb_backup_parallel", "mariadb-backup thread count.",
+                                1, 1, 1000, cfg::Param::AT_RUNTIME);
+cfg::ParamDeprecated<cfg::ParamAlias> s_mbu_parallel(&s_spec, "mariabackup_parallel", &s_bu_parallel);
 cfg::ParamString s_backup_storage_addr(&s_spec, CONFIG_BACKUP_ADDR, "Address of backup storage.", "",
                                        cfg::Param::AT_RUNTIME);
 cfg::ParamString s_backup_storage_path(&s_spec, CONFIG_BACKUP_PATH, "Backup storage directory path.", "",
@@ -482,8 +484,8 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::ssh_timeout, &s_ssh_timeout);
     add_native(&Settings::ssh_port, &s_ssh_port);
     add_native(&Settings::rebuild_port, &s_rebuild_port);
-    add_native(&Settings::mbu_use_memory, &s_mbu_use_memory);
-    add_native(&Settings::mbu_parallel, &s_mbu_parallel);
+    add_native(&Settings::mbu_use_memory, &s_bu_use_memory);
+    add_native(&Settings::mbu_parallel, &s_bu_parallel);
     add_native(&Settings::backup_storage_addr, &s_backup_storage_addr);
     add_native(&Settings::backup_storage_path, &s_backup_storage_path);
 }

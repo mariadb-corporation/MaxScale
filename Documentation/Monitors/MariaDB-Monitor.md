@@ -1632,26 +1632,33 @@ connection. The port must not be blocked by a firewall or listened on by any
 other program. If another process is listening on the port when rebuild is
 starting, MaxScale will attempt to kill the process.
 
-#### `mariabackup_use_memory`
+#### `mariadb_backup_use_memory`
 
 String, default: "1G". Given as is to
-`mariabackup --prepare --use-memory=<mariabackup_use_memory>`. If set to empty,
+`mariadb-backup --prepare --use-memory=<mariadb_backup_use_memory>`. If set to empty,
 no `--use-memory` is set and Mariabackup will use its internal default. See
 [here](https://mariadb.com/kb/en/mariabackup-options/#-use-memory) for more
 information.
 ```
-mariabackup_use_memory=2G
+mariadb_backup_use_memory=2G
 ```
 
-#### `mariabackup_parallel`
+Starting with MaxScale 24.02.7, the old name `mariabackup_use_memory` has been
+deprecated and replaced with `mariadb_backup_use_memory`. The old name is valid
+and will continue working as an alias.
 
-Numeric, default: 1. Given as is to`mariabackup --backup --parallel=<val>`.
+#### `mariadb_backup_parallel`
+
+Numeric, default: 1. Given as is to`mariadb-backup --backup --parallel=<val>`.
 Defines the number of threads used for parallel data file transfer. See
 [here](https://mariadb.com/kb/en/mariabackup-options/#-parallel) for more
 information.
 ```
-mariabackup_parallel=2
+mariadb_backup_parallel=2
 ```
+Starting with MaxScale 24.02.7, the old name `mariabackup_parallel` has been
+deprecated and replaced with `mariadb_backup_parallel`. The old name is valid
+and will continue working as an alias.
 
 #### `backup_storage_address`
 
