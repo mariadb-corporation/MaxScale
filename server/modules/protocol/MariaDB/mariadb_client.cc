@@ -3068,10 +3068,12 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
                 1, FEATURE_DISABLED, "HY000", "Replication protocol is disabled"));
             break;
         }
+
+        m_replicating = true;
         // fallthrough
 
     default:
-        if (mxs_mysql_is_valid_command(m_command))
+        if (mxs_mysql_is_valid_command(m_command) || m_replicating)
         {
             // Not a query, just a command which does not require special handling.
             success = route_statement(move(buffer));

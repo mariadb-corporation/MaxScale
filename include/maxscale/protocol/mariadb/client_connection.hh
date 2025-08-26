@@ -364,4 +364,5 @@ private:
     bool m_track_pooling_status {false};        /**< Does pooling status need to be tracked? */
     bool m_pooling_permanent_disable {false};   /**< Is pooling disabled permanently for this session? */
     bool m_allow_replication {true};
+    bool m_replicating {false};
 };
