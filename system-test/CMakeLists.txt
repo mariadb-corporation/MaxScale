@@ -959,6 +959,9 @@ add_test_executable(mxs5415_retry_failed_reads_timeout.cc mxs5415_retry_failed_r
 # MXS-5432: Executing prepared statements too fast may stall query execution
 add_test_executable(mxs5432_queued_ps.cc mxs5432_queued_ps mxs5432_queued_ps LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5910: Semi-sync through MaxScale doesn't work
+add_test_executable(mxs5910_semisync_routing.cc mxs5910_semisync_routing replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
