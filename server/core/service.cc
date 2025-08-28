@@ -2436,3 +2436,13 @@ const std::set<std::string>& Service::protocols() const
 {
     return m_protocols;
 }
+
+void service_reload_all_users()
+{
+    std::lock_guard<std::mutex> guard(this_unit.lock);
+
+    for (auto* service : this_unit.services)
+    {
+        service->user_account_manager()->update_user_accounts();
+    }
+}

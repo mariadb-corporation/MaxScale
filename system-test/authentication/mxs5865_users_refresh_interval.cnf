@@ -1,0 +1,27 @@
+[maxscale]
+threads=###threads###
+# We need log_info=1 to make the user loading log message appear if the data is identical.
+log_info=1
+users_refresh_interval=60s
+
+[MariaDB-Monitor]
+type=monitor
+module=mariadbmon
+servers=###server_line###
+user=mariadbmon
+password=mariadbmon
+monitor_interval=1s
+
+[RW-Split-Router]
+type=service
+router=readwritesplit
+servers=###server_line###
+user=maxservice
+password=maxservice
+
+[RW-Split-Listener]
+type=listener
+service=RW-Split-Router
+port=4006
+
+###server###

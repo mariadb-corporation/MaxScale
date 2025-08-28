@@ -276,6 +276,11 @@ string encrypt_password(const ByteVec& key, const string& input)
 
     return rval;
 }
+
+bool using_encrypted_passwords()
+{
+    return !this_unit.key.empty();
+}
 }
 
 bool load_encryption_keys(string path)

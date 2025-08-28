@@ -68,4 +68,5 @@ std::string decrypt_password(const std::vector<uint8_t>& key, const std::string&
  */
 std::string decrypt_password(const std::string& input);
 
+bool using_encrypted_passwords();
 }
