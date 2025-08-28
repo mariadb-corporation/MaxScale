@@ -2271,6 +2271,8 @@ bool runtime_alter_maxscale_from_json(json_t* json)
         json_t* params = mxs::Config::get().params_to_json();
         merge_json(params, new_params);
         auto& config = mxs::Config::get();
+        auto old_interval = config.users_refresh_interval.get();
+        auto old_time = config.users_refresh_time.get();
 
         // TODO: Don't strip out these parameters and define them in the core specification instead.
         const char* key;
@@ -2293,6 +2295,13 @@ bool runtime_alter_maxscale_from_json(json_t* json)
             if (rval && config.need_tls_reload(new_params))
             {
                 rval = mxs_admin_reload_tls();
+            }
+
+            // If the user database intervals have changed, reload the users so that the updater thread picks
+            // up the new values immediately.
+            if (config.users_refresh_interval.get() != old_interval || config.users_refresh_time.get() != old_time)
+            {
+                service_reload_all_users();
             }
         }
 

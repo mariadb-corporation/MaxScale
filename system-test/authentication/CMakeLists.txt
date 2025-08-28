@@ -61,3 +61,7 @@ add_test_executable_ex(NAME auth_verify_peer_host SOURCE auth_verify_peer_host.c
 # MXS-5760: Authentication failures do not immediately close rwsplit sessions
 add_test_executable_ex(NAME mxs5760_bad_db_access SOURCE mxs5760_bad_db_access.cc
         CONFIG mxs5760_bad_db_access.cnf VMS repl_backend LABELS readwritesplit)
+
+# MXS-5865: Run-time modification of users_refresh_time and users_refresh_interval are not immediately taken into use
+add_test_executable_ex(NAME mxs5865_users_refresh_interval SOURCE mxs5865_users_refresh_interval.cc
+        CONFIG mxs5865_users_refresh_interval.cnf VMS repl_backend)

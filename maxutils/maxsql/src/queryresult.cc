@@ -18,6 +18,7 @@
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <memory>
+#include <cstring>
 
 using std::string;
 using mxb::string_printf;
@@ -128,19 +129,19 @@ bool QueryResult::get_bool(int64_t column_ind) const
 {
     bool rval = false;
     auto bool_parser = [&rval](const char* data_elem) {
-            bool success = false;
-            char c = *data_elem;
-            if (c == '1' || c == 'Y' || c == 'y')
-            {
-                rval = true;
-                success = true;
-            }
-            else if (c == '0' || c == 'N' || c == 'n')
-            {
-                success = true;
-            }
-            return success;
-        };
+        bool success = false;
+        char c = *data_elem;
+        if (c == '1' || c == 'Y' || c == 'y' || strcasecmp(data_elem, "ON") == 0)
+        {
+            rval = true;
+            success = true;
+        }
+        else if (c == '0' || c == 'N' || c == 'n'|| strcasecmp(data_elem, "OFF") == 0)
+        {
+            success = true;
+        }
+        return success;
+    };
 
     call_parser(bool_parser, column_ind, type_boolean);
     return rval;
