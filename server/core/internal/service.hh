@@ -669,3 +669,8 @@ json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const std::str
  * @param monitor Monitor to update from
  */
 void service_update_targets(const mxs::Monitor* monitor);
+
+/**
+ * Reloads the users on all services
+ */
+void service_reload_all_users();

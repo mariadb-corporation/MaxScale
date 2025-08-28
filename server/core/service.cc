@@ -2465,3 +2465,13 @@ mxb::Json Service::config_state() const
 
     return mxb::Json(obj, mxb::Json::RefType::STEAL);
 }
+
+void service_reload_all_users()
+{
+    std::lock_guard<std::mutex> guard(this_unit.lock);
+
+    for (auto* service : this_unit.services)
+    {
+        service->user_account_manager()->update_user_accounts();
+    }
+}

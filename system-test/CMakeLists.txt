@@ -1011,6 +1011,9 @@ add_test_executable(mxs5432_queued_ps.cc mxs5432_queued_ps mxs5432_queued_ps LAB
 # MXS-5485: Read is not retried if Endpoint::connect() fails
 add_test_executable(mxs5485_failed_read_retry.cc mxs5485_failed_read_retry mxs5485_failed_read_retry LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5910: Semi-sync through MaxScale doesn't work
+add_test_executable(mxs5910_semisync_routing.cc mxs5910_semisync_routing replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
