@@ -3115,6 +3115,7 @@ json_t* mxs::Config::maxscale_to_json(const char* host) const
     json_object_set_new(attr, "activated_at", json_string(http_to_date(activated).c_str()));
     json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
     json_object_set_new(attr, "process_datadir", json_string(mxs::process_datadir()));
+    json_object_set_new(attr, "encrypted_passwords", json_boolean(mxs::using_encrypted_passwords()));
 
     auto manager = mxs::ConfigManager::get()->to_json();
     json_object_set_new(attr, "config_sync", json_incref(manager.get_json()));
