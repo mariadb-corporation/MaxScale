@@ -28,6 +28,8 @@ void test_main(TestConnections& test)
                                 + "INSERT INTO " + db + ".t1 values (1)"));
         }
 
+        test.repl->sync_slaves();
+
         auto c = test.maxscale->rwsplit();
         MXT_EXPECT(c.connect());
 
