@@ -1,4 +1,4 @@
-# MariaDB MaxScale 22.08.18 Release Notes
+# MariaDB MaxScale 22.08.18 Release Notes -- 2025-09-08
 
 Release 22.08.18 is a GA release.
 
