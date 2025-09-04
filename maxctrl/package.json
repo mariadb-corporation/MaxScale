@@ -24,7 +24,7 @@
     "colors": "^1.4.0",
     "flat": "^5.0.0",
     "ini": "^2.0.0",
-    "inquirer": "^8.2.0",
+    "inquirer": "8.2.6",
     "inquirer-command-prompt": "^0.1.0",
     "lodash": "^4.17.21",
     "lodash-getpath": "^0.2.4",
