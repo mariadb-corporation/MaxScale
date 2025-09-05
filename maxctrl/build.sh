@@ -26,5 +26,5 @@ set -o pipefail
 
 # Piping the output through `tee` works around a problem in npm where it always
 # prints verbose output: https://github.com/npm/cli/issues/3314
-(npm install --production pkg@5 && \
+(npm ci --production pkg@5 && \
      npx pkg --options max_old_space_size=4096 $opts -t node14-linux .) |& tee
