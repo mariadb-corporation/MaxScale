@@ -24,7 +24,7 @@ if (BUILD_MAXCTRL)
       # Runs webpack to bundle all the sources and dependencies into one file.
       add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dist/maxctrl.js
         DEPENDS maxctrl_node_modules ${MAXCTRL_SOURCES} maxctrl.js
-        COMMAND npm install
+        COMMAND npm ci
         COMMAND npm run build
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
       add_custom_target(maxctrl_build DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dist/maxctrl.js)
