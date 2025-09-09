@@ -15,6 +15,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/http.hh>
 #include <maxscale/modulecmd.hh>
+#include <maxscale/secrets.hh>
 #include "mariadbmon.hh"
 #include "ssh_utils.hh"
 
@@ -1676,7 +1677,8 @@ bool RebuildServer::serve_backup()
     const char stream_fmt[] = "sudo mariabackup --user='%s' --password='%s' --backup --safe-slave-backup "
                               "--target-dir=/tmp --stream=xbstream --parallel=%i "
                               "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
-    string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cs.password.c_str(), 1,
+    string cleartext_pw = mxs::decrypt_password(cs.password);
+    string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cleartext_pw.c_str(), 1,
                                            m_rebuild_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
