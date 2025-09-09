@@ -6,12 +6,12 @@ type=monitor
 module=mysqlmon
 servers= server1, server2
 user=mariadbmon
-password=mariadbmon
+password=shouldnotwork
 monitor_interval=1000ms
 auto_failover=true
 auto_rejoin=true
 replication_user=repl
-replication_password=repl
+replication_password=shouldnotwork
 backend_connect_timeout=10s
 backend_read_timeout=10s
 backend_write_timeout=10s
@@ -22,7 +22,7 @@ type=service
 router= readwritesplit
 servers=server1, server2
 user=maxskysql
-password=skysql
+password=shouldnotwork
 
 [RW-Split-Listener]
 type=listener

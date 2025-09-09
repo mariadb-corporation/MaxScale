@@ -16,6 +16,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/string.hh>
+#include "mariadbmon_utils.hh"
 
 using std::string;
 using mxt::MaxScale;
@@ -43,7 +44,15 @@ void test_main(TestConnections& test)
     auto* target_be = repl.backend(target_ind);
     copy_ssh_keyfile(test, source_be, target_be);
 
-    mxs.start();
+    mxs.ssh_output("maxkeys");
+    auto monpw = mxs.ssh_output("maxpasswd mariadbmon").output;
+    auto replpw = mxs.ssh_output("maxpasswd repl").output;
+    const char mon_name[] = "MariaDB-Monitor";
+    mxs.start_and_check_started();
+    mxs.alter_monitor(mon_name, "password", monpw);
+    mxs.alter_monitor(mon_name, "replication_password", replpw);
+    mxs.wait_for_monitor();
+
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
     // Firewall on the source server may interfere with the transfer, stop it.
@@ -137,6 +146,7 @@ void test_main(TestConnections& test)
     }
 
     source_be->vm_node().run_cmd_output_sudo("systemctl start iptables");
+    delete_secrets_file(test);
     mxs.vm_node().delete_from_node(keypath);
 }
 

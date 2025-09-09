@@ -18,6 +18,7 @@
 #include "mariadbmon_utils.hh"
 
 // Test failover/switchover with multiple masters.
+// MXS-5717 Password encryption with monitor operations
 
 using std::string;
 
@@ -34,6 +35,7 @@ void test_main(TestConnections& test);
 int main(int argc, char** argv)
 {
     TestConnections test;
+    TestConnections::skip_maxscale_start(true);
     return test.run_test(argc, argv, test_main);
 }
 
@@ -52,6 +54,18 @@ void test_main(TestConnections& test)
     auto mon_wait = [&test](int ticks) {
         test.maxscale->wait_for_monitor(ticks);
     };
+
+    mxs.ssh_output("maxkeys");
+    auto monpw = mxs.ssh_output("maxpasswd mariadbmon").output;
+    auto replpw = mxs.ssh_output("maxpasswd repl").output;
+    auto svcpw = mxs.ssh_output("maxpasswd skysql").output;
+    const char mon_name[] = "MariaDB-Monitor";
+    mxs.start_and_check_started();
+    mxs.alter_monitor(mon_name, "password", monpw);
+    mxs.alter_monitor(mon_name, "replication_password", replpw);
+    mxs.alter_service("RW-Split-Router", "password", svcpw);
+    mxs.restart();
+    mxs.wait_for_monitor();
 
     // Add a few events. Needs to be replicated to all servers.
     auto maxconn = mxs.open_rwsplit_connection2();
@@ -137,6 +151,7 @@ void test_main(TestConnections& test)
         }
         mxs.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
     }
+    delete_secrets_file(test);
 }
 
 namespace

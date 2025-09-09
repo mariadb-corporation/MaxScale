@@ -170,6 +170,11 @@ void cleanup_log_bin_failover_test(TestConnections& test)
     test.maxscale->wait_for_monitor(1);
 }
 
+void delete_secrets_file(TestConnections& test)
+{
+    test.maxscale->vm_node().delete_from_node("/var/lib/maxscale/.secrets");
+}
+
 namespace testclient
 {
 Client::Client(TestConnections& test, const Settings& sett, int id, bool verbose)
