@@ -288,8 +288,18 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows,
 
         if (i == 0 && rows > 0)
         {
-            json_decref(arr);
-            arr = nullptr;
+            static bool warned = false;
+
+            if (!warned)
+            {
+                warned = true;
+                MXB_NOTICE("Failed to read any data from the systemd journal when fetching log events. "
+                           "Make sure that the user that MaxScale is running as has the required permissions "
+                           "to read the log data. On most systems, this means that the 'maxscale' user must "
+                           "be a part of the 'systemd-journal' or 'wheel' groups. Alternatively, switch the "
+                           "log source to 'maxlog' by configuring 'maxlog=true' and 'syslog=false' under the "
+                           "'[maxscale]' section.");
+            }
         }
     }
 #endif
@@ -596,11 +606,6 @@ json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int ro
     {
         std::tie(log, cursors) = get_syslog_data(cursor, rows, priorities);
         log_source = "syslog";
-
-        if (!log)
-        {
-            return nullptr;
-        }
     }
     else if (cnf.maxlog.get())
     {
