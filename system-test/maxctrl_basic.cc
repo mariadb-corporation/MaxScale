@@ -73,7 +73,7 @@ int main(int argc, char** argv)
                               "maxctrl show threads;"
                               "maxctrl show logging;"
                               "maxctrl show commands mariadbmon;"
-                              "maxctrl drain server server1;"
+                              "maxctrl drain server --drain-timeout=1 server1;"
                               "maxctrl clear server server1 maintenance;"
                               "maxctrl enable log-priority info;"
                               "maxctrl enable account vagrant;"
