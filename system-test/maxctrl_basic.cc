@@ -289,6 +289,12 @@ int main(int argc, char** argv)
 
     test.check_maxctrl("show filters");
 
+    test.tprintf("MXS-5947: 'create report' broken with maxlog=false syslog=true");
+    test.check_maxctrl("create report");
+    test.check_maxctrl("create report /tmp/maxctrl-report.txt");
+    test.check_maxctrl("create report --archive /tmp/maxctrl-report.tar");
+    test.log_includes("Failed to read any data from the systemd journal");
+
     test.check_maxscale_alive();
     return test.global_result;
 }
