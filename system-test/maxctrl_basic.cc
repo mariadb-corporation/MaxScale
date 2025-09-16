@@ -192,7 +192,7 @@ int main(int argc, char** argv)
                               "maxctrl show threads;"
                               "maxctrl show logging;"
                               "maxctrl show commands mariadbmon;"
-                              "maxctrl drain server server1;"
+                              "maxctrl drain server --drain-timeout=1 server1;"
                               "maxctrl clear server server1 maintenance;"
                               "maxctrl enable log-priority info;"
                               "maxctrl disable log-priority info;"
@@ -268,6 +268,12 @@ int main(int argc, char** argv)
 
     res = test.maxctrl("alter listener RW-Split-Listener protocol=cdc");
     test.expect(res.rc != 0, "Changing listener protocol should fail.");
+
+    test.tprintf("MXS-5947: 'create report' broken with maxlog=false syslog=true");
+    test.check_maxctrl("create report");
+    test.check_maxctrl("create report /tmp/maxctrl-report.txt");
+    test.check_maxctrl("create report --archive /tmp/maxctrl-report.tar");
+    test.log_includes("Failed to read any data from the systemd journal");
 
     test.check_maxscale_alive();
     return test.global_result;
