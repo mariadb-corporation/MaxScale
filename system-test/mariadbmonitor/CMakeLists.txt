@@ -123,6 +123,7 @@ add_test_executable_ex(NAME mariadbmon_enforce_writable_master SOURCE mariadbmon
         CONFIG mariadbmon_enforce_writable_master.cnf VMS repl_backend LABELS mysqlmon)
 
 # MariaDB-Monitor multimaster failover/switchover
+# MXS-5717 Password encryption with monitor operations
 add_test_executable_ex(NAME mbdbmon_fail_switch_multi SOURCE mdbmon_fail_switch_multi.cc
         CONFIG mdbmon_fail_switch_multi.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
@@ -132,6 +133,7 @@ add_test_executable_ex(NAME mdbmon_master_slave_conditions SOURCE mdbmon_master_
         CONFIG mdbmon_master_slave_conditions.cnf VMS repl_backend LABELS mysqlmon)
 
 # MXS-5366 Rebuild with special chars in username/pw.
+# MXS-5717 Password encryption with monitor operations
 add_test_executable_ex(NAME mariadbmon_rebuild_server SOURCE mariadbmon_rebuild_server.cc
         CONFIG mariadbmon_rebuild_server.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
