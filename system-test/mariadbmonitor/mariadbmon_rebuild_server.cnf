@@ -1,7 +1,18 @@
 [maxscale]
 threads=###threads###
 
-###mariadb_monitor###
+[MariaDB-Monitor]
+type=monitor
+module=mariadbmon
+servers=###server_line###
+user=mariadbmon
+password=shouldnotwork
+monitor_interval=1s
+replication_user=repl
+replication_password=shouldnotwork
+backend_connect_timeout=5s
+backend_read_timeout=5s
+backend_write_timeout=5s
 ssh_user=###ssh_user###
 ssh_keyfile=/tmp/sshkey.pem
 ssh_check_host_key=false
