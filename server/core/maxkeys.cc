@@ -39,11 +39,11 @@ void print_usage(const char* executable, const char* default_directory)
     const char msg[] =
         R"(usage: %s [-h|--help] [directory]
 
-This utility generates a random AES encryption key and init vector and writes
-them to disk. The data is written to the file '%s', in the specified
-directory. The key and init vector are used by the utility 'maxpasswd' to
-encrypt passwords used in MaxScale configuration files, as well as by MaxScale
-itself to decrypt the passwords.
+This utility generates a random AES encryption key and writes it to disk.
+The key is written to the file '%s', in the specified directory. Use
+'maxpasswd' to encrypt passwords with the generated key. The encrypted
+passwords can be used in MaxScale configuration files. MaxScale uses the
+key to decrypt the passwords while running.
 
 Re-creating the file invalidates all existing encrypted passwords in the
 configuration files.
