@@ -16,6 +16,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/http.hh>
 #include <maxscale/modulecmd.hh>
+#include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
 #include <unistd.h>
 #include "mariadbmon.hh"
@@ -1752,7 +1753,8 @@ bool BackupOperation::serve_backup(const string& mariadb_user, const string& mar
     const char stream_fmt[] = "sudo mariabackup --user='%s' --password='%s' --backup --safe-slave-backup "
                               "--target-dir=/tmp --stream=xbstream --parallel=%i "
                               "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
-    string stream_cmd = mxb::string_printf(stream_fmt, mariadb_user.c_str(), mariadb_pw.c_str(), 1,
+    string cleartext_pw = mxs::decrypt_password(mariadb_pw);
+    string stream_cmd = mxb::string_printf(stream_fmt, mariadb_user.c_str(), cleartext_pw.c_str(), 1,
                                            m_source_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
