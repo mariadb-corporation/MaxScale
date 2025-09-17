@@ -270,6 +270,7 @@ int main(int argc, char** argv)
     test.expect(res.rc != 0, "Changing listener protocol should fail.");
 
     test.tprintf("MXS-5947: 'create report' broken with maxlog=false syslog=true");
+    test.check_maxctrl("alter maxscale syslog=true maxlog=true");
     test.check_maxctrl("create report");
     test.check_maxctrl("create report /tmp/maxctrl-report.txt");
     test.check_maxctrl("create report --archive /tmp/maxctrl-report.tar");
