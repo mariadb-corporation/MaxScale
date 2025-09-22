@@ -126,6 +126,7 @@ public:
         bool events {false};                // Supports event handling?
         bool read_only_admin {false};       // Implements read-only admin priv?
         bool separate_ro_admin {false};     // Is read-only admin separate from super?
+        bool ssl_on_by_default {false};     // Does the server expect SSL unless disabled?
     };
 
     // This class groups some miscellaneous replication related settings together.

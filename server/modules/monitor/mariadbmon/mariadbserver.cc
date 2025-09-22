@@ -1066,6 +1066,11 @@ void MariaDBServer::update_server_version()
                         if (total >= 101100)
                         {
                             m_capabilities.separate_ro_admin = true;
+                            // 11.4.1 adds zero-configuration SSL and enables SSL by default.
+                            if (total >= 110401)
+                            {
+                                m_capabilities.ssl_on_by_default = true;
+                            }
                         }
                     }
                 }
@@ -2314,10 +2319,12 @@ MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_sett
         return {"", ""};
     }
 
-    if (m_settings.replication_ssl)
+    // Server versions that enable ssl by default also enable it when replicating unless explicitly disabled.
+    if (m_settings.replication_ssl || m_capabilities.ssl_on_by_default)
     {
-        cmd_begin += "MASTER_SSL = 1, ";    // Leave out if not set to preserve existing setting.
+        cmd_begin.append("MASTER_SSL = ").append(m_settings.replication_ssl ? "1" : "0").append(", ");
     }
+    // Else: leave out if not set to preserve existing setting.
 
     auto server_repl_custom_opts = server->replication_custom_opts();
     const string& eff_repl_custom_opts = !server_repl_custom_opts.empty() ? server_repl_custom_opts :
