@@ -30,11 +30,15 @@ const char EV_STATE_ENABLED[] = "ENABLED";
 const char EV_STATE_DISABLED[] = "DISABLED";
 const char EV_STATE_SLAVE_DISABLED[] = "SLAVESIDE_DISABLED";
 
+const char def_db[] = "test";
 const char def_charset[] = "latin1";
 const char def_collation[] = "latin1_swedish_ci";
 
-void expect_event_charset_collation(TestConnections& test, int node, const string& event_name,
+void expect_event_charset_collation(TestConnections& test, int node,
+                                    const string& event_schema, const string& event_name,
                                     const string& client_charset, const string& collation_connection);
+
+void test_special_chars(TestConnections& test);
 
 int read_incremented_field(TestConnections& test)
 {
@@ -97,31 +101,33 @@ void delete_event(TestConnections& test)
     test.repl->sync_slaves();
 }
 
-bool expect_event_status(TestConnections& test, int node,
-                         const string& event_name, const string& expected_state)
+void expect_event_status(TestConnections& test, int node,
+                         const string& event_schema, const string& event_name, const string& expected_status)
 {
-    bool rval = false;
-    string query = "SELECT * FROM information_schema.EVENTS WHERE EVENT_NAME = '" + event_name + "';";
     auto be = test.repl->backend(node);
     be->ping_or_open_admin_connection();
     auto conn = be->admin_connection();
-    auto res = conn->query(query);
+    auto res = conn->query_f("SELECT STATUS FROM information_schema.EVENTS WHERE EVENT_SCHEMA = '%s' AND "
+                             "EVENT_NAME = '%s';", event_schema.c_str(), event_name.c_str());
     if (res && res->next_row())
     {
-        string status = res->get_string("STATUS");
-        if (status != expected_state)
+        string status = res->get_string(0);
+        if (status != expected_status)
         {
             test.add_failure("Wrong event status, found %s when %s was expected.",
-                             status.c_str(), expected_state.c_str());
+                             status.c_str(), expected_status.c_str());
         }
         else
         {
-            rval = true;
             test.tprintf("Event '%s' is '%s' on node %i as it should.",
                          event_name.c_str(), status.c_str(), node);
         }
     }
-    return rval;
+    else
+    {
+        test.add_failure("Event '%s'.'%s' not found or query failed.",
+                         event_schema.c_str(), event_name.c_str());
+    }
 }
 
 void set_event_state(TestConnections& test, const string& event_name, const string& new_state)
@@ -203,7 +209,7 @@ void test_main(TestConnections& test)
             if (test.ok())
             {
                 // Old master joined as slave, check that event is disabled.
-                expect_event_status(test, server1_ind, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
+                expect_event_status(test, server1_ind, def_db, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
             }
         }
 
@@ -216,7 +222,7 @@ void test_main(TestConnections& test)
             switchover(test, server1_name);
             if (test.ok())
             {
-                expect_event_status(test, server1_ind, EVENT_NAME, EV_STATE_ENABLED);
+                expect_event_status(test, server1_ind, def_db, EVENT_NAME, EV_STATE_ENABLED);
             }
         }
 
@@ -228,8 +234,8 @@ void test_main(TestConnections& test)
                          "Check that event is still disabled.");
             set_event_state(test, EVENT_NAME, "DISABLE");
             mxs.wait_for_monitor();     // Wait for the monitor to detect the change.
-            expect_event_status(test, 0, EVENT_NAME, EV_STATE_DISABLED);
-            expect_event_status(test, 1, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
+            expect_event_status(test, 0, def_db, EVENT_NAME, EV_STATE_DISABLED);
+            expect_event_status(test, 1, def_db, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
 
             if (test.ok())
             {
@@ -238,7 +244,7 @@ void test_main(TestConnections& test)
                 if (test.ok())
                 {
                     // Event should not have been touched.
-                    expect_event_status(test, server2_ind, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
+                    expect_event_status(test, server2_ind, def_db, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
                 }
 
                 // Switchover back.
@@ -253,7 +259,7 @@ void test_main(TestConnections& test)
             // when altering it.
             test.tprintf("Step 5: Check event handling with non-default charset and collation.");
 
-            expect_event_charset_collation(test, server1_ind, EVENT_NAME, def_charset, def_collation);
+            expect_event_charset_collation(test, server1_ind, def_db, EVENT_NAME, def_charset, def_collation);
             if (test.ok())
             {
                 // Alter event charset to utf8.
@@ -265,21 +271,23 @@ void test_main(TestConnections& test)
                 conn->cmd_f("ALTER EVENT %s ENABLE;", EVENT_NAME);
                 repl.sync_slaves();
 
-                expect_event_status(test, server1_ind, EVENT_NAME, EV_STATE_ENABLED);
-                expect_event_charset_collation(test, server1_ind, EVENT_NAME, new_charset, new_collation);
-                expect_event_status(test, server2_ind, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
-                expect_event_charset_collation(test, server2_ind, EVENT_NAME, new_charset, new_collation);
+                expect_event_status(test, server1_ind, def_db, EVENT_NAME, EV_STATE_ENABLED);
+                expect_event_charset_collation(test, server1_ind, def_db, EVENT_NAME,
+                                               new_charset, new_collation);
+                expect_event_status(test, server2_ind, def_db, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
+                expect_event_charset_collation(test, server2_ind, def_db, EVENT_NAME,
+                                               new_charset, new_collation);
 
                 if (test.ok())
                 {
                     switchover(test, server2_name);
                     if (test.ok())
                     {
-                        expect_event_status(test, server1_ind, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
-                        expect_event_charset_collation(test, server1_ind, EVENT_NAME, new_charset,
+                        expect_event_status(test, server1_ind, def_db, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
+                        expect_event_charset_collation(test, server1_ind, def_db, EVENT_NAME, new_charset,
                                                        new_collation);
-                        expect_event_status(test, server2_ind, EVENT_NAME, EV_STATE_ENABLED);
-                        expect_event_charset_collation(test, server2_ind, EVENT_NAME, new_charset,
+                        expect_event_status(test, server2_ind, def_db, EVENT_NAME, EV_STATE_ENABLED);
+                        expect_event_charset_collation(test, server2_ind, def_db, EVENT_NAME, new_charset,
                                                        new_collation);
                     }
 
@@ -290,18 +298,26 @@ void test_main(TestConnections& test)
         }
 
         delete_event(test);
+
+        if (test.ok())
+        {
+            // MXS-5948 Events with special characters.
+            test_special_chars(test);
+        }
     }
 }
 
-void expect_event_charset_collation(TestConnections& test, int node, const string& event_name,
+void expect_event_charset_collation(TestConnections& test, int node,
+                                    const string& event_schema, const string& event_name,
                                     const string& client_charset, const string& collation_connection)
 {
     auto be = test.repl->backend(node);
     be->ping_or_open_admin_connection();
     auto conn = be->admin_connection();
     string query = mxb::string_printf("select CHARACTER_SET_CLIENT, COLLATION_CONNECTION, DATABASE_COLLATION "
-                                      "from information_schema.EVENTS where EVENT_NAME = '%s';",
-                                      event_name.c_str());
+                                      "from information_schema.EVENTS where "
+                                      "EVENT_SCHEMA = '%s' AND EVENT_NAME = '%s';",
+                                      event_schema.c_str(), event_name.c_str());
     auto res = conn->query(query);
     if (res && res->next_row())
     {
@@ -320,6 +336,82 @@ void expect_event_charset_collation(TestConnections& test, int node, const strin
     {
         test.add_failure("Query '%s' failed.", query.c_str());
     }
+}
+
+void test_special_chars(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+
+    const char user[] = "5p(|4|_";
+    const char pw[] = "pass";
+    const char db[] = "test#!^_-db";
+    const char table[] = "table=)(/;:_-";
+    const char event[] = "event-_+&/+";
+
+    auto servers = mxs.get_servers();
+    servers.check_servers_status(mxt::ServersInfo::default_repl_states());
+
+    int server1_ind = 0;
+    int server2_ind = 1;
+    auto server1_name = servers.get(server1_ind).name;
+    auto server2_name = servers.get(server2_ind).name;
+
+    test.tprintf("Test events with failover/switchover with special characters in user, database, table and "
+                 "event name.");
+    auto rwconn = mxs.open_rwsplit_connection2();
+    rwconn->cmd_f("create or replace database `%s`;", db);
+    rwconn->cmd_f("create table `%s`.`%s` (c1 int);", db, table);
+
+    rwconn->cmd_f("create or replace user '%s'@'%%' identified by '%s';", user, pw);
+    rwconn->cmd_f("grant select, insert, update, event on `%s`.* to `%s`;", db, user);
+    rwconn = nullptr;
+    repl.sync_slaves();
+
+    if (test.ok())
+    {
+        test.tprintf("User %s created, generating event as that user.", user);
+        auto testconn = mxs.try_open_rwsplit_connection(user, pw, db);
+        testconn->cmd_f("create event `%s`.`%s` on schedule every 100 second do "
+                        "update `%s`.`%s` set c1 = c1 + 1;", db, event, db, table);
+        testconn = nullptr;
+        repl.sync_slaves();
+
+        expect_event_status(test, 0, db, event, EV_STATE_ENABLED);
+        expect_event_status(test, 1, db, event, EV_STATE_SLAVE_DISABLED);
+
+        test.tprintf("Switchover...");
+        switchover(test, server2_name);
+        mxs.wait_for_monitor();
+        mxs.check_print_servers_status({slave, master, slave, slave});
+        expect_event_status(test, 0, db, event, EV_STATE_SLAVE_DISABLED);
+        int master_ind = 1;
+        expect_event_status(test, master_ind, db, event, EV_STATE_ENABLED);
+
+        if (test.ok())
+        {
+            test.tprintf("Stop master and wait for failover. Check that another server is promoted and "
+                         "event is enabled there.");
+            repl.stop_node(master_ind);
+            mxs.wait_for_monitor(3);
+            mxs.check_print_servers_status({master, mxt::ServerInfo::DOWN, slave, slave});
+            expect_event_status(test, 0, db, event, EV_STATE_ENABLED);
+
+            repl.start_node(master_ind);
+            mxs.wait_for_monitor(3);
+            mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+            expect_event_status(test, master_ind, db, event, EV_STATE_SLAVE_DISABLED);
+        }
+
+        testconn = mxs.try_open_rwsplit_connection(user, pw, db);
+        testconn->cmd_f("drop event `%s`.`%s`;", db, event);
+    }
+
+    rwconn = mxs.open_rwsplit_connection2();
+    rwconn->cmd_f("drop user '%s';", user);
+    rwconn->cmd_f("drop database `%s`;", db);
 }
 }
 

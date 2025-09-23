@@ -93,7 +93,7 @@ add_test_executable_ex(NAME mdbmon_external_master SOURCE mdbmon_external_master
         CONFIG mdbmon_external_master.cnf VMS repl_backend LABELS mysqlmon)
 
 # Check failover, switchover and rejoin with scheduled server events
-# Also, MXS-3158
+# Also, MXS-3158, MXS-5948
 add_test_executable_ex(NAME mdbmon_fail_switch_events SOURCE mdbmon_fail_switch_events.cc
         CONFIG mdbmon_rejoin_good.cnf VMS repl_backend LABELS mysqlmon)
 
