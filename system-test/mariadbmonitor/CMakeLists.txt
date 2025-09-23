@@ -5,8 +5,8 @@ install(TARGETS mariadbmon_utils DESTINATION system-test/mariadbmonitor)
 add_dependencies(mariadbmon_utils maxtest)
 
 # Two-server multimaster topology
-add_test_executable_ex(NAME mariadbmon_multimaster_simple SOURCE mariadbmon_multimaster_simple.cc
-        CONFIG mariadbmon_multimaster_simple.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_multimaster_simple SOURCE mdbmon_multimaster_simple.cc
+        CONFIG mdbmon_multimaster_simple.cnf VMS repl_backend LABELS mysqlmon)
 
 # MySQL Monitor with Multi-master configurations
 add_test_executable_ex(NAME mdbmon_multimaster SOURCE mdbmon_multimaster.cc
@@ -29,12 +29,12 @@ add_test_executable_ex(NAME mdbmon_failover_manual SOURCE mdbmon_failover_manual
         CONFIG mdbmon_failover_manual.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MySQL Monitor manual failover with many valid candidates
-add_test_executable_ex(NAME mysqlmon_failover_manual2_4 SOURCE mysqlmon_failover_manual2.cc
-        CONFIG mysqlmon_failover_manual2_4.cnf VMS repl_backend LABELS mysqlmon)
-add_test_executable_ex(NAME mysqlmon_failover_manual2_3 SOURCE mysqlmon_failover_manual2.cc
-        CONFIG mysqlmon_failover_manual2_3.cnf VMS repl_backend LABELS mysqlmon)
-add_test_executable_ex(NAME mysqlmon_failover_manual2_2 SOURCE mysqlmon_failover_manual2.cc
-        CONFIG mysqlmon_failover_manual2_2.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_failover_manual2_4 SOURCE mdbmon_failover_manual2.cc
+        CONFIG mdbmon_failover_manual2_4.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_failover_manual2_3 SOURCE mdbmon_failover_manual2.cc
+        CONFIG mdbmon_failover_manual2_3.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_failover_manual2_2 SOURCE mdbmon_failover_manual2.cc
+        CONFIG mdbmon_failover_manual2_2.cnf VMS repl_backend LABELS mysqlmon)
 
 # MariaDB Monitor switchover
 add_test_executable_ex(NAME mdbmon_switchover SOURCE mdbmon_switchover.cc
@@ -118,11 +118,11 @@ add_test_executable_ex(NAME mdbmon_verify_master_failure SOURCE mdbmon_verify_ma
 add_test_executable_ex(NAME mdbmon_enforce_simple SOURCE mdbmon_enforce_simple.cc
         CONFIG mdbmon_enforce_simple.cnf VMS repl_backend LABELS mysqlmon)
 
-add_test_executable_ex(NAME mariadbmon_enforce_writable_master SOURCE mariadbmon_enforce_writable_master.cc
-        CONFIG mariadbmon_enforce_writable_master.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_enforce_writable_master SOURCE mdbmon_enforce_writable_master.cc
+        CONFIG mdbmon_enforce_writable_master.cnf VMS repl_backend LABELS mysqlmon)
 
 # MariaDB-Monitor multimaster failover/switchover
-add_test_executable_ex(NAME mbdbmon_fail_switch_multi SOURCE mdbmon_fail_switch_multi.cc
+add_test_executable_ex(NAME mdbmon_fail_switch_multi SOURCE mdbmon_fail_switch_multi.cc
         CONFIG mdbmon_fail_switch_multi.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MXS-3018 MariaDB-Monitor master_conditions and slave_conditions
@@ -131,16 +131,16 @@ add_test_executable_ex(NAME mdbmon_master_slave_conditions SOURCE mdbmon_master_
         CONFIG mdbmon_master_slave_conditions.cnf VMS repl_backend LABELS mysqlmon)
 
 # promotion_sql_file and demotion_sql_file
-add_test_executable_ex(NAME mariadbmon_prom_dem_files SOURCE mariadbmon_prom_dem_files.cc
-        CONFIG mariadbmon_prom_dem_files.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_prom_dem_files SOURCE mdbmon_prom_dem_files.cc
+        CONFIG mdbmon_prom_dem_files.cnf VMS repl_backend LABELS mysqlmon)
 
-add_test_executable_ex(NAME mariadbmon_switchover_kill_super SOURCE mariadbmon_switchover_kill_super.cc
-        CONFIG mariadbmon_switchover_kill_super.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_switchover_kill_super SOURCE mdbmon_switchover_kill_super.cc
+        CONFIG mdbmon_switchover_kill_super.cnf VMS repl_backend LABELS mysqlmon)
 
 # Slave with broken replication does not cause new master selection or cannot be selected as master.
 # MXS-4798, MXS-4841
-add_test_executable_ex(NAME mariadbmon_broken_repl_master SOURCE mariadbmon_broken_repl_master.cc
-        CONFIG mariadbmon_broken_repl_master.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_broken_repl_master SOURCE mdbmon_broken_repl_master.cc
+        CONFIG mdbmon_broken_repl_master.cnf VMS repl_backend LABELS mysqlmon)
 
 # Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
 # to move test exec to a separate MV. Also MXS-4902.
