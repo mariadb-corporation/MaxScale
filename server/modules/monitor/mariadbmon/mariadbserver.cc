@@ -1343,7 +1343,11 @@ MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_n
 {
     EventStatusMapper mapper = [&event_names](const EventInfo& event) {
         string rval;
-        if (event_names.count(event.name) > 0
+        // Elements in event_names are formatted as <schema>.<name>.
+        string search_name = event.schema;
+        search_name.append(".").append(event.name);
+
+        if (event_names.count(search_name) > 0
             && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
         {
             rval = "ENABLE";
@@ -1494,7 +1498,8 @@ bool MariaDBServer::events_foreach(EventManipulator& func, mxb::Json& error_out)
     while (event_info->next_row())
     {
         EventInfo event;
-        event.name = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
+        event.schema = event_info->get_string(db_name_ind);
+        event.name = event_info->get_string(event_name_ind);
         event.definer = event_info->get_string(event_definer_ind);
         event.status = event_info->get_string(event_status_ind);
         event.charset = event_info->get_string(charset_ind);
@@ -1517,23 +1522,23 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
     bool rval = false;
     string error_msg;
     // An ALTER EVENT by default changes the definer (owner) of the event to the monitor user.
-    // This causes problems if the monitor user does not have privileges to run
-    // the event contents. Prevent this by setting definer explicitly.
-    // The definer may be of the form user@host. If host includes %, then it must be quoted.
-    // For simplicity, quote the host always.
+    // This causes problems if the monitor user does not have privileges to run the event contents.
+    // Prevent this by setting definer explicitly. The definer may be of the form <user>@<host>.
+    // Also, quote the definer, as it may contain special characters.
     string quoted_definer;
+
     auto loc_at = event.definer.find('@');
     if (loc_at != string::npos)
     {
-        auto host_begin = loc_at + 1;
-        quoted_definer = event.definer.substr(0, loc_at + 1)
-            +   // host_begin may be the null-char if @ was the last char
-            "'" + event.definer.substr(host_begin, string::npos) + "'";
+        string user = event.definer.substr(0, loc_at);
+        // The following should still work even if @ was the last char.
+        string host = event.definer.substr(loc_at + 1);
+        quoted_definer.append("'").append(user).append("'@'").append(host).push_back('\'');
     }
     else
     {
-        // Just the username
-        quoted_definer = event.definer;
+        // Just the username.
+        quoted_definer.append("'").append(event.definer).push_back('\'');
     }
 
     // Change character set and collation to the values in the event description. Otherwise, the event
@@ -1542,18 +1547,20 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
                                      event.collation.c_str());
     if (execute_cmd(set_names, &error_msg))
     {
+        // Event schema and name should be delimited with backticks to work with special characters.
+        string event_name_ticked = mxb::string_printf("`%s`.`%s`", event.schema.c_str(), event.name.c_str());
         string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s %s;", quoted_definer.c_str(),
-                                                 event.name.c_str(), target_status.c_str());
+                                                 event_name_ticked.c_str(), target_status.c_str());
         if (execute_cmd(alter_event_query, &error_msg))
         {
             rval = true;
             const char FMT[] = "Event '%s' on server '%s' set to '%s'.";
-            MXB_NOTICE(FMT, event.name.c_str(), name(), target_status.c_str());
+            MXB_NOTICE(FMT, event_name_ticked.c_str(), name(), target_status.c_str());
         }
         else
         {
             const char FMT[] = "Could not alter event '%s' on server '%s': %s";
-            PRINT_JSON_ERROR(error_out, FMT, event.name.c_str(), name(), error_msg.c_str());
+            PRINT_JSON_ERROR(error_out, FMT, event_name_ticked.c_str(), name(), error_msg.c_str());
         }
     }
     else
@@ -2366,8 +2373,9 @@ bool MariaDBServer::update_enabled_events()
 
     while (event_info->next_row())
     {
-        string full_name = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
-        full_names.insert(full_name);   // Ignore duplicates, they shouldn't exists.
+        string full_name = event_info->get_string(db_name_ind);
+        full_name.append(".").append(event_info->get_string(event_name_ind));
+        full_names.insert(std::move(full_name));    // Ignore duplicates, they shouldn't exist.
     }
 
     m_enabled_events = std::move(full_names);
