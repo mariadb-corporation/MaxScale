@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-const { maxctrl, _, warning, parseValue, doRequest, getJson, OK, helpMsg } = require("./common.js");
+const { maxctrl, _, warning, error, parseValue, doRequest, getJson, OK, helpMsg } = require("./common.js");
 const fs = require("fs");
 const os = require("os");
 const tar = require("tar-stream");
