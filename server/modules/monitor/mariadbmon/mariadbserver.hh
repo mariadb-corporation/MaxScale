@@ -95,7 +95,8 @@ public:
     class EventInfo
     {
     public:
-        std::string name;       /**< Event name in <database.name> form */
+        std::string schema;     /**< Event database */
+        std::string name;       /**< Event name */
         std::string definer;    /**< Definer of the event */
         std::string status;     /**< Status of the event */
         std::string charset;    /**< character_set_client-field */
@@ -202,7 +203,7 @@ public:
      * 'update_replication_settings' before use. */
     ReplicationSettings m_rpl_settings;
 
-    EventNameSet m_enabled_events;          /* Enabled scheduled events */
+    EventNameSet m_enabled_events;          /* Enabled scheduled events, in <schema>.<name> format. */
     bool         m_cmd_grant_fail {false};  /* Command failed due to insufficient privileges. */
 
     /**
