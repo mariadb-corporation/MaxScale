@@ -183,6 +183,16 @@ fi
 if [[ ${packager_type} == "zypper" ]]
 then
     install_libdir=/usr/lib64
+
+    # TODO: This is needed to make gcc14 available.
+    # TODO: Will need tuning when something else than Sles15 SP5 is used for building.
+    if is_arm
+    then
+       SUSEConnect -p sle-module-development-tools/15.5/aarch64
+    else
+       SUSEConnect -p sle-module-development-tools/15.5/x86_64
+    fi
+
     # We need zypper here
     zypper_cmd="zypper -t -n"
     sudo $zypper_cmd refresh
@@ -208,11 +218,13 @@ then
     # Install a newer compiler
     for version in 14 13 12 11 10 9
     do
+        echo Checking whether gcc${version} exists.
         sudo $zypper_cmd install gcc${version} gcc${version}-c++
         if [ $? == 0 ]
         then
-            echo "export CC=/usr/bin/gcc-${version}" >> ~/.bashrc
-            echo "export CXX=/usr/bin/g++-${version}" >> ~/.bashrc
+            echo gcc${version} exists, using.
+            echo "export CC=/usr/bin/gcc-${version}" > $scriptdir/build_env.sh
+            echo "export CXX=/usr/bin/g++-${version}" >> $scriptdir/build_env.sh
             break
         fi
     done
