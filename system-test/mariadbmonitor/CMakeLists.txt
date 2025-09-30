@@ -41,9 +41,8 @@ add_test_executable_ex(NAME mdbmon_switchover SOURCE mdbmon_switchover.cc
         CONFIG mdbmon_switchover.cnf VMS repl_backend LABELS mysqlmon switchover)
 
 # MXS-4743 switchover-force works even with high replication lag
-add_test_executable_ex(NAME mariadbmon_switchover_force SOURCE mariadbmon_switchover_force.cc
-        CONFIG mariadbmon_switchover_force.cnf
-        VMS repl_backend LABELS mysqlmon switchover)
+add_test_executable_ex(NAME mdbmon_switchover_force SOURCE mdbmon_switchover_force.cc
+        CONFIG mdbmon_switchover_force.cnf VMS repl_backend LABELS mysqlmon switchover)
 
 # MySQL Monitor switchover with bad master
 add_test_executable_ex(NAME mdbmon_switchover_bad_master SOURCE mdbmon_switchover_bad_master.cc
@@ -140,8 +139,8 @@ add_test_executable_ex(NAME mdbmon_master_slave_conditions SOURCE mdbmon_master_
 
 # MXS-5366 Rebuild with special chars in username/pw.
 # MXS-5717 Password encryption with monitor operations
-add_test_executable_ex(NAME mariadbmon_rebuild_server SOURCE mariadbmon_rebuild_server.cc
-        CONFIG mariadbmon_rebuild_server.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
+add_test_executable_ex(NAME mdbmon_rebuild_server SOURCE mdbmon_rebuild_server.cc
+        CONFIG mdbmon_rebuild_server.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MXS-5366 Rebuild and backup creation with data-at-rest encryption.
 add_test_executable_ex(NAME mdbmon_enc_backup SOURCE mdbmon_enc_backup.cc
@@ -153,8 +152,8 @@ add_test_executable_ex(NAME mdbmon_prom_dem_files SOURCE mdbmon_prom_dem_files.c
 add_test_executable_ex(NAME mdbmon_switchover_kill_super SOURCE mdbmon_switchover_kill_super.cc
         CONFIG mdbmon_switchover_kill_super.cnf VMS repl_backend LABELS mysqlmon)
 
-add_test_executable_ex(NAME mariadbmon_repl_custom_opts SOURCE mariadbmon_repl_custom_opts.cc
-        CONFIG mariadbmon_repl_custom_opts.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_repl_custom_opts SOURCE mdbmon_repl_custom_opts.cc
+        CONFIG mdbmon_repl_custom_opts.cnf VMS repl_backend LABELS mysqlmon)
 
 # Slave with broken replication does not cause new master selection or cannot be selected as master.
 # MXS-4798, MXS-4841
@@ -162,8 +161,8 @@ add_test_executable_ex(NAME mdbmon_broken_repl_master SOURCE mdbmon_broken_repl_
         CONFIG mdbmon_broken_repl_master.cnf VMS repl_backend LABELS mysqlmon)
 
 # MXS-4705 Separate private address for servers
-add_test_executable_ex(NAME mariadbmon_priv_address SOURCE mariadbmon_priv_address.cc
-        CONFIG mariadbmon_priv_address.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_priv_address SOURCE mdbmon_priv_address.cc
+        CONFIG mdbmon_priv_address.cnf VMS repl_backend LABELS mysqlmon)
 
 # Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
 # to move test exec to a separate MV. Also MXS-4902.
@@ -177,5 +176,5 @@ add_test_executable_ex(NAME mdbmon_cooperative_monitoring_2srv SOURCE mdbmon_coo
         CONFIG mdbmon_cooperative_monitoring_2srv.cnf VMS repl_backend second_maxscale
         LABELS mysqlmon BREAKS_REPL LIBS mariadbmon_utils)
 
-add_test_executable_ex(NAME mariadbmon_servers_no_promotion SOURCE mariadbmon_servers_no_promotion.cc
-        CONFIG mariadbmon_servers_no_promotion.cnf VMS repl_backend)
+add_test_executable_ex(NAME mdbmon_servers_no_promotion SOURCE mdbmon_servers_no_promotion.cc
+        CONFIG mdbmon_servers_no_promotion.cnf VMS repl_backend)

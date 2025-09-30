@@ -33,6 +33,20 @@ public:
 
     void run() override
     {
+        // Set the address of "pinloki"-server to the IP of MaxScale, so that the address used by
+        // MariaDB-Monitor matches the address used by server2. Reconfigure the monitor so that it
+        // updates its internal bookkeeping.
+        test.maxscale->maxctrlf("alter server pinloki address=%s", test.maxscale->ip4());
+        test.maxscale->maxctrl("unlink monitor mariadb-cluster pinloki");
+        test.maxscale->maxctrl("link monitor mariadb-cluster pinloki");
+        test.maxscale->wait_for_monitor(1);
+
+        auto servers = test.maxscale->get_servers();
+        servers.print();
+        auto slave_st = mxt::ServerInfo::slave_st;
+        servers.check_servers_status({mxt::ServerInfo::master_st, slave_st, slave_st, slave_st,
+                                      mxt::ServerInfo::BLR | mxt::ServerInfo::RUNNING});
+
         // test.t1 should contain one row
         auto result = slave.field("SELECT COUNT(*) FROM test.t1");
         test.expect(result == "1", "`test`.`t1` should have one row.");
