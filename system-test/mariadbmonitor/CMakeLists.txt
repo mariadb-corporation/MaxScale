@@ -134,8 +134,8 @@ add_test_executable_ex(NAME mdbmon_master_slave_conditions SOURCE mdbmon_master_
 
 # MXS-5366 Rebuild with special chars in username/pw.
 # MXS-5717 Password encryption with monitor operations
-add_test_executable_ex(NAME mariadbmon_rebuild_server SOURCE mariadbmon_rebuild_server.cc
-        CONFIG mariadbmon_rebuild_server.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
+add_test_executable_ex(NAME mdbmon_rebuild_server SOURCE mdbmon_rebuild_server.cc
+        CONFIG mdbmon_rebuild_server.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MXS-5366 Rebuild and backup creation with data-at-rest encryption.
 add_test_executable_ex(NAME mdbmon_enc_backup SOURCE mdbmon_enc_backup.cc
@@ -147,8 +147,8 @@ add_test_executable_ex(NAME mdbmon_prom_dem_files SOURCE mdbmon_prom_dem_files.c
 add_test_executable_ex(NAME mdbmon_switchover_kill_super SOURCE mdbmon_switchover_kill_super.cc
         CONFIG mdbmon_switchover_kill_super.cnf VMS repl_backend LABELS mysqlmon)
 
-add_test_executable_ex(NAME mariadbmon_repl_custom_opts SOURCE mariadbmon_repl_custom_opts.cc
-        CONFIG mariadbmon_repl_custom_opts.cnf VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mdbmon_repl_custom_opts SOURCE mdbmon_repl_custom_opts.cc
+        CONFIG mdbmon_repl_custom_opts.cnf VMS repl_backend LABELS mysqlmon)
 
 # Slave with broken replication does not cause new master selection or cannot be selected as master.
 # MXS-4798, MXS-4841
