@@ -102,6 +102,14 @@ then
     # YUM!
     sudo yum update -d1 -y
     unset enable_power_tools
+    rhel_version=$(cat /etc/redhat-release | grep -oP 'release \K[0-9]+' | head -1)
+    if [[ ${rhel_version} -ge 10 ]]
+    then
+        echo "Running on RHEL 10 or later"
+        sudo dnf config-manager --set-enabled codeready-builder-for-rhel-10-rhui-rpms
+        dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+    fi
+
     yum repolist all | grep "^PowerTools"
     if [ $? == 0 ]
     then
