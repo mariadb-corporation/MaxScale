@@ -4,6 +4,16 @@
 
 set -x
 
+scriptdir=$(dirname $(realpath $0))
+
+if [ -f $scriptdir/build_env.sh ]
+then
+    . $scriptdir/build_env.sh
+else
+    echo "$scriptdir/build_env.sh not found. Using default compiler."
+fi
+
+
 cd ./MaxScale || exit 1
 git submodule update --init
 cd ..
