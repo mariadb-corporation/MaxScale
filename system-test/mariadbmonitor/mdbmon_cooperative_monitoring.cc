@@ -194,6 +194,95 @@ void test_main(TestConnections& test)
 
     if (test.ok())
     {
+        // MXS-5955: Master + primary MaxScale shut down during cooperative monitoring.
+        ensure_primary_monitor(test, *primary_mon1);
+
+        test.tprintf("Switchover to return server1A as master.");
+        string cmd = mxb::string_printf("call command mariadbmon switchover %s server1A",
+                                        primary_mon1->name.c_str());
+        auto res = primary_mon1->maxscale->maxctrl(cmd);
+        test.tprintf("Command '%s' returned '%s'.", cmd.c_str(), res.output.c_str());
+        test.expect(res.rc == 0, "Command failed on primary monitor");
+        mxs1.wait_for_monitor();
+        mxs2.wait_for_monitor();
+        mxs1.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+        mxs2.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+
+        test.tprintf("Shut down monitors 2A and 2B.");
+        for (int i : {1, 3})
+        {
+            monitors[i].maxscale->maxctrlf("stop monitor %s", monitors[i].name.c_str());
+        }
+
+        auto* next_expected_primary_mon = &monitors[2];
+        auto* next_expected_mxs = next_expected_primary_mon->maxscale;
+        test.tprintf("Increase failcount on %s to delay failover.", next_expected_primary_mon->name.c_str());
+        next_expected_mxs->alter_monitor(next_expected_primary_mon->name, "failcount", "5");
+
+        mxs1.wait_for_monitor(1);
+        mxs2.wait_for_monitor(1);
+
+        test.expect(cooperative_monitoring::monitor_is_primary(test, *primary_mon1),
+                    "%s is not the primary monitor.", primary_mon1->name.c_str());
+
+        if (test.ok())
+        {
+            test.tprintf("Stop master and primary MaxScale. The other MaxScale should claim primary status.");
+            auto* stopped_be = test.repl->backend(0);
+            stopped_be->stop_database();
+            mxs1.stop();
+
+            bool primary_monitor_ok = false;
+            for (int i = 0; i < 5; i++)
+            {
+                if (cooperative_monitoring::monitor_is_primary(test, *next_expected_primary_mon))
+                {
+                    primary_monitor_ok = true;
+                    break;
+                }
+                else
+                {
+                    sleep(1);
+                }
+            }
+
+            test.expect(primary_monitor_ok, "%s did not claim the locks.",
+                        next_expected_primary_mon->name.c_str());
+            auto slave_st = mxt::ServerInfo::slave_st;
+            auto master_down_st = {mxt::ServerInfo::DOWN, slave_st, slave_st, slave_st};
+            auto new_master_st = {mxt::ServerInfo::DOWN, mxt::ServerInfo::master_st, slave_st, slave_st};
+
+            mxs2.check_print_servers_status(master_down_st);
+
+            test.tprintf("Restart the previous primary MaxScale.");
+            mxs1.start_and_check_started();
+            mxs1.wait_for_monitor();
+            mxs1.maxctrlf("stop monitor %s", monitors[1].name.c_str());
+            mxs1.check_print_servers_status(master_down_st);
+
+            test.tprintf("Wait for failover...");
+            mxs2.wait_for_monitor(failover_mon_ticks);
+            mxs1.wait_for_monitor(1);
+
+            mxs1.check_print_servers_status(new_master_st);
+            mxs2.check_print_servers_status(new_master_st);
+
+            test.tprintf("Restart %s, it should rejoin.", stopped_be->vm_node().name());
+            stopped_be->start_database();
+            next_expected_mxs->wait_for_monitor(2);
+            next_expected_mxs->check_print_servers_status(
+                {slave_st, mxt::ServerInfo::master_st, slave_st, slave_st});
+
+            test.tprintf("Switchover back.");
+            next_expected_mxs->maxctrlf("call command mariadbmon switchover %s",
+                                        next_expected_primary_mon->name.c_str());
+            next_expected_mxs->wait_for_monitor();
+            next_expected_mxs->check_print_servers_status(mxt::ServersInfo::default_repl_states());
+        }
+    }
+
+    if (test.ok())
+    {
         test.tprintf("Test successful!");
     }
 }
