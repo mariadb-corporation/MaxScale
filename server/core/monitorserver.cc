@@ -137,27 +137,46 @@ mxb::Json MonitorServer::journal_data() const
 
 void MonitorServer::read_journal_data(const mxb::Json& data)
 {
-    uint64_t status = data.get_int(journal_fields::FIELD_STATUS);
+    uint64_t old_status = data.get_int(journal_fields::FIELD_STATUS);
+
+    // Need to be a bit careful when reading server status flags from journal. The journaled status flags
+    // can be obsolete so roles such as MASTER or SLAVE could be wrong. Although a single monitor tick will
+    // fix any wrong roles, it could be too late if a client connects right away and performs a write. On
+    // the other hand, the setting-like flags MAINT and DRAINING must be read and put to effect immediately,
+    // as these must persist through restart and should be visible as fast as possible after startup. All
+    // other flags can wait until the monitor ticks.
+    uint64_t setting_flags = (old_status & (SERVER_MAINT | SERVER_DRAINING));
+    server->set_status(setting_flags);
 
     // Ignoring the AUTH_ERROR status causes the authentication error message to be logged every time MaxScale
     // is restarted. This should make it easier to spot authentication related problems during startup.
-    status &= ~SERVER_AUTH_ERROR;
+    old_status &= ~SERVER_AUTH_ERROR;
 
     // Also clear out the DNS lookup flag, the information stored in the file might not be in sync with the
     // configuration and the need for a DNS lookup might not be there.
-    status &= ~SERVER_NEED_DNS;
+    old_status &= ~SERVER_NEED_DNS;
 
-    m_prev_status = status;
-    server->set_status(status);
+    m_status_from_journal = old_status;
 }
 
 void MonitorServer::stash_current_status()
 {
     // Should be run at the start of a monitor tick to both prepare next pending status and save the previous
     // status.
-    auto status = server->status();
-    m_prev_status = status;
-    m_pending_status = status;
+    uint64_t eff_prev_status = 0;
+    if (m_status_from_journal != 0)
+    {
+        // Use the journaled status flags as starting points for the first tick. This avoids events like
+        // new_master and new_slave from firing.
+        eff_prev_status = m_status_from_journal;
+        m_status_from_journal = 0;
+    }
+    else
+    {
+        eff_prev_status = server->status();
+    }
+    m_prev_status = eff_prev_status;
+    m_pending_status = eff_prev_status;
 }
 
 void MonitorServer::set_pending_status(uint64_t bits)

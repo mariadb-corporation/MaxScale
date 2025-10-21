@@ -287,8 +287,9 @@ public:
     time_t              triggered_at {time(nullptr)};   /**< Time when the last event was triggered */
 
 protected:
-    uint64_t m_prev_status = -1;    /**< Status at start of current monitor loop */
-    uint64_t m_pending_status = 0;  /**< Status during current monitor loop */
+    uint64_t m_status_from_journal = 0; /**< Status read from monitor journal */
+    uint64_t m_prev_status = -1;        /**< Status at start of current monitor loop */
+    uint64_t m_pending_status = 0;      /**< Status during current monitor loop */
 
     const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
 
