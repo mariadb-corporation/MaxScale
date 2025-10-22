@@ -99,5 +99,34 @@ void test_main(TestConnections& test)
         mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor server1");
         mxs.wait_for_monitor();
         mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+
+        if (test.ok())
+        {
+            // MXS-1262: Test that Maintenance and draining status persists through MaxScale restart.
+            const char set_server[] = "set server server%i %s";
+            const char clear_server[] = "clear server server%i %s";
+            const char maint[] = "maint";
+            const char drain[] = "drain";
+            auto maint_st = mxt::ServerInfo::MAINT | mxt::ServerInfo::RUNNING;
+            auto drain_st = mxt::ServerInfo::SLAVE | mxt::ServerInfo::DRAINED | mxt::ServerInfo::RUNNING;
+
+            mxs.maxctrlf(set_server, 2, maint);
+            mxs.maxctrlf(set_server, 3, drain);
+            mxs.maxctrlf(set_server, 4, maint);
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status({master, maint_st, drain_st, maint_st});
+
+            test.tprintf("Restart MaxScale.");
+            mxs.stop_and_check_stopped();
+            mxs.start_and_check_started();
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status({master, maint_st, drain_st, maint_st});
+
+            mxs.maxctrlf(clear_server, 2, maint);
+            mxs.maxctrlf(clear_server, 3, drain);
+            mxs.maxctrlf(clear_server, 4, maint);
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+        }
     }
 }
