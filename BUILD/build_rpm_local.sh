@@ -16,3 +16,4 @@ sudo chmod a+x /usr/bin/strip
 mkdir -p MaxScale/_build
 cp _build/*.rpm -t MaxScale/_build/
 cp _build/*.gz -t MaxScale/_build/
+cp _build/*.sha256 -t MaxScale/_build/

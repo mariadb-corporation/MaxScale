@@ -12,9 +12,6 @@ FetchContent_Declare(
   GIT_REPOSITORY ${LIBMARIAS3_REPO}
   GIT_TAG "master"
   SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/libmarias3
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ""
-  INSTALL_COMMAND ""
   PATCH_COMMAND ""
   # We need a config.h in the source directory. This is usually (?) created by the autotools invocation and
   # previously it got included from _somewhere_. The file is not really needed and an empty files seems to
