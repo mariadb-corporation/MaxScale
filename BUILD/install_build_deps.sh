@@ -6,6 +6,9 @@
 tmpdir=$(mktemp -d)
 scriptdir=$(dirname $(realpath $0))
 
+cmake_version=$1
+nodejs_version=$2
+
 cd $tmpdir
 
 distro_id=`cat /etc/*-release | grep "^ID_LIKE=" | sed "s/ID=//"`
@@ -248,7 +251,7 @@ verlt() {
 }
 
 # Install a recent cmake in case the package manager installed an old version.
-$scriptdir/install_cmake.sh
+$scriptdir/install_cmake.sh $cmake_version
 
 # TCL
 system_tcl_version=$(tclsh <<< 'puts [info patchlevel]')
@@ -273,6 +276,6 @@ fi
 
 
 # Install NPM for MaxCtrl and the GUI
-$scriptdir/install_npm.sh
+$scriptdir/install_npm.sh $nodejs_version
 
 sudo rm -rf $tmpdir
