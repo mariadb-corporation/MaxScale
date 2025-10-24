@@ -116,6 +116,11 @@ cfg::ParamSeconds s_switchover_timeout(
     "Timeout for switchover",
     90s, cfg::Param::AT_RUNTIME);
 
+cfg::ParamBool s_check_repl_on_stop_slave_to(
+    &s_spec, "check_repl_on_stop_slave_timeout",
+    "If a \"STOP SLAVE\"-command times out, confirm replication status with \"SHOW SLAVE STATUS\".",
+    false, cfg::Param::AT_RUNTIME);
+
 cfg::ParamString s_replication_user(
     &s_spec, CN_REPLICATION_USER,
     "User used for replication",
@@ -472,6 +477,7 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::shared, &Shared::replication_custom_opts, &s_replication_custom_opts);
     add_native(&Settings::shared, &Shared::replication_user, &s_replication_user);
     add_native(&Settings::shared, &Shared::replication_password, &s_replication_password);
+    add_native(&Settings::shared, &Shared::check_repl_on_stop_slave_timeout, &s_check_repl_on_stop_slave_to);
     add_native(&Settings::cs_admin_port, &s_cs_admin_port);
     add_native(&Settings::cs_admin_base_path, &s_cs_admin_base_path);
     add_native(&Settings::cs_admin_api_key, &s_cs_admin_api_key);
