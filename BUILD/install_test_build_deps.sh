@@ -2,8 +2,9 @@
 
 scriptdir=$(dirname $(realpath $0))
 
-# Install all build dependences
-${scriptdir}/install_build_deps.sh
+# Install all build dependences. The CMake version and Nodejs major version are passed as arguments
+# The tests need a very new CMake in order to produce JUnit XML output.
+${scriptdir}/install_build_deps.sh "3.25.1" 20
 
 function install_mariadb_repo() {
     # A few system tests need mariadb-test which is not available in all OS repositories
@@ -39,9 +40,3 @@ else
     cat /etc/os-release
     exit 1
 fi
-
-# The tests need a very new CMake in order to produce JUnit XML output. This
-# ends up installing CMake twice which isn't nice. The install_build_deps.sh
-# script could be modified to take the CMake version as an argument which could
-# then be passed down to install_cmake.sh.
-${scriptdir}/install_cmake.sh "3.25.1"
