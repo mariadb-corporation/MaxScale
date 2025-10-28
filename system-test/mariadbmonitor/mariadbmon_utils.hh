@@ -26,6 +26,11 @@ void cleanup_log_bin_failover_test(TestConnections& test);
 
 void delete_secrets_file(TestConnections& test);
 
+void        create_test_user(TestConnections& test);
+void        drop_test_user(TestConnections& test);
+const char* test_user_un();
+const char* test_user_pw();
+
 namespace testclient
 {
 
@@ -127,9 +132,6 @@ struct BaseSettings
 
 void run_failover_stress_test(TestConnections& test, const BaseSettings& base_sett,
                               const testclient::Settings& client_sett);
-
-void check_semisync_off(TestConnections& test);
-void check_semisync_status(TestConnections& test, int node, bool master, bool slave, int expected_clients);
 }
 
 namespace cooperative_monitoring
@@ -161,4 +163,12 @@ void delete_ssh_keyfile(TestConnections& test);
 
 void stop_firewall(TestConnections& test, int ind);
 void start_firewall(TestConnections& test, int ind);
+}
+
+namespace semisync
+{
+void check_semisync_off(TestConnections& test);
+void check_semisync_status(TestConnections& test, int node, bool master, bool slave, int expected_clients);
+void setup_semisync_replication(TestConnections& test);
+void restore_normal_replication(TestConnections& test);
 }

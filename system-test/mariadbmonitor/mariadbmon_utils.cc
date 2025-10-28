@@ -34,6 +34,9 @@ const char unexpected_val_fmt[] = "Client %i got wrong answer. Row %i had value 
 const char row_not_found_fmt[] = "Table %s does not contain id %i when it should.";
 
 const string keypath = "/tmp/sshkey.pem";
+
+const char test_user[] = "testuser";
+const char test_pass[] = "testpass";
 }
 
 /**
@@ -175,6 +178,29 @@ void cleanup_log_bin_failover_test(TestConnections& test)
 void delete_secrets_file(TestConnections& test)
 {
     test.maxscale->vm_node().delete_from_node("/var/lib/maxscale/.secrets");
+}
+
+void create_test_user(TestConnections& test)
+{
+    auto admin_conn = test.maxscale->open_rwsplit_connection2();
+    admin_conn->cmd_f("create or replace user '%s' identified by '%s';", test_user, test_pass);
+    admin_conn->cmd_f("grant select, update on test.* to %s;", test_user);
+}
+
+void drop_test_user(TestConnections& test)
+{
+    auto admin_conn = test.maxscale->open_rwsplit_connection2();
+    admin_conn->cmd_f("drop user '%s';", test_user);
+}
+
+const char* test_user_un()
+{
+    return test_user;
+}
+
+const char* test_user_pw()
+{
+    return test_pass;
 }
 
 namespace testclient
@@ -715,7 +741,10 @@ void run_failover_stress_test(TestConnections& test, const BaseSettings& base_se
     mxs.wait_for_monitor(2);
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 }
+}
 
+namespace semisync
+{
 void check_semisync_off(TestConnections& test)
 {
     for (int i = 0; i < test.repl->N; i++)
@@ -794,6 +823,45 @@ void check_semisync_status(TestConnections& test, int node, bool master, bool sl
                     "Wrong value for '%s' for node%i. Expected '%i', got '%i'",
                     semis_clients.c_str(), node, expected_clients, clients_val);
     }
+}
+
+void setup_semisync_replication(TestConnections& test)
+{
+    // Setup semisync replication. During the test, the master should not diverge.
+    // Write the config values to config files so that they persist between restarts.
+    auto& repl = *test.repl;
+    repl.stop_nodes();
+    for (int i = 0; i < repl.N; i++)
+    {
+        repl.stash_server_settings(i);
+        repl.add_server_setting(i, "rpl_semi_sync_master_enabled=ON");
+        repl.add_server_setting(i, "rpl_semi_sync_slave_enabled=ON");
+        repl.add_server_setting(i, "rpl_semi_sync_master_wait_point=AFTER_SYNC");
+        repl.add_server_setting(i, "rpl_semi_sync_master_timeout=6000");        // in ms
+        repl.add_server_setting(i, "rpl_semi_sync_slave_kill_conn_timeout=5");  // in s
+        repl.add_server_setting(i, "gtid_strict_mode=1");
+        repl.add_server_setting(i, "init-rpl-role=SLAVE");      // to prevent old master from diverging.
+        repl.start_node(i);
+    }
+    sleep(1);
+
+    check_semisync_status(test, 1, true, true, 0);
+    check_semisync_status(test, 2, true, true, 0);
+    check_semisync_status(test, 3, true, true, 0);
+    check_semisync_status(test, 0, true, false, 3);
+}
+
+void restore_normal_replication(TestConnections& test)
+{
+    auto& repl = *test.repl;
+    repl.stop_nodes();
+    for (int i = 0; i < repl.N; i++)
+    {
+        repl.restore_server_settings(i);
+    }
+    repl.start_nodes();
+
+    semisync::check_semisync_off(test);
 }
 }
 
