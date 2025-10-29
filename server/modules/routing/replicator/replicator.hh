@@ -33,11 +33,14 @@ public:
     /**
      * Create a new data replicator
      *
-     * @param cnf The configuration to use
+     * @param cnf     The configuration to use
+     * @param handler The row event handler
+     * @param func    The database identifier sanitization function, nullptr for no sanitization
      *
      * @return The new Replicator instance
      */
-    static std::unique_ptr<Replicator> start(const Config& cnf, SRowEventHandler handler);
+    static std::unique_ptr<Replicator> start(const Config& cnf, SRowEventHandler handler,
+                                             tok::Sanitizer func = nullptr);
 
     /**
      * Check if the replicator is OK
@@ -72,7 +75,7 @@ public:
 
 private:
     class Imp;
-    Replicator(const Config& cnf, SRowEventHandler handler);
+    Replicator(const Config& cnf, SRowEventHandler handler, tok::Sanitizer func);
 
     // Pointer to the implementation of the abstract interface
     std::unique_ptr<Replicator::Imp> m_imp;

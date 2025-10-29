@@ -268,6 +268,7 @@ public:
     // Construct a new replication stream transformer
     Rpl(SERVICE* service,
         SRowEventHandler event_handler,
+        tok::Sanitizer func,
         pcre2_code* match,
         pcre2_code* exclude,
         gtid_pos_t = {});
@@ -330,6 +331,7 @@ private:
     pcre2_match_data* m_md_exclude;
     std::string       m_datadir;
     cdc::Server       m_server;
+    tok::Sanitizer    m_sanitizer;
 
     std::unordered_map<std::string, int> m_versions;    // Table version numbers per identifier
 
