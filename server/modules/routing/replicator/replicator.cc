@@ -62,7 +62,7 @@ public:
     static constexpr int IMPLICIT_COMMIT_FLAG = 0x1;
 
     // Creates a new replication stream and starts it
-    Imp(const Config& cnf, SRowEventHandler handler);
+    Imp(const Config& cnf, SRowEventHandler handler, tok::Sanitizer func);
 
     // Check if the replicator is still OK
     bool ok() const;
@@ -124,10 +124,10 @@ const std::string Replicator::Imp::STATEFILE_DIR = "./";
 const std::string Replicator::Imp::STATEFILE_NAME = "current_gtid.txt";
 const std::string Replicator::Imp::STATEFILE_TMP_SUFFIX = ".tmp";
 
-Replicator::Imp::Imp(const Config& cnf, SRowEventHandler handler)
+Replicator::Imp::Imp(const Config& cnf, SRowEventHandler handler, tok::Sanitizer func)
     : m_cnf(cnf)
     , m_gtid_position(parse_gtid_list(cnf.gtid))    // The config value could contain multiple gtids.
-    , m_rpl(cnf.service, std::move(handler), cnf.match, cnf.exclude)
+    , m_rpl(cnf.service, std::move(handler), func, cnf.match, cnf.exclude)
     , m_thr(&Imp::process_events, this)
 {
 }
@@ -662,9 +662,10 @@ std::string Replicator::Imp::gtid_list_to_string(const GtidList& gtid_list)
 //
 
 // static
-std::unique_ptr<Replicator> Replicator::start(const Config& cnf, SRowEventHandler handler)
+std::unique_ptr<Replicator> Replicator::start(const Config& cnf, SRowEventHandler handler,
+                                              tok::Sanitizer func)
 {
-    return std::unique_ptr<Replicator>(new Replicator(cnf, std::move(handler)));
+    return std::unique_ptr<Replicator>(new Replicator(cnf, std::move(handler), func));
 }
 
 bool Replicator::ok() const
@@ -686,8 +687,8 @@ Replicator::~Replicator()
 {
 }
 
-Replicator::Replicator(const Config& cnf, SRowEventHandler handler)
-    : m_imp(new Imp(cnf, std::move(handler)))
+Replicator::Replicator(const Config& cnf, SRowEventHandler handler, tok::Sanitizer func)
+    : m_imp(new Imp(cnf, std::move(handler), func))
 {
 }
 }

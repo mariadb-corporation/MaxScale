@@ -113,7 +113,7 @@ public:
             : m_type(t)
             , m_str(s)
             , m_len(l)
-            , m_sanitizer(sanitizer)
+            , m_sanitizer(sanitizer ? sanitizer : default_sanitizer)
         {
         }
 
@@ -150,7 +150,7 @@ public:
         Type        m_type;
         const char* m_str {nullptr};
         int         m_len {0};
-        Sanitizer   m_sanitizer {default_sanitizer};
+        Sanitizer   m_sanitizer;
     };
 
     class Chain

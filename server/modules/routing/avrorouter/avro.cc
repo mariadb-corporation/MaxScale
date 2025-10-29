@@ -31,6 +31,27 @@
 
 using namespace maxscale;
 
+// Sanitizes the SQL field names for Avro usage
+static std::string avro_sanitizer(const char* s, int l)
+{
+    std::string str(s, l);
+
+    for (auto& a : str)
+    {
+        if (!isalnum(a) && a != '_')
+        {
+            a = '_';
+        }
+    }
+
+    if (is_reserved_word(str.c_str()))
+    {
+        str += '_';
+    }
+
+    return str;
+}
+
 // static
 Avro* Avro::create(SERVICE* service)
 {
@@ -75,7 +96,7 @@ bool Avro::post_configure()
             auto hndl = std::make_unique<AvroConverter>(
                 cnf.service, cnf.statedir, block_size, codec, max_size, max_age);
 
-            m_replicator = cdc::Replicator::start(cnf, std::move(hndl));
+            m_replicator = cdc::Replicator::start(cnf, std::move(hndl), avro_sanitizer);
             mxb_assert(m_replicator);
         }, mxs::RoutingWorker::EXECUTE_QUEUED);
     }
@@ -84,7 +105,7 @@ bool Avro::post_configure()
         handler.reset(
             new Rpl(service,
                     std::make_unique<AvroConverter>(service, m_config.avrodir, block_size, codec, 0, 0),
-                    m_config.match.code(), m_config.exclude.code()));
+                    nullptr, m_config.match.code(), m_config.exclude.code()));
 
         char filename[BINLOG_FNAMELEN + 1];
         snprintf(filename,

@@ -1105,7 +1105,8 @@ bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * @param dest Destination where the string is stored
  * @param len Size of destination
  */
-void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, char* dest, size_t len)
+void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, char* dest, size_t len,
+                     char* table_name, size_t table_len, char* schema_name, size_t schema_len)
 {
     uint64_t table_id = 0;
     size_t id_size = post_header_len == 6 ? 4 : 6;
@@ -1116,18 +1117,14 @@ void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, ch
     memcpy(&flags, ptr, 2);
     ptr += 2;
 
-    uint8_t schema_name_len = *ptr++;
-    char schema_name[schema_name_len + 2];
-
     /** Copy the NULL byte after the schema name */
-    memcpy(schema_name, ptr, schema_name_len + 1);
+    size_t schema_name_len = *ptr++;
+    memcpy(schema_name, ptr, std::min(schema_name_len + 1, schema_len - 1));
     ptr += schema_name_len + 1;
 
-    uint8_t table_name_len = *ptr++;
-    char table_name[table_name_len + 2];
-
     /** Copy the NULL byte after the table name */
-    memcpy(table_name, ptr, table_name_len + 1);
+    size_t table_name_len = *ptr++;
+    memcpy(table_name, ptr, std::min(table_name_len + 1, table_len - 1));
 
     snprintf(dest, len, "%s.%s", schema_name, table_name);
     *tbl_id = table_id;
@@ -1638,6 +1635,7 @@ void Table::serialize(const char* path) const
 
 Rpl::Rpl(SERVICE* service,
          SRowEventHandler handler,
+         tok::Sanitizer func,
          pcre2_code* match,
          pcre2_code* exclude,
          gtid_pos_t gtid)
@@ -1649,6 +1647,7 @@ Rpl::Rpl(SERVICE* service,
     , m_exclude(exclude)
     , m_md_match(m_match ? pcre2_match_data_create_from_pattern(m_match, NULL) : nullptr)
     , m_md_exclude(m_exclude ? pcre2_match_data_create_from_pattern(m_exclude, NULL) : nullptr)
+    , m_sanitizer(func)
 {
 }
 
@@ -1906,10 +1905,13 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 {
     bool rval = false;
     uint64_t id;
+    char table_name[MYSQL_TABLE_MAXLEN + 2];
+    char schema_name[MYSQL_DATABASE_MAXLEN + 2];
     char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
     int ev_len = m_event_type_hdr_lens[hdr->event_type];
 
-    read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident));
+    read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident), table_name, sizeof(table_name),
+                    schema_name, sizeof(schema_name));
 
     if (!table_matches(table_ident))
     {
@@ -1924,7 +1926,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 
         if (res.first.empty())
         {
-            std::string query = "SHOW CREATE TABLE "s + table_ident;
+            std::string query = "SHOW CREATE TABLE `"s + schema_name + "`.`" + table_name + "`";
             auto rset = res.second->result(query);
 
             if (!rset.empty() && rset.front().size() == 2)
@@ -2229,32 +2231,11 @@ void Rpl::handle_event(REP_HEADER hdr, uint8_t* ptr)
     }
 }
 
-// Sanitizes the SQL field names for Avro usage
-static std::string avro_sanitizer(const char* s, int l)
-{
-    std::string str(s, l);
-
-    for (auto& a : str)
-    {
-        if (!isalnum(a) && a != '_')
-        {
-            a = '_';
-        }
-    }
-
-    if (is_reserved_word(str.c_str()))
-    {
-        str += '_';
-    }
-
-    return str;
-}
-
 void Rpl::parse_sql(const std::string& sql, const std::string& db)
 {
     MXB_INFO("%s", sql.c_str());
     parser.db = db;
-    parser.tokens = tok::Tokenizer::tokenize(sql.c_str(), avro_sanitizer);
+    parser.tokens = tok::Tokenizer::tokenize(sql.c_str(), m_sanitizer);
 
     try
     {
