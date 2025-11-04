@@ -588,7 +588,7 @@ private:
                             ss << "Error in specification " << bsoncxx::to_json(doc)
                                << " :: caused by :: Values in the index key pattern cannot be 0.";
 
-                            throw (ss.str(), error::CANNOT_CREATE_INDEX);
+                            throw SoftError(ss.str(), error::CANNOT_CREATE_INDEX);
                         }
                     }
                     else if (key_element.type() != bsoncxx::type::k_utf8)
