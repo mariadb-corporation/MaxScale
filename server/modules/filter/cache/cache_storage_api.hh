@@ -15,7 +15,6 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <cstdbool>
 #include <cstdint>
 
 #include <chrono>
