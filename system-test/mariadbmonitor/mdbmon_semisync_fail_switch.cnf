@@ -1,0 +1,35 @@
+[maxscale]
+threads=###threads###
+
+[MariaDB-Monitor]
+type=monitor
+module=mysqlmon
+servers= ###server_line###
+user=mariadbmon
+password=mariadbmon
+monitor_interval=1000ms
+auto_failover=true
+auto_rejoin=true
+replication_user=repl
+replication_password=repl
+backend_connect_timeout=2s
+backend_read_timeout=2s
+backend_write_timeout=2s
+failcount=2
+failover_timeout=9s
+verify_master_failure=false
+
+[RW-Split-Router]
+type=service
+router= readwritesplit
+servers=###server_line###
+user=maxskysql
+password=skysql
+
+[RW-Split-Listener]
+type=listener
+service=RW-Split-Router
+protocol=MySQLClient
+port=4006
+
+###server###

@@ -92,6 +92,10 @@ add_test_executable_ex(NAME mdbmon_failover_stress_ss SOURCE mdbmon_failover_str
 add_test_executable_ex(NAME mdbmon_switchover_stress SOURCE mdbmon_switchover_stress.cc
         CONFIG mdbmon_switchover_stress.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
+# Additional failover + switchover with semisync tests.
+add_test_executable_ex(NAME mdbmon_semisync_fail_switch SOURCE mdbmon_semisync_fail_switch.cc
+        CONFIG mdbmon_semisync_fail_switch.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
+
 # Check monitoring and failover with an external master
 # Also MXS-5272
 add_test_executable_ex(NAME mdbmon_external_master SOURCE mdbmon_external_master.cc

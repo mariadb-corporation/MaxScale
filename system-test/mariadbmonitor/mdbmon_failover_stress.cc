@@ -24,7 +24,7 @@ void test_main(TestConnections& test)
     auto& repl = *test.repl;
     auto& mxs = *test.maxscale;
 
-    stress_test::check_semisync_off(test);
+    semisync::check_semisync_off(test);
 
     if (test.ok())
     {
