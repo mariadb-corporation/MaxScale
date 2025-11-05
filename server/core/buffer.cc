@@ -42,10 +42,14 @@ std::string extract_sql_real(const GWBUF* pBuf)
         // Skip the packet header and the command byte
         size_t header_len = MYSQL_HEADER_LEN + 1;
         size_t length = gwbuf_length(pBuf) - header_len;
-        rval.resize(length);
-        char* pCopy_from = (char*) GWBUF_DATA(pBuf) + header_len;
-        char* pCopy_to = &rval.front();
-        memcpy(pCopy_to, pCopy_from, length);
+
+        if (length > 0)
+        {
+            rval.resize(length);
+            char* pCopy_from = (char*) GWBUF_DATA(pBuf) + header_len;
+            char* pCopy_to = &rval.front();
+            memcpy(pCopy_to, pCopy_from, length);
+        }
     }
 
     return rval;
