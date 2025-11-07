@@ -15,6 +15,7 @@ replication_password=repl
 backend_connect_timeout=5s
 backend_read_timeout=5s
 backend_write_timeout=5s
+failover_timeout=20s
 
 [RW-Split-Router]
 type=service
