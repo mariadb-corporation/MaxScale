@@ -168,6 +168,10 @@ public:
 
         uint32_t master_conds;  /**< Master conditions */
         uint32_t slave_conds;   /**< Slave conditions */
+
+        /* Check replication status if STOP SLAVE times out. If replication looks stopped, continue failover/
+         * switchover. */
+        bool check_repl_on_stop_slave_timeout {false};
     };
 
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
@@ -323,6 +327,11 @@ public:
      * @return The slave status info of the slave thread, or NULL if not found
      */
     const SlaveStatus* slave_connection_status_host_port(const MariaDBServer* target) const;
+
+    /**
+     * Find slave connection by connection name.
+     */
+    const SlaveStatus* slave_connection_status_name(const std::string& name) const;
 
     /**
      * Checks if this server can replicate from master. Only considers gtid:s and only detects obvious
@@ -649,9 +658,12 @@ private:
 
     bool execute_cmd_ex(const std::string& cmd, const std::string& masked_cmd, QueryRetryMode mode,
                         std::string* errmsg_out = nullptr, unsigned int* errno_out = nullptr);
+
+    using CmdTimeoutFunc = std::function<bool()>;
     bool execute_cmd_time_limit(const std::string& cmd, const std::string& masked_cmd,
                                 maxbase::Duration time_limit,
-                                std::string* errmsg_out, unsigned int* errnum_out);
+                                std::string* errmsg_out, unsigned int* errnum_out,
+                                const CmdTimeoutFunc& timeout_func);
     bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
                                 std::string* errmsg_out, unsigned int* errnum_out = nullptr);
 

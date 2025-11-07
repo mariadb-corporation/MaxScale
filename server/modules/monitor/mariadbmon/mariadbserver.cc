@@ -185,28 +185,33 @@ bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd, const std::stri
     return execute_cmd_ex(cmd, masked_cmd, QueryRetryMode::DISABLED, errmsg_out, errno_out);
 }
 
-/**
- * Execute a query which does not return data. If the query fails because of a network error
- * (e.g. Connector-C timeout), automatically retry the query until time is up. Uses max_statement_time
- * when available to ensure no lingering timed out commands are left on the server.
- *
- * @param cmd The query to execute. Should be a query with a predictable effect even when retried or
- * ran several times.
- * @param time_limit How long to retry. This does not overwrite the connector-c timeouts which are always
- * respected.
- * @param errmsg_out Error message output
- * @param errnum_out Error number output
- * @return True, if successful.
- */
 bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
                                            string* errmsg_out, unsigned int* errnum_out)
 {
-    return execute_cmd_time_limit(cmd, "", time_limit, errmsg_out, errnum_out);
+    return execute_cmd_time_limit(cmd, "", time_limit, errmsg_out, errnum_out, {});
 }
 
+/**
+ * Execute a query which does not return data. If the query fails because of a network error
+ * (e.g. Connector-C timeout) or a max_statement_time timeout, retries the query until time is up.
+ * Uses max_statement_time when available to ensure no lingering timed out commands are left on the server.
+ * If the query fails due to a non-timeout related reason, fails immediately.
+ *
+ * @param cmd The query to execute. Should be a query with a predictable effect even when retried or
+ * ran several times.
+ * @param masked_cmd Alternative version of query for logging. Useful if cmd includes passwords.
+ * @param time_limit How long to retry. This does not overwrite the Connector-C timeouts, so an individual
+ * query execution time may be less than time_limit.
+ * @param errmsg_out Error message output
+ * @param errnum_out Error number output
+ * @param timeout_func An optional function that is run on query timeout. If timeout_func returns true,
+ * execute_cmd_time_limit assumes that query completed successfully, and returns success.
+ * @return True, if successful.
+ */
 bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& masked_cmd,
                                            maxbase::Duration time_limit,
-                                           string* errmsg_out, unsigned int* errnum_out)
+                                           string* errmsg_out, unsigned int* errnum_out,
+                                           const CmdTimeoutFunc& timeout_func)
 {
     auto build_cmds = [this, &cmd, &masked_cmd](mxb::Duration time_lim) -> std::tuple<string, string> {
         string max_stmt_time;
@@ -281,16 +286,43 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
             {
                 string retrying = string_printf("Retrying with %.1f seconds left.",
                                                 mxb::to_secs(time_remaining));
-                if (net_error)
+                if (timeout_func)
                 {
-                    MXB_WARNING("%s %s", error_msg.c_str(), retrying.c_str());
+                    const char extra_check[] = "Performing additional test.";
+                    if (net_error)
+                    {
+                        MXB_WARNING("%s %s", error_msg.c_str(), extra_check);
+                    }
+                    else
+                    {
+                        auto& logged_query = complete_masked_cmd.empty() ? complete_cmd : complete_masked_cmd;
+                        MXB_WARNING("Query '%s' timed out on '%s'. %s",
+                                    logged_query.c_str(), name(), extra_check);
+                    }
+
+                    // Check if command succeeded even when it seemed to time out.
+                    cmd_success = timeout_func();
+                    if (!cmd_success)
+                    {
+                        MXB_WARNING("%s", retrying.c_str());
+                    }
                 }
                 else
                 {
-                    // Timed out because of max_statement_time.
-                    auto& logged_query = complete_masked_cmd.empty() ? complete_cmd : complete_masked_cmd;
-                    MXB_WARNING("Query '%s' timed out on '%s'. %s",
-                                logged_query.c_str(), name(), retrying.c_str());
+                    if (net_error)
+                    {
+                        MXB_WARNING("%s %s", error_msg.c_str(), retrying.c_str());
+                    }
+                    else
+                    {
+                        // Timed out because of max_statement_time.
+                        auto& logged_query = complete_masked_cmd.empty() ? complete_cmd : complete_masked_cmd;
+                        if (keep_trying)
+                        {
+                            MXB_WARNING("Query '%s' timed out on '%s'. %s",
+                                        logged_query.c_str(), name(), retrying.c_str());
+                        }
+                    }
                 }
 
                 if (query_time < min_query_time)
@@ -1356,6 +1388,18 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
     return nullptr;
 }
 
+const SlaveStatus* MariaDBServer::slave_connection_status_name(const string& name) const
+{
+    for (const SlaveStatus& ss : m_slave_status)
+    {
+        if (ss.settings.name == name)
+        {
+            return &ss;
+        }
+    }
+    return nullptr;
+}
+
 bool
 MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, mxb::Json& error_out)
 {
@@ -1931,7 +1975,46 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
     StopWatch timer;
     string stop = string_printf("STOP SLAVE '%s';", conn_name.c_str());
     string error_msg;
-    bool stop_success = execute_cmd_time_limit(stop, time_left, &error_msg);
+    bool stop_success = false;
+    if (m_settings.check_repl_on_stop_slave_timeout)
+    {
+        auto to_func = [this, &conn_name, &stop](){
+            if (do_show_slave_status())
+            {
+                auto slave_conn = slave_connection_status_name(conn_name);
+                if (slave_conn == nullptr)
+                {
+                    // Weird. Maybe someone just removed the slave connection. Do not assume success.
+                }
+                else if (slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_NO
+                         && slave_conn->slave_sql_running == false)
+                {
+                    // Replication seems to have stopped.
+                    MXB_NOTICE("According to 'SHOW ALL SLAVES STATUS', replication from %s to %s has stopped "
+                               "even though '%s' timed out.",
+                               slave_conn->settings.master_endpoint.to_string().c_str(), name(),
+                               stop.c_str());
+                    return true;
+                }
+                else
+                {
+                    string io_status = SlaveStatus::slave_io_to_string(slave_conn->slave_io_running);
+                    string sql_status = slave_conn->slave_sql_running ? "Yes" : "No";
+                    MXB_WARNING("According to 'SHOW ALL SLAVES STATUS', replication from %s to %s is still "
+                                "active. Slave_IO_Running: %s, Slave_SQL_Running: %s",
+                                slave_conn->settings.master_endpoint.to_string().c_str(), name(),
+                                io_status.c_str(), sql_status.c_str());
+                }
+            }
+            return false;
+        };
+        stop_success = execute_cmd_time_limit(stop, "", time_limit, &error_msg, nullptr, to_func);
+    }
+    else
+    {
+        stop_success = execute_cmd_time_limit(stop, time_left, &error_msg);
+    }
+
     time_left -= timer.restart();
 
     bool rval = false;
@@ -2271,7 +2354,7 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
     new_settings.m_owner = name();      // So any error messages refer to this server.
     auto change_master = generate_change_master_cmd(new_settings);
     bool conn_created = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,
-                                               time_remaining, &error_msg, nullptr);
+                                               time_remaining, &error_msg, nullptr, {});
     time_remaining -= timer.restart();
     if (conn_created)
     {
@@ -2380,7 +2463,7 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
 
         string error_msg;
         bool changed = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,
-                                              time_remaining, &error_msg, nullptr);
+                                              time_remaining, &error_msg, nullptr, {});
         time_remaining -= timer.restart();
         if (changed)
         {
