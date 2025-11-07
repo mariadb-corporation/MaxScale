@@ -560,6 +560,21 @@ void test_mxs5507(TestConnections& test)
     test.check_maxctrl("alter service RW-Split-Router causal_reads=none");
 }
 
+void test_mxs6005(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+
+    for (std::string query : {
+        "SELECT 1;;",
+        "SELECT 1; /* hello */;",
+        "SELECT 1;\n /* hello */ ;",
+    })
+    {
+        test.expect(c.query(query), "Query '%s' failed: %s", query.c_str(), c.error());
+    }
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -615,5 +630,7 @@ int main(int argc, char** argv)
     // MXS-5507: Multi-statements are enabled even without causal_reads
     test_mxs5507(test);
 
+    test.log_printf("MXS-6005: Crash in multi-statement detection");
+    test_mxs6005(test);
     return test.global_result;
 }
