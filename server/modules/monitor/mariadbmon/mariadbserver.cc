@@ -317,11 +317,8 @@ bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& mask
                     {
                         // Timed out because of max_statement_time.
                         auto& logged_query = complete_masked_cmd.empty() ? complete_cmd : complete_masked_cmd;
-                        if (keep_trying)
-                        {
-                            MXB_WARNING("Query '%s' timed out on '%s'. %s",
-                                        logged_query.c_str(), name(), retrying.c_str());
-                        }
+                        MXB_WARNING("Query '%s' timed out on '%s'. %s",
+                                    logged_query.c_str(), name(), retrying.c_str());
                     }
                 }
 
