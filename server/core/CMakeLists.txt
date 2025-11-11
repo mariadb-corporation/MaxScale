@@ -76,6 +76,7 @@ target_link_libraries(maxscale-common
   m
   sqlite3
   stdc++
+  stdc++fs
   ${MICROHTTPD_LIBRARIES}
   ${GNUTLS_LIBRARIES}
   ${LIBATOMIC_LIBRARIES}
