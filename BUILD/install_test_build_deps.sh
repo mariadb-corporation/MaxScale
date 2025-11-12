@@ -8,14 +8,14 @@ ${scriptdir}/install_build_deps.sh "3.25.1" 20
 
 function install_mariadb_repo() {
     # A few system tests need mariadb-test which is not available in all OS repositories
-    curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | sudo bash -s -- --mariadb-server-version=10.11 --skip_maxscale --skip-check-installed
+    curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version=10.11 --skip_maxscale --skip-check-installed
 }
 
 if command -v apt-get
 then
     # Debian or Ubuntu
     export DEBIAN_FRONTEND=noninteractive
-    apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
+    apt_cmd="apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef -y"
     ${apt_cmd} install curl oathtool php-cli php-mysql openjdk-17-jdk krb5-user maven unixodbc-dev
     install_mariadb_repo
@@ -26,14 +26,14 @@ then
 
     # This enables the CodeReadyBuilder on RHEL/Rocky 9 which is needed by
     # some packages in the EPEL repository.
-    sudo dnf install -y dnf-plugins-core
-    sudo dnf config-manager --enable crb
-    sudo dnf install -y epel-release
+    dnf install -y dnf-plugins-core
+    dnf config-manager --enable crb
+    dnf install -y epel-release
 
     # The --allowerasing is needed on systems where curl-minimal is installed instead of curl.
-    sudo dnf install -y --allowerasing curl php-cli php-mysqlnd oathtool java-17-openjdk maven-openjdk17 krb5-workstation  unixODBC-devel
+    dnf install -y --allowerasing curl php-cli php-mysqlnd oathtool java-17-openjdk maven-openjdk17 krb5-workstation  unixODBC-devel
     install_mariadb_repo
-    sudo dnf install -y MariaDB-test MariaDB-client
+    dnf install -y MariaDB-test MariaDB-client
 else
     # This is something we don't support running tests on (e.g. SLES)
     echo "ERROR: Cannot run system tests on this OS."
