@@ -117,11 +117,12 @@ void test_rwsplit(TestConnections& test)
     c.query("DROP TABLE test.t1");
 
     // Temporary tables
-    for (auto a : {
+    for (const char* a : {
         "USE test",
         "CREATE OR REPLACE TABLE t1(`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY)",
         "CREATE OR REPLACE TABLE t2(`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY)",
         "CREATE TEMPORARY TABLE temp1(`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY)",
+        "SHOW CREATE TABLE temp1",      // MXS-6013: SHOW CREATE TABLE doesn't detect temporary tables
         "INSERT INTO temp1 values (1), (2), (3)",
         "INSERT INTO t1 values (1), (2), (3)",
         "INSERT INTO t2 values (1), (2), (3)",
@@ -133,7 +134,7 @@ void test_rwsplit(TestConnections& test)
         "DROP TABLE t2"
     })
     {
-        test.expect(c.query(a), "Temp table query failed");
+        test.expect(c.query(a), "Temp table query '%s' failed: %s", a, c.error());
     }
 
     //  Temporary and real table overlap

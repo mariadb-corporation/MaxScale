@@ -3189,6 +3189,9 @@ public:
         switch (pShow->what)
         {
         case MXS_SHOW_COLUMNS:
+        case MXS_SHOW_CREATE_TABLE:
+        case MXS_SHOW_CREATE_SEQUENCE:
+        case MXS_SHOW_CREATE_VIEW:
             {
                 m_type_mask = mxs::sql::TYPE_READ;
                 const char* zDatabase = nullptr;
@@ -3204,18 +3207,6 @@ public:
 
                 update_table_names(zDatabase, nDatabase, pShow->pName->z, pShow->pName->n);
             }
-            break;
-
-        case MXS_SHOW_CREATE_SEQUENCE:
-            m_type_mask = mxs::sql::TYPE_READ;
-            break;
-
-        case MXS_SHOW_CREATE_VIEW:
-            m_type_mask = mxs::sql::TYPE_READ;
-            break;
-
-        case MXS_SHOW_CREATE_TABLE:
-            m_type_mask = mxs::sql::TYPE_READ;
             break;
 
         case MXS_SHOW_DATABASES:
