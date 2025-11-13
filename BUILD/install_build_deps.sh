@@ -69,10 +69,10 @@ then
   # DEB-based distro
   install_libdir=/usr/lib
   export DEBIAN_FRONTEND=noninteractive
-  sudo apt-get update
+  apt-get update
 
-  sudo dpkg-reconfigure libc6
-  apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
+  dpkg-reconfigure libc6
+  apt_cmd="apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef -y"
   ${apt_cmd} upgrade
   ${apt_cmd} install dpkg-dev git wget cmake \
@@ -94,9 +94,9 @@ then
      ${apt_cmd} install python3
   fi
 
-  if (grep -q 'VERSION_CODENAME=jammy' /etc/os-release) && (sudo sysctl -a |grep -q 'vm.mmap_rnd_bits = 32')
+  if (grep -q 'VERSION_CODENAME=jammy' /etc/os-release) && (sysctl -a |grep -q 'vm.mmap_rnd_bits = 32')
   then
-      sudo sysctl -w vm.mmap_rnd_bits=28
+      sysctl -w vm.mmap_rnd_bits=28
   fi
 fi
 
@@ -104,13 +104,13 @@ if [[ ${packager_type} == "yum" ]]
 then
     install_libdir=/usr/lib64
     # YUM!
-    sudo yum update -d1 -y
+    yum update -d1 -y
     unset enable_power_tools
     rhel_version=$(cat /etc/redhat-release | grep -oP 'release \K[0-9]+' | head -1)
     if [[ ${rhel_version} -ge 10 ]]
     then
         echo "Running on RHEL 10 or later"
-        sudo dnf config-manager --set-enabled codeready-builder-for-rhel-10-rhui-rpms
+        dnf config-manager --set-enabled codeready-builder-for-rhel-10-rhui-rpms
         dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
     fi
 
@@ -128,8 +128,8 @@ then
     # For some reason RHEL/Rocky 9 doesn't have unixODBC-devel in the normal
     # repositories. It's in the devel repo and must be enabled before it can be
     # installed.
-    sudo dnf -d1 -y --nogpgcheck install dnf-plugins-core
-    sudo dnf config-manager --set-enabled devel
+    dnf -d1 -y --nogpgcheck install dnf-plugins-core
+    dnf config-manager --set-enabled devel
 
     if yum repolist all | grep "^crb "
     then
@@ -137,7 +137,7 @@ then
         enable_crb="--enablerepo=crb"
     fi
 
-    sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} ${enable_crb} \
+    yum install -d1 -y --nogpgcheck ${enable_power_tools} ${enable_crb} \
          gcc gcc-c++ ncurses-devel bison glibc-devel cmake \
          libgcc perl make libtool openssl-devel libaio libaio-devel  \
          systemtap-sdt-devel rpm-sign \
@@ -151,18 +151,18 @@ then
     # example CentOS 7 uses postgresql-devel whereas RHEL 8 goes with libpq-devel.
     for package in libpq-devel postgresql-devel
     do
-        sudo yum -d1 -y install $package && break
+        yum -d1 -y install $package && break
     done
 
-    sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} libedit-devel
+    yum install -d1 -y --nogpgcheck ${enable_power_tools} libedit-devel
 
     if is_arm
     then
        # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
-       sudo yum -d1 -y install python3
+       yum -d1 -y install python3
        # And for some reason RHEL 8 ARM requires python2 instead of python3. Install it
        # separately so that in case it fails, the build will still proceed.
-       sudo yum -d1 -y install python2
+       yum -d1 -y install python2
     fi
 
     # The storage_memcached can only be built on RHEL 8 where the .so files are
@@ -171,37 +171,37 @@ then
     # installed without enabling them.
     if grep "release 8" /etc/redhat-release
     then
-        sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} libmemcached-devel
+        yum install -d1 -y --nogpgcheck ${enable_power_tools} libmemcached-devel
     fi
 
     # Enable the devtoolkit to get a newer compiler
 
     # CentOS: install the centos-release-scl repo
     # RHEL: enable the existing repo (seems to be rhui-REGION-rhel-server-rhscl on AWS)
-    sudo yum -d1 -y install centos-release-scl || \
-        sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
+    yum -d1 -y install centos-release-scl || \
+        yum-config-manager --enable rhui-REGION-rhel-server-rhscl
 
     # Install newer compiler for CentOS 7
     grep "release 7" /etc/redhat-release
     if [ $? -eq 0 ]
     then
-        sudo yum -d1 -y install devtoolset-9-gcc-c++
-        sudo yum -d1 -y install devtoolset-9-libasan-devel
-        sudo yum -d1 -y install devtoolset-9-libubsan-devel
+        yum -d1 -y install devtoolset-9-gcc-c++
+        yum -d1 -y install devtoolset-9-libasan-devel
+        yum -d1 -y install devtoolset-9-libubsan-devel
         # Enable it by default
         echo "source /opt/rh/devtoolset-9/enable" >> ~/.bashrc
     else
         # For everything else, install the default ASAN
-        sudo yum -d1 -y install libasan
-        sudo yum -d1 -y install libubsan
+        yum -d1 -y install libasan
+        yum -d1 -y install libubsan
     fi
 
     grep "release [78]" /etc/redhat-release
     if [ $? -eq 0 ]
     then
         # EPEL is installed for GCOV report generation (lcov)
-        sudo yum -d1 -y install epel-release
-        sudo yum -d1 -y install lcov
+        yum -d1 -y install epel-release
+        yum -d1 -y install lcov
     fi
 fi
 
@@ -220,10 +220,10 @@ then
 
     # We need zypper here
     zypper_cmd="zypper -t -n"
-    sudo $zypper_cmd refresh
-    sudo $zypper_cmd update
-    sudo $zypper_cmd remove gettext-runtime-mini
-    sudo $zypper_cmd install --allow-downgrade gcc gcc-c++ cmake ncurses-devel bison glibc-devel libgcc_s1 perl \
+    $zypper_cmd refresh
+    $zypper_cmd update
+    $zypper_cmd remove gettext-runtime-mini
+    $zypper_cmd install --allow-downgrade gcc gcc-c++ cmake ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex \
          git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config \
@@ -231,21 +231,21 @@ then
          cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel pcre2-devel libjansson-devel \
          libmicrohttpd-devel boost-devel librdkafka-devel libmemcached-devel unixODBC-devel \
          postgresql-devel libssh-devel
-    sudo $zypper_cmd install --allow-downgrade rpm-build
+    $zypper_cmd install --allow-downgrade rpm-build
 
     if is_arm
     then
        # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
-       sudo $zypper_cmd install python3
+       $zypper_cmd install python3
        # See: YUM version explains why we need this
-       sudo $zypper_cmd install python2
+       $zypper_cmd install python2
     fi
 
     # Install a newer compiler
     for version in 14 13 12 11 10 9
     do
         echo Checking whether gcc${version} exists.
-        sudo $zypper_cmd install gcc${version} gcc${version}-c++
+        $zypper_cmd install gcc${version} gcc${version}-c++
         if [ $? == 0 ]
         then
             echo gcc${version} exists, using.
@@ -285,7 +285,7 @@ then
    tar xzf tcl8.6.5-src.tar.gz
    cd tcl8.6.5/unix
    ./configure -q || exit 1
-   sudo make -s install || exit 1
+   make -s install || exit 1
    cd ../../..
 fi
 
@@ -293,4 +293,4 @@ fi
 # Install NPM for MaxCtrl and the GUI
 $scriptdir/install_npm.sh $nodejs_version
 
-sudo rm -rf $tmpdir
+rm -rf $tmpdir
