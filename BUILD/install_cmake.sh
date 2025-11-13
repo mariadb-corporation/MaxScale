@@ -52,7 +52,7 @@ if [ $cmake_version_ok -eq 0 ] ; then
   cmake_remotepath="v${cmake_version_install}/${cmake_filename}"
 
   wget --quiet https://github.com/Kitware/CMake/releases/download/${cmake_remotepath}
-  sudo tar -axf ${cmake_filename} -C /usr/ --strip-components=1
+  tar -axf ${cmake_filename} -C /usr/ --strip-components=1
 
   cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
   if verlt $cmake_version $cmake_version_required ; then
