@@ -719,8 +719,17 @@ std::tuple<bool, std::string> MariaDBMonitor::prepare_to_stop()
 
 void MariaDBMonitor::tick()
 {
+    bool first_tick = ticks_complete() == 0;
+
     m_state = State::MONITOR;
-    check_maintenance_requests();
+
+    // Don't check for status change requests on the first tick. The status from the journal is restored in
+    // stash_current_status() when the first tick happens and if the status change request is processed first
+    // during the same tick, it would get overwritten by the status from the journal.
+    if (!first_tick)
+    {
+        check_maintenance_requests();
+    }
 
     for (auto srv : m_servers)
     {
@@ -728,7 +737,6 @@ void MariaDBMonitor::tick()
     }
 
     // Query all servers for their status.
-    bool first_tick = ticks_complete() == 0;
     bool should_update_disk_space = check_disk_space_this_tick();
 
     // Concurrently query all servers for their status. Force a reconnect on all servers if a command failed
@@ -802,7 +810,7 @@ void MariaDBMonitor::tick()
     process_state_changes();
     hangup_failed_servers();
     write_journal_if_needed();
-    if (m_cluster_modified)
+    if (m_cluster_modified || first_tick)
     {
         request_fast_ticks();
     }
