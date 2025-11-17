@@ -621,9 +621,26 @@ void run_failover_stress_test(TestConnections& test, const BaseSettings& base_se
             if (have_master && servers_before.get_role_info().slaves >= 1)
             {
                 // Can do another failover.
-                test.tprintf("Stopping master '%s'", master.name.c_str());
                 int old_master_ind = master.server_id - 1;
-                repl.stop_node(old_master_ind);
+
+                if (base_sett.signal_kill)
+                {
+                    test.tprintf("Killing MariaDB Server process on '%s'", master.name.c_str());
+                    auto& node = repl.backend(old_master_ind)->vm_node();
+                    auto rc = node.run_cmd_output_sudo("pkill --signal 11 mariadbd").rc;
+                    test.tprintf("Kill command returned %i", rc);
+                    test.expect(rc == 0, "Kill failed");
+                    sleep(1);
+                    rc = node.run_cmd_output("pgrep mariadb").rc;
+                    test.expect(rc, "MariaDB Server is still running!");
+                    repl.stop_node(old_master_ind);     // To prevent autostart.
+                }
+                else
+                {
+                    test.tprintf("Stopping master '%s'", master.name.c_str());
+                    repl.stop_node(old_master_ind);
+                }
+
                 mxs.sleep_and_wait_for_monitor(1, 2);
 
                 bool failover_success = false;

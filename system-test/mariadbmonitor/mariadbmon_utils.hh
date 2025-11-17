@@ -129,6 +129,7 @@ struct BaseSettings
     int    test_clients {0};
     int    min_expected_failovers {-1};
     bool   diverging_allowed {false};
+    bool   signal_kill {false};
 };
 
 void run_failover_stress_test(TestConnections& test, const BaseSettings& base_sett,

@@ -51,10 +51,11 @@ void test_main(TestConnections& test)
             // Semisync replication slows down the test, so the rate of failovers is rather low.
             stress_test::BaseSettings fail_sett;
             fail_sett.test_duration = 60;
-            fail_sett.test_clients = 4;
+            fail_sett.test_clients = 10;
             fail_sett.min_expected_failovers = 5;
             // Using init-rpl-rol=SLAVE, so old master should not diverge.
             fail_sett.diverging_allowed = false;
+            fail_sett.signal_kill = true;
 
             stress_test::run_failover_stress_test(test, fail_sett, client_sett);
         }
@@ -71,5 +72,6 @@ void test_main(TestConnections& test)
 int main(int argc, char* argv[])
 {
     TestConnections test;
+    test.reset_timeout(120);
     return test.run_test(argc, argv, test_main);
 }
