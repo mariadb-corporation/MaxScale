@@ -13,6 +13,7 @@
 
 #include <maxtest/testconnections.hh>
 #include "mariadbmon_utils.hh"
+#include <maxbase/format.hh>
 
 using std::string;
 using mxt::MaxScale;
@@ -73,9 +74,28 @@ bool wait_for_rejoin(mxt::MaxScale* mxs, int ind, bool must_succeed)
     return joined;
 }
 
+bool server_roles_match(const mxt::ServersInfo& info1, const mxt::ServersInfo& info2)
+{
+    if (info1.size() != info2.size())
+    {
+        return false;
+    }
+    bool rval = true;
+    for (size_t i = 0; i < info1.size(); i++)
+    {
+        if (info1.get(i).status != info2.get(i).status)
+        {
+            rval = false;
+            break;
+        }
+    }
+    return rval;
+}
+
 void test_main(TestConnections& test)
 {
     using namespace cooperative_monitoring;
+    auto& repl = *test.repl;
     auto& mxs1 = *test.maxscale;
     auto& mxs2 = *test.maxscale2;
     MonitorInfo mon1{1, "MariaDB-Monitor", &mxs1};
@@ -102,7 +122,9 @@ void test_main(TestConnections& test)
     mxs1.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     mxs2.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     auto* primary_mon = &mon1;
+    auto* secondary_mon = &mon2;
     test.expect(monitor_is_primary(test, *primary_mon), "Wrong primary monitor when starting test");
+    int master_server_ind = 0;
 
     if (test.ok())
     {
@@ -143,11 +165,218 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
+            std::random_device dev;
+            std::mt19937 rand_gen;
+            rand_gen.seed(dev());
+            std::uniform_int_distribution<int> action_gen(1, 100);
+
+            time_t test_duration = 60;
+            test.tprintf("Starting test clients and testing failover/switchover for %li seconds.",
+                         test_duration);
+
             clients1.start();
             clients2.start();
+            const time_t start = time(NULL);
+            int primary_maxscale_failovers = 0;
+            int master_server_failovers = 0;
+            sleep(1);
 
-            // Breaks replication, so should be last part of test.
-            test_master_block(test, primary_mon->maxscale);
+            while (test.ok() && (time(NULL) - start < test_duration))
+            {
+                // 40%: kill both
+                // 10%: only kill primary MaxScale
+                // 50%: only kill primary server
+
+                bool kill_master = false;
+                bool kill_mxs = false;
+
+                int rand_num = action_gen(rand_gen);
+                if (rand_num <= 40)
+                {
+                    kill_master = true;
+                    kill_mxs = true;
+                }
+                else if (rand_num <= 60)
+                {
+                    kill_mxs = true;
+                }
+                else
+                {
+                    kill_master = true;
+                }
+
+                auto kill_process = [&test](mxt::Node& node, const char* proc){
+                    test.tprintf("Masking and killing process '%s' on %s.", proc, node.name());
+                    // Prevents auto-restart after kill
+                    node.run_cmd_output_sudof("sudo systemctl mask %s", proc);
+                    auto rc = node.run_cmd_output_sudof("pkill --signal 11 %s", proc).rc;
+                    test.expect(rc == 0, "Kill failed");
+
+                    bool kill_confirmed = false;
+                    string grep = mxb::string_printf("pgrep %s", proc);
+                    for (int i = 0; i < 5; ++i)
+                    {
+                        // pgrep returns 1 for non-existing processes.
+                        if (node.run_cmd_output(grep).rc)
+                        {
+                            kill_confirmed = true;
+                            break;
+                        }
+                        else
+                        {
+                            sleep(1);
+                        }
+                    }
+
+                    test.expect(kill_confirmed, "'%s' is still running!", proc);
+
+                    // Stop service normally and enable starting it.
+                    node.run_cmd_output_sudof("sudo systemctl stop %s", proc);
+                    node.run_cmd_output_sudof("sudo systemctl unmask %s", proc);
+                    rc = node.run_cmd_output(grep).rc;
+                    test.expect(rc, "'%s' started after unmasking.", proc);
+                };
+
+                MaxScale* killed_mxs = nullptr;
+                if (kill_mxs)
+                {
+                    kill_process(primary_mon->maxscale->vm_node(), "maxscale");
+                    primary_mon->maxscale->stop_and_check_stopped();
+                    killed_mxs = primary_mon->maxscale;
+                }
+
+                int killed_master_ind = -1;
+                if (kill_master)
+                {
+                    auto& node = repl.backend(master_server_ind)->vm_node();
+                    kill_process(node, "mariadbd");
+                    repl.stop_node(master_server_ind);      // To prevent autostart.
+                    killed_master_ind = master_server_ind;
+                }
+
+                // Processes killed. Wait for both MaxScale and master server failover. MaxScale first.
+                if (kill_mxs)
+                {
+                    MonitorInfo* next_primary_mon = secondary_mon;
+                    // Some extra sleeps required, as in cooperative_monitoring test.
+                    time_t mxs_swap_start = time(nullptr);
+                    test.tprintf("Waiting until %s gets primary status.",
+                                 secondary_mon->maxscale->node_name().c_str());
+                    bool mxs_swapped = false;
+                    do
+                    {
+                        if (monitor_is_primary(test, *secondary_mon))
+                        {
+                            test.tprintf("%s is primary MaxScale.",
+                                         secondary_mon->maxscale->node_name().c_str());
+                            std::swap(primary_mon, secondary_mon);
+                            mxs_swapped = true;
+                        }
+                        else if (time(nullptr) - mxs_swap_start > 15)
+                        {
+                            test.add_failure("%s did not get primary status within the time limit.",
+                                             next_primary_mon->maxscale->node_name().c_str());
+                            break;
+                        }
+                        else
+                        {
+                            test.tprintf("%s is not yet primary, waiting...",
+                                         next_primary_mon->maxscale->node_name().c_str());
+                            next_primary_mon->maxscale->sleep_and_wait_for_monitor(1, 1);
+                        }
+                    }
+                    while (!mxs_swapped);
+
+                    if (mxs_swapped)
+                    {
+                        primary_maxscale_failovers++;
+                        test.tprintf("Primary MaxScale failover %i success.", primary_maxscale_failovers);
+                    }
+                }
+
+                if (kill_master)
+                {
+                    test.tprintf("Waiting for master server failover.");
+                    master_server_ind = wait_for_master(primary_mon->maxscale);
+                    if (master_server_ind >= 0)
+                    {
+                        master_server_failovers++;
+                        test.tprintf("Master server failover %i success.", master_server_failovers);
+                    }
+                }
+
+                test.tprintf("Restarting killed processes.");
+                if (killed_master_ind >= 0)
+                {
+                    master_server_failovers++;
+                    repl.start_node(killed_master_ind);
+                }
+                if (killed_mxs)
+                {
+                    killed_mxs->start_and_check_started();
+                    killed_mxs->wait_for_monitor();
+                    if (monitor_is_primary(test, *secondary_mon))
+                    {
+                        test.add_failure("%s is still the primary MaxScale.",
+                                         secondary_mon->maxscale->node_name().c_str());
+                    }
+                }
+                if (killed_master_ind >= 0)
+                {
+                    wait_for_rejoin(primary_mon->maxscale, killed_master_ind, true);
+                }
+
+                auto check_server_roles = [&]() {
+                    mxs1.wait_for_monitor();
+                    mxs2.wait_for_monitor();
+                    auto srvs1 = mxs1.get_servers();
+                    auto srvs2 = mxs2.get_servers();
+
+                    bool rval = false;
+                    if (server_roles_match(srvs1, srvs2))
+                    {
+                        srvs1.print();
+                        rval = true;
+                    }
+                    else
+                    {
+                        test.add_failure("The two MaxScales see different server roles.");
+                        srvs1.print();
+                        srvs2.print();
+                    }
+                    return rval;
+                };
+
+                if (check_server_roles())
+                {
+                    if (action_gen(rand_gen) > 80)
+                    {
+                        test.tprintf("Test switchover on %s.", primary_mon->maxscale->node_name().c_str());
+                        int next_master_ind = (master_server_ind + 1) % repl.N;
+                        primary_mon->maxscale->maxctrlf(
+                            "-t 20s call command mariadbmon switchover MariaDB-Monitor server%i",
+                            next_master_ind + 1);
+                        primary_mon->maxscale->wait_for_monitor(2);
+                        check_server_roles();
+                        master_server_ind = next_master_ind;
+                    }
+                }
+                sleep(1);
+            }
+
+            test.tprintf("Primary MaxScale failovers: %i, master server failovers: %i",
+                         primary_maxscale_failovers, master_server_failovers);
+
+            int min_expected_failovers = 3;     // The number of failovers is random, so keep small.
+            test.expect(master_server_failovers >= min_expected_failovers,
+                        "Expected at least %i failovers, but only managed %i.",
+                        min_expected_failovers, master_server_failovers);
+
+            if (test.ok())
+            {
+                // Breaks replication, so should be last part of test.
+                test_master_block(test, primary_mon->maxscale);
+            }
 
             clients1.stop();
             clients2.stop();
