@@ -216,7 +216,10 @@ Client::Client(TestConnections& test, const Settings& sett, int id, bool verbose
 {
     std::random_device dev;
     m_rand_gen.seed(dev());
-    m_tbl = mxb::string_printf("test.t%d", m_id);
+    m_tbl = mxb::string_printf("test.%st%d", m_settings.group_name.c_str(), m_id);
+
+    m_update_limit = sett.updates_pc;
+    m_trx_limit = sett.updates_pc + sett.trx_pc;
 }
 
 void Client::start()
@@ -234,13 +237,13 @@ void Client::stop()
 bool Client::run_query(mxt::MariaDB& conn)
 {
     bool rv;
-    // 20% simple updates, 20% trx updates, 60% selects
+    // simple updates, trx updates and selects
     int action_ind = m_action_gen(m_rand_gen);
-    if (action_ind <= 20)
+    if (action_ind <= m_update_limit)
     {
         rv = run_update(conn);
     }
-    else if (action_ind <= 40)
+    else if (action_ind <= m_trx_limit)
     {
         rv = run_trx(conn);
     }
@@ -428,11 +431,10 @@ bool Client::create_table(mxt::MariaDB& conn)
     bool rval = false;
 
     // Make a table with two integer columns, both with values 0 -- (rows - 1).
-    string tbl = mxb::string_printf("test.t%d", m_id);
     if (conn.try_cmd_f("create or replace table %s (id int unsigned not null, value int, primary key (id));",
-                       tbl.c_str()))
+                       m_tbl.c_str()))
     {
-        string insert = mxb::string_printf("insert into %s values ", tbl.c_str());
+        string insert = mxb::string_printf("insert into %s values ", m_tbl.c_str());
         for (int i = 0; i < m_settings.rows; i++)
         {
             string val = std::to_string(i);
@@ -460,7 +462,7 @@ bool Client::create_table(mxt::MariaDB& conn)
 
 bool Client::drop_table(mxt::MariaDB& conn)
 {
-    return conn.try_cmd_f("drop table test.t%d;", m_id);
+    return conn.try_cmd_f("drop table %s;", m_tbl.c_str());
 }
 
 Client::Stats Client::stats() const
@@ -562,7 +564,15 @@ Client::Stats ClientGroup::total_stats() const
 
 void ClientGroup::print_stats()
 {
-    m_test.tprintf("Total stats from test clients:");
+    if (m_settings.group_name.empty())
+    {
+        m_test.tprintf("Total stats from test clients:");
+    }
+    else
+    {
+        m_test.tprintf("Total stats from test clients (group %s):", m_settings.group_name.c_str());
+    }
+
     printf("Client | Read (success) | Read (fail) | Update (success) | Update (fail) | Trx (success) | "
            "Trx (read fail) | Trx (update fail) \n");
     for (const auto& client : m_clients)

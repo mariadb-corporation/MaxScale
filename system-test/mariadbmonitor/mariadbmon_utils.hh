@@ -37,11 +37,15 @@ namespace testclient
 
 struct Settings
 {
-    std::string host;
-    int         port {0};
-    std::string user;
-    std::string pw;
-    int         rows {0};
+    std::string host;       /**< Host to connect to, typically MaxScale IP */
+    int         port {0};   /**< Port to connect to, typically MaxScale listener */
+    std::string user;       /**< Client username */
+    std::string pw;         /**< Client pw */
+    int         rows {0};   /**< How many rows the table managed by this client should have */
+    std::string group_name; /**< Table name prefix. Required with multiple ClientGroups. */
+
+    int updates_pc {20};/**< Ratio of simple update queries */
+    int trx_pc {20};    /**< Ratio of transaction updates. Remaining queries are selects. */
 };
 
 class Client
@@ -78,7 +82,6 @@ private:
     bool run_trx(mxt::MariaDB& conn);
     void run();
 
-private:
     const int        m_id {-1};
     TestConnections& m_test;
     const Settings&  m_settings;
@@ -94,6 +97,9 @@ private:
     std::uniform_int_distribution<int> m_row_gen;
     std::uniform_int_distribution<int> m_val_gen;
     std::uniform_int_distribution<int> m_action_gen;
+
+    int m_update_limit {0};
+    int m_trx_limit {0};
 
     Stats m_stats;
 };
