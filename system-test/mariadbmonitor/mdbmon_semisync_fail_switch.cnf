@@ -18,6 +18,7 @@ backend_write_timeout=2s
 failcount=2
 failover_timeout=9s
 verify_master_failure=false
+cooperative_monitoring_locks=majority_of_all
 
 [RW-Split-Router]
 type=service

@@ -528,6 +528,7 @@ public:
     void write_env_vars();
 
     mxt::Node& vm_node();
+    mxt::TestLogger& log() const;
 
     /**
      * Check that server status is as expected. Increments global error counter if differences found.
@@ -587,7 +588,6 @@ private:
     mxt::SharedData&           m_shared;
     std::unique_ptr<mxt::Node> m_vmnode;
 
-    mxt::TestLogger& log() const;
     bool             verbose() const;
     mxt::CmdResult   curl_rest_api(const std::string& path);
     int              start_local_maxscale();
