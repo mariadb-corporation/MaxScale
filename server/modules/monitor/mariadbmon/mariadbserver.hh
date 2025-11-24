@@ -605,7 +605,7 @@ public:
     const EventList& new_custom_events() const override;
     void             set_wait_timout(int wait_timeout);
 
-    bool relax_connector_timeouts(std::chrono::seconds op_timeout);
+    bool relax_connector_timeouts(GeneralOpData& op, std::chrono::seconds op_timeout);
     void restore_connector_timeouts();
 
 private:
