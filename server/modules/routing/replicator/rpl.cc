@@ -1905,8 +1905,8 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 {
     bool rval = false;
     uint64_t id;
-    char table_name[MYSQL_TABLE_MAXLEN + 2];
-    char schema_name[MYSQL_DATABASE_MAXLEN + 2];
+    char table_name[MYSQL_TABLE_MAXLEN + 1];
+    char schema_name[MYSQL_DATABASE_MAXLEN + 1];
     char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
     int ev_len = m_event_type_hdr_lens[hdr->event_type];
 
