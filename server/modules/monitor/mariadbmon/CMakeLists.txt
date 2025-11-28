@@ -3,7 +3,7 @@ add_library(mariadbmon SHARED mariadbmon.cc cluster_manipulation.cc cluster_disc
 target_link_libraries(mariadbmon maxscale-common ${LIBSSH_LIBRARY})
 target_include_directories(mariadbmon PRIVATE ${LIBSSH_INCLUDE_DIR})
 
-if (FORCE_BUNDLE)
+if (FORCE_BUNDLE AND BUILDING_LIBSSH)
   add_dependencies(mariadbmon libssh)
 endif()
 
