@@ -900,7 +900,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
     bool ok_to_demote = false;
     StopWatch timer;
     auto new_conn_timeout = round_to_seconds(op.general.time_remaining) * 1s;
-    if (demotion_target->relax_connector_timeouts(new_conn_timeout))
+    if (demotion_target->relax_connector_timeouts(op.general, new_conn_timeout))
     {
         ok_to_demote = true;
     }

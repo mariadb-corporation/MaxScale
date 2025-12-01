@@ -3025,7 +3025,7 @@ const std::string& MariaDBServer::permission_test_query() const
     return grant_test_query;
 }
 
-bool MariaDBServer::relax_connector_timeouts(std::chrono::seconds op_timeout)
+bool MariaDBServer::relax_connector_timeouts(GeneralOpData& op, std::chrono::seconds op_timeout)
 {
     // Limit final connector timeout. Statement timeout will be 1s less.
     auto new_timeout_max = 41s;
@@ -3063,6 +3063,17 @@ bool MariaDBServer::relax_connector_timeouts(std::chrono::seconds op_timeout)
     }
     else
     {
+        const char conn_failed[] = "Monitor %s %s to server %s with increased read/write timeouts: '%s'";
+        if (res == ConnectResult::TIMEOUT)
+        {
+            PRINT_JSON_ERROR(op.error_out, conn_failed, m_shared.monitor_name, "timed out when connecting",
+                             name(), m_latest_error.c_str());
+        }
+        else
+        {
+            PRINT_JSON_ERROR(op.error_out, conn_failed, m_shared.monitor_name, "failed to connect", name(),
+                             m_latest_error.c_str());
+        }
         mysql_close(con);
         con = nullptr;
     }
