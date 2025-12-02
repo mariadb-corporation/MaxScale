@@ -1,6 +1,6 @@
-# MaxScale by MariaDB Corporation
+# MaxScale by MariaDB plc
 
-The MariaDB Corporation MaxScale is an intelligent proxy that allows
+The MariaDB MaxScale is an intelligent proxy that allows
 forwarding of database statements to one or more database servers using
 complex rules, a semantic understanding of the database statements and the
 roles of the various servers within the backend cluster of databases.
@@ -32,9 +32,9 @@ them.
 
 # License
 
-MariaDB MaxScale is licensed under the [Business Source
-License](https://mariadb.com/bsl-faq-mariadb/). For the full details of
-the license, refer to [LICENSE.TXT](./LICENSE.TXT).
+MariaDB MaxScale up until version 24.02 is licensed under the
+[Business Source License](https://mariadb.com/bsl-faq-mariadb/).
+For the full details of the license, refer to [LICENSE.TXT](./LICENSE.TXT).
 
 The following is a table of the BSL change dates.
 
