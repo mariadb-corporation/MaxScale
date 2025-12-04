@@ -374,8 +374,16 @@ void test_main(TestConnections& test)
 
             if (test.ok())
             {
-                // Breaks replication, so should be last part of test.
-                test_master_block(test, primary_mon->maxscale);
+                // Breaks replication, so should be last part of test. Ensure that mxs1 is primary before
+                // continuing.
+                mxs2.stop_and_check_stopped();
+                mxs1.wait_for_monitor(3);
+                test.expect(monitor_is_primary(test, mon1), "MaxScale1 is not primary.");
+                mxs2.start_and_check_started();
+                if (test.ok())
+                {
+                    test_master_block(test, &mxs1);
+                }
             }
 
             clients1.stop();
