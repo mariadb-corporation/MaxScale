@@ -236,6 +236,31 @@ std::tuple<int, std::string> next_message(string& msg_buf)
     }
     return {rval, rval_msg};
 }
+
+void check_pam_service_file_readability(const string& service)
+{
+    string path = mxb::string_printf("/etc/pam.d/%s", service.c_str());
+    if (access(path.c_str(), R_OK) != 0)
+    {
+        int eno = errno;
+        if (eno == EACCES)
+        {
+            MXB_WARNING("MaxScale cannot read file '%s'. PAM authentication will not work properly. "
+                        "Error: %s", path.c_str(), mxb_strerror(eno));
+        }
+        else if (eno == ENOENT || eno == ENOTDIR)
+        {
+            // Expected if pam service files are located elsewhere. Do nothing.
+        }
+        else
+        {
+            // Unexpected error.
+            MXB_ERROR("Failed to check for readability of file '%s'. Error: %s",
+                      path.c_str(), mxb_strerror(eno));
+        }
+    }
+
+}
 }
 }
 

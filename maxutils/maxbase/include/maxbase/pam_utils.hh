@@ -131,6 +131,16 @@ AuthResult authenticate_fd(int read_fd, int write_fd, const UserData& user, cons
 bool match_prompt(const char* prompt, const std::string& expected_start);
 
 /**
+ * Check if current process can read the config file for the given PAM service. If not, log a warning message.
+ * If the file doesn't exist at all, do nothing. The purpose of this function is to warn the user if MaxScale
+ * cannot properly run the PAM service. Some OSs may have fallback services and their use may not be
+ * obvious.
+ *
+ * @param service
+ */
+void check_pam_service_file_readability(const std::string& service);
+
+/**
  * Read a length-encoded string from pipe, blocking to wait until data can be read. Should be only used on
  * blocking pipes, typically by a subprocess.
  *

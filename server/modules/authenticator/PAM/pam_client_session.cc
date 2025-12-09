@@ -395,6 +395,7 @@ AuthRes PamClientAuthenticator::authenticate_old(MYSQL_session* session, Authent
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
     string service(eff_pam_service(entry.auth_string));
+    mxb::pam::check_pam_service_file_readability(service);
 
     AuthRes rval;
     AuthResult res = mxb::pam::authenticate(m_settings.mode, user, pwds, service, expected_msgs);

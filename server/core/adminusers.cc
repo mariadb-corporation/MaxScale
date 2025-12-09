@@ -385,6 +385,7 @@ mxs::user_account_type admin_user_is_pam_account(const std::string& username, co
 
     if (!pam_rw_srv.empty())
     {
+        mxb::pam::check_pam_service_file_readability(pam_rw_srv);
         pam_res = mxb::pam::authenticate(username, password, pam_rw_srv);
         user_type = USER_ACCOUNT_ADMIN;
         auth_attempted = true;
@@ -392,6 +393,7 @@ mxs::user_account_type admin_user_is_pam_account(const std::string& username, co
 
     if (!pam_ro_srv.empty() && pam_res.type != mxb::pam::AuthResult::Result::SUCCESS)
     {
+        mxb::pam::check_pam_service_file_readability(pam_ro_srv);
         pam_res = mxb::pam::authenticate(username, password, pam_ro_srv);
         user_type = USER_ACCOUNT_BASIC;
         auth_attempted = true;
