@@ -388,6 +388,7 @@ void test_main(TestConnections& test)
         clients2.cleanup();
 
         semisync::restore_normal_replication(test);
+        mxs1.wait_for_monitor();
     }
 
     drop_test_user(test);
