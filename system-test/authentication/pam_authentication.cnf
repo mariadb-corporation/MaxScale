@@ -1,7 +1,7 @@
 [maxscale]
 threads=###threads###
 admin_pam_readwrite_service=pam_config_msg
-log_info=1
+log_info=0
 users_refresh_time=0s
 admin_secure_gui=false
 

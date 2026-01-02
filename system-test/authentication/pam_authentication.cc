@@ -32,6 +32,7 @@ const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED 
 const char pam_user[] = "dduck";
 const char pam_pw[] = "313";
 const char pam_config_name[] = "pam_config_msg";
+const char pam_config_path_fmt[] = "/etc/pam.d/%s";
 
 MYSQL* pam_login(TestConnections& test, int port, const string& user, const string& pass,
                  const string& database);
@@ -43,6 +44,7 @@ bool try_mapped_pam_login(TestConnections& test, int port, const string& user, c
 void test_main(TestConnections& test);
 void test_pam_cleartext_plugin(TestConnections& test);
 void test_user_account_mapping(TestConnections& test);
+void test_service_file_access_denied(TestConnections& test);
 }
 
 int main(int argc, char** argv)
@@ -69,7 +71,7 @@ void test_main(TestConnections& test)
     // all backends.
 
     string pam_config_path_src = mxb::string_printf("%s/authentication/%s", mxt::SOURCE_DIR, pam_config_name);
-    string pam_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_config_name);
+    string pam_config_path_dst = mxb::string_printf(pam_config_path_fmt, pam_config_name);
 
     const char pam_msgfile[] = "pam_test_msg.txt";
     string pam_msgfile_path_src = mxb::string_printf("%s/authentication/%s", mxt::SOURCE_DIR, pam_msgfile);
@@ -317,6 +319,11 @@ void test_main(TestConnections& test)
         test_user_account_mapping(test);
     }
 
+    if (test.ok())
+    {
+        test_service_file_access_denied(test);
+    }
+
     test.tprintf("Test complete. Cleaning up.");
     // Cleanup: remove linux user and files from the MaxScale node.
     mxs_vm.remove_linux_user(pam_user);
@@ -385,7 +392,7 @@ void test_pam_cleartext_plugin(TestConnections& test)
         // distributions. Copy a minimal pam config and use it.
         const char pam_min_cfg[] = "pam_config_simple";
         string pam_min_cfg_src = mxb::string_printf("%s/authentication/%s", mxt::SOURCE_DIR, pam_min_cfg);
-        string pam_min_cfg_dst = mxb::string_printf("/etc/pam.d/%s", pam_min_cfg);
+        string pam_min_cfg_dst = mxb::string_printf(pam_config_path_fmt, pam_min_cfg);
         mxs_vm.copy_to_node_sudo(pam_min_cfg_src, pam_min_cfg_dst);
         // Copy to VMs.
         for (int i = 0; i < N; i++)
@@ -573,5 +580,50 @@ bool try_mapped_pam_login(TestConnections& test, int port, const string& user, c
         mysql_close(maxconn);
     }
     return rval;
+}
+
+void test_service_file_access_denied(TestConnections& test)
+{
+    // MXS-6033
+    test.tprintf("MXS-6033: Pam login when pam service config file is unreadable to MaxScale.");
+
+    auto& mxs = *test.maxscale;
+
+    auto rwsplit_conn = mxs.open_rwsplit_connection2();
+    rwsplit_conn->cmd_f("CREATE USER '%s'@'%%' IDENTIFIED VIA pam USING '%s';", pam_user, pam_config_name);
+    sleep(1);
+
+    test.tprintf("Log in normally, user account should work.");
+    bool login_ok = test_pam_login(test, mxs.rwsplit_port, pam_user, pam_pw, "");
+    test.expect(login_ok, "Login should have succeeded.");
+
+    if (test.ok())
+    {
+        string pam_config_path = mxb::string_printf(pam_config_path_fmt, pam_config_name);
+        test.tprintf("Make '%s' unreadable by maxscale user, check that MaxScale logs a warning when "
+                     "trying to log in using the service.", pam_config_path.c_str());
+
+        string chmod = mxb::string_printf("chmod o-r %s", pam_config_path.c_str());
+        auto res = mxs.vm_node().run_cmd_output_sudo(chmod);
+        test.expect(res.rc == 0, "chmod failed: %s", res.output.c_str());
+
+        auto test_conn = pam_login(test, mxs.rwsplit_port, pam_user, pam_pw, "");
+        test.expect(!test_conn, "Login should have failed.");
+        mysql_close(test_conn);
+
+        bool found = mxs.log_matches("MaxScale cannot read file .* PAM authentication will not "
+                                     "work properly.");
+        test.expect(found, "Expected log message not found.");
+
+        test.tprintf("Give read-access again, login should work.");
+        string undo_chmod = mxb::string_printf("chmod o+r %s", pam_config_path.c_str());
+        res = mxs.vm_node().run_cmd_output_sudo(undo_chmod);
+        test.expect(res.rc == 0, "chmod undo failed: %s", res.output.c_str());
+
+        login_ok = test_pam_login(test, mxs.rwsplit_port, pam_user, pam_pw, "");
+        test.expect(login_ok, "Login should have succeeded after restoring read access.");
+    }
+
+    rwsplit_conn->cmd_f("drop user %s;", pam_user);
 }
 }
