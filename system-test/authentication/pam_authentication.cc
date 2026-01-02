@@ -519,6 +519,7 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
         {
             cout << "Query rejected: '" << mysql_error(maxconn) << "'\n";
         }
+        mysql_close(maxconn);
     }
     return rval;
 }
@@ -550,6 +551,7 @@ bool try_mapped_pam_login(TestConnections& test, int port, const string& user, c
         {
             cout << "Query rejected: '" << mysql_error(maxconn) << "'\n";
         }
+        mysql_close(maxconn);
     }
     return rval;
 }
