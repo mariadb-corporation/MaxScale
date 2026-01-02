@@ -169,16 +169,16 @@ void test_main(TestConnections& test)
             test.tprintf("Stop master. Failover should stall until at least one lock is released.");
             repl.backend(old_master_ind)->stop_database();
             mxs.wait_for_monitor(3);
-            mxs.log_matches("To avoid data loss, failover is postponed");
+            test.log_includes("To avoid data loss, failover is postponed");
             mxs.check_print_servers_status({down, slave, slave, slave});
             test.tprintf("Release lock on server2, failover should begin. Redirecting servers 3 & 4 should "
                          "stall.");
             repl.backend(1)->admin_connection()->cmd(unlock_tables);
             sleep(2);
-            mxs.log_matches("Performing automatic failover");
+            test.log_includes("Performing automatic failover");
             test.tprintf("Sleep more, \"STOP SLAVE\" should time out.");
             sleep(5);
-            mxs.log_matches("According to .+, replication from .+ is still active.");
+            test.log_includes("According to 'SHOW ALL SLAVES STATUS', replication from");
             test.tprintf("Release locks, failover should complete.");
             release_locks();
             mxs.wait_for_monitor(2);
