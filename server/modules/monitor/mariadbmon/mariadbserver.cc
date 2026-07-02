@@ -39,6 +39,8 @@ namespace
 {
 const char not_a_db[] = "it is not a valid database.";
 const string grant_test_query = "SHOW SLAVE STATUS;";
+// MySQL 8.4 removed "SHOW SLAVE STATUS"; the equivalent permission test uses the new spelling.
+const string grant_test_query_mysql = "SHOW REPLICA STATUS;";
 }
 
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
@@ -318,10 +320,18 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 {
     string query;
     bool all_slaves_status = false;
+    // MySQL 8.0.22+ uses the "REPLICA" command vocabulary and renamed the SHOW SLAVE STATUS columns
+    // (Master_* -> Source_*, Slave_*_Running -> Replica_*_Running, Seconds_Behind_Master ->
+    // Seconds_Behind_Source). MySQL 8.4 removed the legacy "SLAVE" spelling completely.
+    const bool mysql_replica = m_capabilities.mysql_replica_syntax;
     if (m_capabilities.slave_status_all)
     {
         all_slaves_status = true;
         query = "SHOW ALL SLAVES STATUS;";
+    }
+    else if (mysql_replica)
+    {
+        query = "SHOW REPLICA STATUS;";
     }
     else if (m_capabilities.basic_support)
     {
@@ -339,16 +349,25 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         return false;
     }
 
+    // Column names differ between the MariaDB ("Master_*"/"Slave_*") and the MySQL 8.0.22+
+    // ("Source_*"/"Replica_*") replication dialects.
+    const char* col_master_host = mysql_replica ? "Source_Host" : "Master_Host";
+    const char* col_master_port = mysql_replica ? "Source_Port" : "Master_Port";
+    const char* col_io_running = mysql_replica ? "Replica_IO_Running" : "Slave_IO_Running";
+    const char* col_sql_running = mysql_replica ? "Replica_SQL_Running" : "Slave_SQL_Running";
+    const char* col_master_server_id = mysql_replica ? "Source_Server_Id" : "Master_Server_Id";
+    const char* col_seconds_behind = mysql_replica ? "Seconds_Behind_Source" : "Seconds_Behind_Master";
+
     // Fields common to all server versions
-    auto i_master_host = result->get_col_index("Master_Host");
-    auto i_master_port = result->get_col_index("Master_Port");
-    auto i_slave_io_running = result->get_col_index("Slave_IO_Running");
-    auto i_slave_sql_running = result->get_col_index("Slave_SQL_Running");
-    auto i_master_server_id = result->get_col_index("Master_Server_Id");
+    auto i_master_host = result->get_col_index(col_master_host);
+    auto i_master_port = result->get_col_index(col_master_port);
+    auto i_slave_io_running = result->get_col_index(col_io_running);
+    auto i_slave_sql_running = result->get_col_index(col_sql_running);
+    auto i_master_server_id = result->get_col_index(col_master_server_id);
     auto i_last_io_errno = result->get_col_index("Last_IO_Errno");
     auto i_last_io_error = result->get_col_index("Last_IO_Error");
     auto i_last_sql_error = result->get_col_index("Last_SQL_Error");
-    auto i_seconds_behind_master = result->get_col_index("Seconds_Behind_Master");
+    auto i_seconds_behind_master = result->get_col_index(col_seconds_behind);
 
     const char INVALID_DATA[] = "'%s' returned invalid data.";
     if (i_master_host < 0 || i_master_port < 0 || i_slave_io_running < 0 || i_slave_sql_running < 0
@@ -374,6 +393,12 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             MXB_ERROR(INVALID_DATA, query.c_str());
             return false;
         }
+    }
+    else if (mysql_replica)
+    {
+        // MySQL "SHOW REPLICA STATUS" returns one row per replication channel. The default channel
+        // name is empty, which matches the default (unnamed) MariaDB connection.
+        i_connection_name = result->get_col_index("Channel_Name");
     }
 
     SlaveStatusArray slave_status_new;
@@ -424,6 +449,13 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             {
                 new_row.gtid_io_pos = GtidList::from_string(gtid_io_pos);
             }
+        }
+        else if (mysql_replica && i_connection_name >= 0)
+        {
+            // Track the MySQL replication channel name. MySQL GTID (Auto_Position) uses a UUID-based
+            // format incompatible with MariaDB's GtidList, so gtid_mode is left as NONE: file/position
+            // replication is monitored via the master server id and the running flags above.
+            new_row.settings.name = result->get_string(i_connection_name);
         }
 
         // If parsing fails, discard all query results.
@@ -625,7 +657,12 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
 
 void MariaDBServer::check_semisync_master_status()
 {
-    const char* query =
+    // MySQL 8.0.26+ renamed the semi-sync "master" plugin variables to "source".
+    const char* query = m_capabilities.mysql_replica_syntax ?
+        "SELECT c.VARIABLE_VALUE, s.VARIABLE_VALUE FROM "
+        "INFORMATION_SCHEMA.GLOBAL_VARIABLES c JOIN INFORMATION_SCHEMA.GLOBAL_STATUS s "
+        "ON(c.VARIABLE_NAME = 'rpl_semi_sync_source_enabled' AND s.VARIABLE_NAME = 'rpl_semi_sync_source_status')"
+        :
         "SELECT c.VARIABLE_VALUE, s.VARIABLE_VALUE FROM "
         "INFORMATION_SCHEMA.GLOBAL_VARIABLES c JOIN INFORMATION_SCHEMA.GLOBAL_STATUS s "
         "ON(c.VARIABLE_NAME = 'rpl_semi_sync_master_enabled' AND s.VARIABLE_NAME = 'rpl_semi_sync_master_status')";
@@ -1016,6 +1053,13 @@ void MariaDBServer::update_server_version()
         if (total >= 50500)
         {
             m_capabilities.basic_support = true;
+            // MySQL 8.0.22 introduced the "REPLICA"/"SOURCE" command vocabulary and 8.4 removed the
+            // legacy "SLAVE"/"MASTER" spelling entirely. From 8.0.22 onwards the monitor must speak the
+            // new dialect, e.g. "SHOW REPLICA STATUS" instead of "SHOW SLAVE STATUS".
+            if (type == ServerType::MYSQL && total >= 80022)
+            {
+                m_capabilities.mysql_replica_syntax = true;
+            }
             // For more specific features, at least MariaDB 10.4 is needed.
             if ((type == ServerType::MARIADB || type == ServerType::BLR) && total >= 100400)
             {
@@ -2943,7 +2987,7 @@ const MonitorServer::EventList& MariaDBServer::new_custom_events() const
 
 const std::string& MariaDBServer::permission_test_query() const
 {
-    return grant_test_query;
+    return m_capabilities.mysql_replica_syntax ? grant_test_query_mysql : grant_test_query;
 }
 
 bool MariaDBServer::relax_connector_timeouts(std::chrono::seconds op_timeout)
