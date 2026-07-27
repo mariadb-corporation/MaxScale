@@ -17,6 +17,10 @@
 #include <fstream>
 #include <cinttypes>
 #include <set>
+#include <map>
+#include <mutex>
+#include <algorithm>
+#include <cstdlib>
 #include <utility>
 #include <mysql.h>
 #include <mysqld_error.h>
@@ -41,6 +45,86 @@ const char not_a_db[] = "it is not a valid database.";
 const string grant_test_query = "SHOW SLAVE STATUS;";
 // MySQL 8.4 removed "SHOW SLAVE STATUS"; the equivalent permission test uses the new spelling.
 const string grant_test_query_mysql = "SHOW REPLICA STATUS;";
+
+// --- MySQL GTID support -----------------------------------------------------------------------------
+// MySQL GTIDs are "server_uuid:interval[:interval]" sets, e.g.
+//   "3E11FA47-71CA-11E1-9E33-C80AA9429562:1-5:8-10,A1B2...:1-3".
+// The mariadbmon failover/switchover engine is built around MariaDB GtidLists
+// ("domain-server_id-sequence"). To reuse that engine unchanged, every distinct server_uuid is mapped
+// to a stable synthetic "domain" id and the highest transaction number seen for that uuid becomes the
+// "sequence". This preserves the only properties the engine relies on: per-origin ordering and
+// "who is furthest ahead". The mapping is process-wide and stable across monitor ticks and servers.
+std::mutex uuid_domain_lock;
+std::map<std::string, uint32_t> uuid_domain_map;
+
+uint32_t synth_domain_for_uuid(const std::string& uuid)
+{
+    std::lock_guard<std::mutex> guard(uuid_domain_lock);
+    auto it = uuid_domain_map.find(uuid);
+    if (it != uuid_domain_map.end())
+    {
+        return it->second;
+    }
+    uint32_t d = (uint32_t)uuid_domain_map.size() + 1;      // domains start at 1
+    uuid_domain_map[uuid] = d;
+    return d;
+}
+
+// Convert a MySQL GTID set string into an equivalent synthetic MariaDB GtidList string
+// ("domain-domain-maxseq,..."). Returns an empty string for an empty/invalid set.
+std::string mysql_gtid_to_synthetic(const std::string& mysql_set)
+{
+    std::string s = mysql_set;
+    s.erase(std::remove_if(s.begin(), s.end(),
+                           [](char c) {
+                               return c == '\n' || c == '\r' || c == ' ' || c == '\t';
+                           }), s.end());
+    std::string out;
+    size_t pos = 0;
+    while (pos < s.size())
+    {
+        size_t comma = s.find(',', pos);
+        std::string block = s.substr(pos, comma == std::string::npos ? std::string::npos : comma - pos);
+        pos = (comma == std::string::npos) ? s.size() : comma + 1;
+        if (block.empty())
+        {
+            continue;
+        }
+        size_t colon = block.find(':');
+        if (colon == std::string::npos)
+        {
+            continue;
+        }
+        std::string uuid = block.substr(0, colon);
+        std::string intervals = block.substr(colon + 1);
+        uint64_t maxseq = 0;
+        size_t ip = 0;
+        while (ip < intervals.size())
+        {
+            size_t c2 = intervals.find(':', ip);
+            std::string iv = intervals.substr(ip, c2 == std::string::npos ? std::string::npos : c2 - ip);
+            ip = (c2 == std::string::npos) ? intervals.size() : c2 + 1;
+            if (iv.empty())
+            {
+                continue;
+            }
+            size_t dash = iv.find('-');
+            const char* endp = (dash == std::string::npos) ? iv.c_str() : iv.c_str() + dash + 1;
+            uint64_t end = strtoull(endp, nullptr, 10);
+            if (end > maxseq)
+            {
+                maxseq = end;
+            }
+        }
+        uint32_t domain = synth_domain_for_uuid(uuid);
+        if (!out.empty())
+        {
+            out += ",";
+        }
+        out += std::to_string(domain) + "-" + std::to_string(domain) + "-" + std::to_string(maxseq);
+    }
+    return out;
+}
 }
 
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
@@ -380,6 +464,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 
     int64_t i_connection_name = -1, i_slave_rec_hbs = -1, i_slave_hb_period = -1;
     int64_t i_using_gtid = -1, i_gtid_io_pos = -1;
+    int64_t i_retrieved_gtid = -1, i_executed_gtid = -1;
     if (all_slaves_status)
     {
         i_connection_name = result->get_col_index("Connection_name");
@@ -399,6 +484,10 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         // MySQL "SHOW REPLICA STATUS" returns one row per replication channel. The default channel
         // name is empty, which matches the default (unnamed) MariaDB connection.
         i_connection_name = result->get_col_index("Channel_Name");
+        // Retrieved_Gtid_Set = GTIDs received into the relay log (= MariaDB's Gtid_IO_Pos);
+        // Executed_Gtid_Set = GTIDs already applied. Used to gauge how far this replica has progressed.
+        i_retrieved_gtid = result->get_col_index("Retrieved_Gtid_Set");
+        i_executed_gtid = result->get_col_index("Executed_Gtid_Set");
     }
 
     SlaveStatusArray slave_status_new;
@@ -450,12 +539,32 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
                 new_row.gtid_io_pos = GtidList::from_string(gtid_io_pos);
             }
         }
-        else if (mysql_replica && i_connection_name >= 0)
+        else if (mysql_replica)
         {
-            // Track the MySQL replication channel name. MySQL GTID (Auto_Position) uses a UUID-based
-            // format incompatible with MariaDB's GtidList, so gtid_mode is left as NONE: file/position
-            // replication is monitored via the master server id and the running flags above.
-            new_row.settings.name = result->get_string(i_connection_name);
+            if (i_connection_name >= 0)
+            {
+                new_row.settings.name = result->get_string(i_connection_name);
+            }
+            // The MySQL module always drives replication with SOURCE_AUTO_POSITION=1, i.e. GTID mode.
+            // Map it to CURRENT so the engine treats this as a GTID-based connection.
+            new_row.settings.gtid_mode = GtidMode::CURRENT;
+
+            // gtid_io_pos = GTIDs in the relay log. Prefer Retrieved_Gtid_Set; if the IO thread has not
+            // retrieved anything this session yet, fall back to Executed_Gtid_Set so the position is not
+            // spuriously empty (an empty gtid_io_pos would block this replica from being promoted).
+            string io_set;
+            if (i_retrieved_gtid >= 0)
+            {
+                io_set = mysql_gtid_to_synthetic(result->get_string(i_retrieved_gtid));
+            }
+            if (io_set.empty() && i_executed_gtid >= 0)
+            {
+                io_set = mysql_gtid_to_synthetic(result->get_string(i_executed_gtid));
+            }
+            if (!io_set.empty())
+            {
+                new_row.gtid_io_pos = GtidList::from_string(io_set);
+            }
         }
 
         // If parsing fails, discard all query results.
@@ -525,9 +634,12 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 
 bool MariaDBServer::update_gtids(string* errmsg_out)
 {
-    static const string query = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
+    // MySQL exposes the executed/purged GTID sets, not MariaDB's gtid_current_pos/gtid_binlog_pos.
+    // gtid_executed is the set this server has applied; with log_replica_updates it is also what the
+    // server has in its own binlog, so it serves as both current_pos and binlog_pos for the engine.
+    static const string query = "SELECT @@global.gtid_executed, @@global.gtid_purged;";
     const int i_current_pos = 0;
-    const int i_binlog_pos = 1;
+    const int i_binlog_pos = 0;     // same column: MySQL has a single executed set
 
     bool rval = false;
     auto result = execute_query(query, errmsg_out);
@@ -539,8 +651,8 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
         if (result->next_row())
         {
             // Query returned at least some data.
-            auto current_str = result->get_string(i_current_pos);
-            auto binlog_str = result->get_string(i_binlog_pos);
+            auto current_str = mysql_gtid_to_synthetic(result->get_string(i_current_pos));
+            auto binlog_str = mysql_gtid_to_synthetic(result->get_string(i_binlog_pos));
             if (!current_str.empty())
             {
                 current_pos = GtidList::from_string(current_str);
@@ -582,14 +694,17 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
 
 bool MariaDBServer::update_replication_settings(std::string* errmsg_out)
 {
-    const string query = "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;";
+    // MySQL has no gtid_strict_mode, and log_slave_updates was renamed log_replica_updates (the legacy
+    // name was removed in 8.4). enforce_gtid_consistency is the closest analogue to strict mode.
+    const string query = "SELECT @@enforce_gtid_consistency, @@log_bin, @@log_replica_updates;";
     bool rval = false;
 
     auto result = execute_query(query, errmsg_out);
     if (result && result->next_row())
     {
         rval = true;
-        m_rpl_settings.gtid_strict_mode = result->get_bool(0);
+        // enforce_gtid_consistency is an enum ('OFF'/'ON'/'WARN'); treat ON as strict.
+        m_rpl_settings.gtid_strict_mode = (result->get_string(0) == "ON");
         m_rpl_settings.log_bin = result->get_bool(1);
         m_rpl_settings.log_slave_updates = result->get_bool(2);
     }
@@ -598,8 +713,11 @@ bool MariaDBServer::update_replication_settings(std::string* errmsg_out)
 
 bool MariaDBServer::read_server_variables(string* errmsg_out)
 {
+    // MySQL has no gtid_domain_id. Instead, every server's own server_uuid is mapped to a stable
+    // synthetic domain id, which becomes the cluster "GTID domain" (the primary's uuid-domain) used by
+    // the promotion/catchup engine. read_only is read here; super_read_only is handled at promote/demote.
     const string query_no_gtid = "SELECT @@global.server_id, @@read_only;";
-    const string query_with_gtid = "SELECT @@global.server_id, @@read_only, @@global.gtid_domain_id;";
+    const string query_with_gtid = "SELECT @@global.server_id, @@read_only, @@global.server_uuid;";
     const bool use_gtid = m_capabilities.gtid;
     const string& query = use_gtid ? query_with_gtid : query_no_gtid;
 
@@ -622,7 +740,12 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
             int64_t domain_id_parsed = GTID_DOMAIN_UNKNOWN;
             if (use_gtid)
             {
-                domain_id_parsed = result->get_int(i_domain);
+                // MySQL: derive the synthetic GTID domain from this server's server_uuid.
+                string server_uuid = result->get_string(i_domain);
+                if (!server_uuid.empty())
+                {
+                    domain_id_parsed = synth_domain_for_uuid(server_uuid);
+                }
             }
 
             if (result->error())
@@ -657,6 +780,12 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
 
 void MariaDBServer::check_semisync_master_status()
 {
+    if (server_type() == ServerType::MYSQL)
+    {
+        m_ss_status = SemiSyncStatus::UNKNOWN;
+        return;
+    }
+
     // MySQL 8.0.26+ renamed the semi-sync "master" plugin variables to "source".
     const char* query = m_capabilities.mysql_replica_syntax ?
         "SELECT c.VARIABLE_VALUE, s.VARIABLE_VALUE FROM "
@@ -1059,6 +1188,10 @@ void MariaDBServer::update_server_version()
             if (type == ServerType::MYSQL && total >= 80022)
             {
                 m_capabilities.mysql_replica_syntax = true;
+                // MySQL 8.x GTID auto-positioning enables failover/switchover/rejoin. The engine's
+                // gtid capability is reused; GTID data is read from gtid_executed (see update_gtids)
+                // and replication is set up with SOURCE_AUTO_POSITION=1 (see generate_change_master_cmd).
+                m_capabilities.gtid = true;
             }
             // For more specific features, at least MariaDB 10.4 is needed.
             if ((type == ServerType::MARIADB || type == ServerType::BLR) && total >= 100400)
@@ -1610,8 +1743,8 @@ bool MariaDBServer::reset_all_slave_conns(mxb::Json& error_out)
     for (const auto& slave_conn : m_slave_status)
     {
         auto conn_name = slave_conn.settings.name;
-        auto stop = string_printf("STOP SLAVE '%s';", conn_name.c_str());
-        auto reset = string_printf("RESET SLAVE '%s' ALL;", conn_name.c_str());
+        auto stop = string_printf("STOP REPLICA FOR CHANNEL '%s';", conn_name.c_str());
+        auto reset = string_printf("RESET REPLICA ALL FOR CHANNEL '%s';", conn_name.c_str());
         if (!execute_cmd(stop, &error_msg) || !execute_cmd(reset, &error_msg))
         {
             error = true;
@@ -1947,7 +2080,7 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
      * an already stopped slave connection an error. */
     Duration time_left = time_limit;
     StopWatch timer;
-    string stop = string_printf("STOP SLAVE '%s';", conn_name.c_str());
+    string stop = string_printf("STOP REPLICA FOR CHANNEL '%s';", conn_name.c_str());
     string error_msg;
     bool stop_success = execute_cmd_time_limit(stop, time_left, &error_msg);
     time_left -= timer.restart();
@@ -1955,12 +2088,12 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
     bool rval = false;
     if (stop_success)
     {
-        // The RESET SLAVE-query can also take a while if there is lots of relay log to delete.
+        // The RESET REPLICA-query can also take a while if there is lots of relay log to delete.
         // Very rare, though.
         if (mode == StopMode::RESET || mode == StopMode::RESET_ALL)
         {
-            string reset = string_printf("RESET SLAVE '%s'%s;",
-                                         conn_name.c_str(), (mode == StopMode::RESET_ALL) ? " ALL" : "");
+            string reset = string_printf("RESET REPLICA%s FOR CHANNEL '%s';",
+                                         (mode == StopMode::RESET_ALL) ? " ALL" : "", conn_name.c_str());
             if (execute_cmd_time_limit(reset, time_left, &error_msg))
             {
                 rval = true;
@@ -2063,8 +2196,11 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
 
 bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration time_limit, mxb::Json& error_out)
 {
-    int new_val = (setting == ReadOnlySetting::ENABLE) ? 1 : 0;
-    string cmd = string_printf("SET GLOBAL read_only=%i;", new_val);
+    // MySQL: use super_read_only to demote so that even users with SUPER cannot write to a replica
+    // (setting super_read_only=1 implies read_only=1). Promotion clears read_only, which also clears
+    // super_read_only. This is stronger than MariaDB's plain read_only and the correct primary guard.
+    string cmd = (setting == ReadOnlySetting::ENABLE) ?
+        "SET GLOBAL super_read_only=1;" : "SET GLOBAL read_only=0;";
     string error_msg;
     bool success = execute_cmd_time_limit(cmd, time_limit, &error_msg);
     if (!success)
@@ -2292,7 +2428,7 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
     time_remaining -= timer.restart();
     if (conn_created)
     {
-        string start_slave = string_printf("START SLAVE '%s';", new_settings.name.c_str());
+        string start_slave = string_printf("START REPLICA FOR CHANNEL '%s';", new_settings.name.c_str());
         bool slave_started = execute_cmd_time_limit(start_slave, time_remaining, &error_msg);
         time_remaining -= timer.restart();
         if (slave_started)
@@ -2322,61 +2458,26 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
 MariaDBServer::ChangeMasterCmd
 MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_settings, ReplicationOp repl_op)
 {
-    string cmd_begin = string_printf("CHANGE MASTER '%s' TO MASTER_HOST = '%s', MASTER_PORT = %i, ",
-                                     conn_settings.name.c_str(),
+    // MySQL 8.x dialect: "CHANGE REPLICATION SOURCE TO ... SOURCE_AUTO_POSITION=1 ... FOR CHANNEL '<n>'".
+    // All operations (REDIRECT/PROMOTE/DEMOTE/CONN_SETT) use GTID auto-positioning, which removes the
+    // need for MariaDB's slave_pos/current_pos/MASTER_DEMOTE_TO_SLAVE distinctions: the replica finds
+    // the right starting point from its own gtid_executed automatically.
+    (void)repl_op;
+    string cmd_begin = string_printf("CHANGE REPLICATION SOURCE TO SOURCE_HOST = '%s', SOURCE_PORT = %i, "
+                                     "SOURCE_AUTO_POSITION = 1, ",
                                      conn_settings.master_endpoint.host().c_str(),
                                      conn_settings.master_endpoint.port());
 
-    const char slave_pos[] = "MASTER_USE_GTID = slave_pos, ";
-    const char current_pos[] = "MASTER_USE_GTID = current_pos, ";
-
-    const auto gtid_mode = conn_settings.gtid_mode;
-    switch (repl_op)
-    {
-    case ReplicationOp::REDIRECT:
-        // Existing slave connection should have correct gtid-mode. Only set it if unset (extremely unlikely).
-        if (gtid_mode == GtidMode::NONE)
-        {
-            cmd_begin += slave_pos;
-        }
-        break;
-
-    case ReplicationOp::PROMOTE:
-        // Creating a new slave connection on a previous slave. Gtid_slave_pos should be valid so use that.
-        cmd_begin += slave_pos;
-        break;
-
-    case ReplicationOp::DEMOTE:
-        if (m_capabilities.demote_to_slave)
-        {
-            // Recommended way to demote in 10.10.
-            cmd_begin += "MASTER_DEMOTE_TO_SLAVE = 1, ";
-        }
-        else
-        {
-            // Demoting a master which may not have a (correct) gtid_slave_pos. Start replicating from
-            // gtid_current_pos.
-            cmd_begin += current_pos;
-        }
-        break;
-
-    case ReplicationOp::CONN_SETT:
-        if (gtid_mode == GtidMode::CURRENT)
-        {
-            cmd_begin += current_pos;
-        }
-        else
-        {
-            // File/pos replication not supported.
-            mxb_assert(gtid_mode == GtidMode::SLAVE);
-            cmd_begin += slave_pos;
-        }
-        break;
-    }
-
     if (m_settings.replication_ssl)
     {
-        cmd_begin += "MASTER_SSL = 1, ";    // Leave out if not set to preserve existing setting.
+        cmd_begin += "SOURCE_SSL = 1, ";    // Leave out if not set to preserve existing setting.
+    }
+    else
+    {
+        // Default MySQL 8.x auth is caching_sha2_password. Over a non-SSL replication channel the
+        // replica must fetch the primary's RSA public key to complete the handshake, otherwise the
+        // IO thread fails with "Authentication requires secure connection". Request it explicitly.
+        cmd_begin += "GET_SOURCE_PUBLIC_KEY = 1, ";
     }
 
     auto server_repl_custom_opts = server->replication_custom_opts();
@@ -2388,14 +2489,19 @@ MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_sett
         cmd_begin.append(eff_repl_custom_opts).append(", ");
     }
 
+    // Channel suffix. The default (unnamed) channel is "", which is valid as FOR CHANNEL ''.
+    string for_channel = string_printf(" FOR CHANNEL '%s';", conn_settings.name.c_str());
+
     // Mask user & pw for the masked version.
-    const char user_pw[] = "MASTER_USER = '%s', MASTER_PASSWORD = '%s';";
+    const char user_pw[] = "SOURCE_USER = '%s', SOURCE_PASSWORD = '%s'";
     string cleartext_cmd = cmd_begin;
     cleartext_cmd += mxb::string_printf(user_pw, m_settings.replication_user.c_str(),
                                         m_settings.replication_password.c_str());
+    cleartext_cmd += for_channel;
     const char mask[] = "******";
     string masked_cmd = move(cmd_begin);
     masked_cmd += mxb::string_printf(user_pw, mask, mask);
+    masked_cmd += for_channel;
 
     ChangeMasterCmd rval;
     rval.real_cmd = move(cleartext_cmd);
@@ -2430,7 +2536,7 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
         time_remaining -= timer.restart();
         if (changed)
         {
-            string start = string_printf("START SLAVE '%s';", conn_name.c_str());
+            string start = string_printf("START REPLICA FOR CHANNEL '%s';", conn_name.c_str());
             bool started = execute_cmd_time_limit(start, time_remaining, &error_msg);
             time_remaining -= timer.restart();
             if (started)
@@ -2504,12 +2610,18 @@ bool MariaDBServer::update_enabled_events()
 /**
  * Connect to and query/update a server.
  *
- * @param update_disk_space Disk space update status
- * @param first_tick Is this the first tick? Only affects error logging.
+ * @param time_to_update_disk_space Update disk space status
+ * @param first_tick Is this the first tick? Only affect error logging
+ * @param is_topology_master Is this the master? Only affects disk space status logging.
  */
-void MariaDBServer::update_server(UpdateDiskSpace update_disk_space, bool first_tick)
+void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick, bool is_topology_master,
+                                  bool reconnect)
 {
     m_new_events.clear();
+    if (reconnect)
+    {
+        close_conn();
+    }
     ConnectResult conn_status = ping_or_connect();
 
     if (connection_is_ok(conn_status))
@@ -2543,15 +2655,14 @@ void MariaDBServer::update_server(UpdateDiskSpace update_disk_space, bool first_
             // If permissions are ok, continue.
             if (!has_status(SERVER_AUTH_ERROR))
             {
-                if (update_disk_space != UpdateDiskSpace::NO && can_update_disk_space_status())
+                if (time_to_update_disk_space && can_update_disk_space_status())
                 {
                     update_disk_space_status();
                     if (has_status(SERVER_DISK_SPACE_EXHAUSTED) && !had_status(SERVER_DISK_SPACE_EXHAUSTED))
                     {
                         // Server disk space status changed. Print a warning message if master/slave
                         // conditions now block the server from getting those roles.
-                        if (update_disk_space == UpdateDiskSpace::MASTER &&
-                            (m_settings.master_conds & MasterConds::MCOND_DISK_OK))
+                        if (is_topology_master && (m_settings.master_conds & MasterConds::MCOND_DISK_OK))
                         {
                             // This only works on the current master-like server. A server with
                             // low disk space getting swapped to master and not getting master-status is not
@@ -2617,11 +2728,6 @@ void MariaDBServer::update_server(UpdateDiskSpace update_disk_space, bool first_
     mon_err_count = (is_running() || is_in_maintenance()) ? 0 : mon_err_count + 1;
 }
 
-void MariaDBServer::update_server()
-{
-    // Call with default settings.
-    update_server(UpdateDiskSpace::NO, false);
-}
 
 bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
 {
