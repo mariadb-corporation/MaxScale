@@ -113,6 +113,8 @@ public:
         bool basic_support {false};         // Is the server version supported by the monitor at all?
         bool gtid {false};                  // Supports MariaDB gtid? Required for failover etc.
         bool slave_status_all {false};      // Supports "show all slaves status"?
+        bool mysql_replica_syntax {false};  // MySQL 8.0.22+: must use "SHOW REPLICA STATUS" etc. The
+                                            // legacy "SLAVE" spelling was removed in MySQL 8.4.
         bool max_statement_time {false};    // Supports max_statement_time?
         bool events {false};                // Supports event handling?
         bool read_only_admin {false};       // Implements read-only admin priv?
