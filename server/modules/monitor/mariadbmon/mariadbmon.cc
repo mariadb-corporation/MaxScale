@@ -210,6 +210,11 @@ cfg::ParamBool s_enforce_simple_topology(
     "Enforce a simple topology",
     false, cfg::Param::AT_RUNTIME);
 
+cfg::ParamBool s_use_priority(
+    &s_spec, "use_priority",
+    "Use server priority when choosing among equally suitable promotion candidates",
+    false, cfg::Param::AT_RUNTIME);
+
 cfg::ParamEnum<MariaDBMonitor::RequireLocks> s_cooperative_monitoring_locks(
     &s_spec, CLUSTER_OP_REQUIRE_LOCKS,
     "Cooperative monitoring type",
@@ -464,6 +469,7 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::enforce_read_only_servers, &s_enforce_read_only_servers);
     add_native(&Settings::enforce_writable_master, &s_enforce_writable_master);
     add_native(&Settings::enforce_simple_topology, &s_enforce_simple_topology);
+    add_native(&Settings::use_priority, &s_use_priority);
     add_native(&Settings::verify_master_failure, &s_verify_master_failure);
     add_native(&Settings::master_failure_timeout, &s_master_failure_timeout);
     add_native(&Settings::switchover_on_low_disk_space, &s_switchover_on_low_disk_space);

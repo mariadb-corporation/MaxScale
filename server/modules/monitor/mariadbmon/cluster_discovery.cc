@@ -1120,6 +1120,12 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
         reasons.cat("it's excluded");
     }
 
+    if (server_has_negative_priority(cand))
+    {
+        is_valid = false;
+        reasons.cat("it has negative priority and use_priority is enabled");
+    }
+
     // Check the following only if the other requirements are fulfilled.
     if (is_valid && is_slave_maxscale())
     {

@@ -549,6 +549,9 @@ selection criteria is as follows in descending priority:
       2. gtid_current_pos (most processed events)
       3. log_slave_updates is on
       4. disk space is not low
+      5. If `use_priority` is enabled, prefer lower positive server `priority`
+         (Galera-style). Servers with negative `priority` are not autoselected.
+         If priorities are equal (or all zero), monitor `servers` list order is used.
 2. If the new primary has unprocessed relay log items, cancel and try again
 later.
 3. Prepare the new primary:
@@ -1139,6 +1142,67 @@ As of MaxScale 24.02.4 and 24.08.1, this setting also affects primary
 server selection during MaxScale startup or due to replication topology
 changes. A server listed in `servers_no_promotion` will thus not be
 selected as primary unless manually designated in a *switchover*-command.
+
+#### `use_priority`
+
+- **Type**: boolean
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `false`
+
+Enable Galera-style interaction with server [`priority`](../Getting-Started/Configuration-Guide.md#priority)
+values during primary autoselection.
+
+When enabled, `priority` is used only after the normal promotion filters
+(`gtid_IO_pos`, `gtid_current_pos`, `log_slave_updates`, disk space) have selected
+a set of equally suitable candidates:
+
+1. Servers with a negative `priority` are never autoselected (manual switchover
+   to an explicitly named target is still allowed).
+2. Among remaining candidates, the server with the lowest positive `priority`
+   is preferred.
+3. Servers with the default `priority` of `0` are only preferred when no
+   candidate with a positive priority remains among the equals.
+4. If priorities are still tied, the order of servers in the monitor `servers`
+   parameter decides, as before.
+
+```
+[MariaDB-Monitor]
+type=monitor
+module=mariadbmon
+servers=server-00,server-01,server-10,server-11,server-19
+use_priority=true
+auto_failover=true
+
+[server-00]
+type=server
+...
+priority=1
+
+[server-01]
+type=server
+...
+priority=1
+
+[server-10]
+type=server
+...
+priority=10
+
+[server-11]
+type=server
+...
+priority=10
+
+[server-19]
+type=server
+...
+priority=30
+```
+
+Unlike `galeramon`, MariaDB Monitor still ranks replication state before
+priority. A replica that is strictly more up-to-date is preferred over a
+higher-priority but lagging replica.
 
 #### `promotion_sql_file` and `demotion_sql_file`
 

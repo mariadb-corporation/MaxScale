@@ -441,6 +441,8 @@ private:
         bool enforce_writable_master;       /* If true, set master writable if it's read-only. */
         bool enforce_simple_topology;       /* Can the monitor assume and enforce a simple, 1-master
                                              * and N slaves topology? Also allows unsafe failover */
+        bool use_priority;                  /* Use server priority as last tie-breaker / exclusion
+                                             * for autoselection (Galera-style). */
 
         /* Should all cluster modification commands require a majority of server locks?
          * Used in multi-Maxscale situations. */
@@ -594,6 +596,8 @@ private:
                              const MariaDBServer* demotion_target, uint32_t gtid_domain,
                              std::string* reason_out = nullptr);
     bool server_is_excluded(const MariaDBServer* server);
+    bool server_has_negative_priority(const MariaDBServer* server) const;
+    bool is_priority_better(int64_t candidate_priority, int64_t current_best_priority) const;
     bool check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target,
                                 int64_t cluster_gtid_domain, mxb::Json& error_out);
     int64_t guess_gtid_domain(MariaDBServer* demotion_target, const ServerArray& candidates,
