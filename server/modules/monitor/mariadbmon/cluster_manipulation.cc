@@ -1241,6 +1241,13 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
             string msg = string_printf("'%s' cannot be selected because it is excluded.", cand->name());
             printer.cat(all_reasons, msg);
         }
+        else if (server_has_negative_priority(cand))
+        {
+            valid_but_excluded.push_back(cand);
+            string msg = string_printf("'%s' cannot be selected because it has negative priority "
+                                       "and use_priority is enabled.", cand->name());
+            printer.cat(all_reasons, msg);
+        }
         else
         {
             candidates.push_back(cand);
@@ -1365,6 +1372,38 @@ bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
     return false;
 }
 
+bool MariaDBMonitor::server_has_negative_priority(const MariaDBServer* server) const
+{
+    return m_settings.use_priority && server->server->priority() < 0;
+}
+
+/**
+ * Galera-style priority comparison used only as a final tie-breaker.
+ * Lower positive priority wins. Priority 0 loses to any positive priority.
+ * Negative priorities are filtered before this comparison runs.
+ */
+bool MariaDBMonitor::is_priority_better(int64_t candidate_priority, int64_t current_best_priority) const
+{
+    const bool cand_pos = candidate_priority > 0;
+    const bool best_pos = current_best_priority > 0;
+
+    if (cand_pos && !best_pos)
+    {
+        return true;
+    }
+    if (!cand_pos && best_pos)
+    {
+        return false;
+    }
+    if (cand_pos && best_pos)
+    {
+        return candidate_priority < current_best_priority;
+    }
+
+    // Both zero (or non-positive): keep existing order.
+    return false;
+}
+
 /**
  * Is the candidate a better choice for master than the previous best?
  *
@@ -1426,6 +1465,23 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const M
                     is_better = true;
                     reason = "it is not low on disk space.";
                 }
+                // If disk status is identical ...
+                else if (cand_disk_ok == curr_disk_ok && m_settings.use_priority
+                         && is_priority_better(candidate->server->priority(),
+                                              current_best->server->priority()))
+                {
+                    // ... prefer better Galera-style priority (lower positive wins).
+                    is_better = true;
+                    reason = "it has a better priority.";
+                }
+            }
+            // If neither has log_slave_updates, still allow priority to break the tie.
+            else if (!cand_updates && !curr_updates && m_settings.use_priority
+                     && is_priority_better(candidate->server->priority(),
+                                          current_best->server->priority()))
+            {
+                is_better = true;
+                reason = "it has a better priority.";
             }
         }
     }

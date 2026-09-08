@@ -172,6 +172,10 @@ The default master selection is based only on MIN(wsrep_local_index). This
 can be influenced with the server priority mechanic described in the
 [Galera Monitor](../Monitors/Galera-Monitor.md) manual.
 
+MariaDB Monitor does not use `priority` unless `use_priority=true` is set on
+the monitor. When enabled, priority is only a final autoselection tie-breaker
+after GTID and related promotion filters; see the MariaDB Monitor manual.
+
 ## Router limitations
 
 Refer to individual router documentation for a list of their limitations.

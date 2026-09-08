@@ -3439,10 +3439,14 @@ they are available. When they are no longer available, the `DR-site-primary` and
 - **Dynamic**: Yes
 - **Default**: 0
 
-Server priority. Currently only used by galeramon to choose the order in which
-nodes are selected as the current primary server. Refer to the
+Server priority. Used by galeramon to choose the order in which nodes are
+selected as the current primary server. When MariaDB Monitor is configured with
+`use_priority=true`, the same values are used as a final tie-breaker when
+selecting a promotion target among equally suitable replicas (and negative
+values prevent autoselection). Refer to the
 [Server Priorities](../Monitors/Galera-Monitor.md#interaction-with-server-priorities)
-section of the galeramon documentation for more information on how to use it.
+section of the galeramon documentation and the MariaDB Monitor `use_priority`
+setting for more information.
 
 Starting with MaxScale 2.5.21, this parameter also accepts negative values. In
 older versions, the parameter only accepted non-negative values.
