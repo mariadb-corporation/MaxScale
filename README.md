@@ -1,5 +1,9 @@
 # MaxScale by MariaDB plc
 
+**NOTE** The Open Source version of MaxScale is no longer supported or maintained. A fully supported version can be obtained [here](https://mariadb.com/contact/).
+
+---
+
 The MariaDB MaxScale is an intelligent proxy that allows
 forwarding of database statements to one or more database servers using
 complex rules, a semantic understanding of the database statements and the
